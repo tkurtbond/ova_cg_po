@@ -56,6 +56,7 @@ labels are the printed numbers (`/PageLabels`: roman for indexes 0 and
 ```sh
 make                 # obj/ (poc output) and ./po_ova_cg
 make test            # what needs no display: unit tests (TESTS), test/cli.sh
+make check-pages     # OvaRules' pages against the rulebook PDF's headings (needs mutool)
 make test-headless   # make test-gui on Xvfb: window tests (GUITESTS), the
                      #   program running RUNTIME seconds, test/quit.sh (Ctrl+Q)
 make test-sway       # make test-gui on a headless sway (quit.sh skips: X11 only)

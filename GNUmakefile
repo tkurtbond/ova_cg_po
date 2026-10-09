@@ -47,7 +47,7 @@ PROGSRC := $(wildcard src/*.Mod src/*.c)
 # Test support modules, and test programs (test/<name>.Mod, main
 # modules): TESTS need no display, GUITESTS do.
 TESTSUPPORT := test/Check.Mod
-TESTS       :=
+TESTS       := TestRules
 GUITESTS    := TestWindow
 TESTBINS    := $(TESTS:%=$(OBJ)/%)
 GUITESTBINS := $(GUITESTS:%=$(OBJ)/%)
@@ -62,7 +62,7 @@ ifneq ($(if $(MAKECMDGOALS),$(filter-out clean uninstall print-%,$(MAKECMDGOALS)
 $(foreach l,$(SHAREDLIBS),$(if $(wildcard $(POC_OBERON_LIBRARIES)/$(l)/*/OC/$(l).library),,$(error the $(l) library is not in $(POC_OBERON_LIBRARIES)/$(l); install it from its repo (AGENTS.md))))
 endif
 
-.PHONY: all tests test test-gui test-headless test-sway valgrind valgrind-headless valgrind-sway \
+.PHONY: all tests test check-pages test-gui test-headless test-sway valgrind valgrind-headless valgrind-sway \
   display install uninstall clean
 .NOTPARALLEL:
 
@@ -87,6 +87,19 @@ test: $(PROGRAM) $(TESTBINS)
 	done; \
 	echo "== cli.sh"; test/cli.sh ./$(PROGRAM) || status=1; \
 	exit $$status
+
+# Every page in OvaRules against the rulebook: the entries' headings,
+# found by their font in the PDF (tools/rulebook-headings.py, which needs
+# mutool).  Not part of make test, which can't count on the PDF.
+RULEBOOK ?= $(HOME)/Reference/RPG/OVA/OVA_The_Anime_Role-Playing_Game.pdf
+$(OBJ)/ListRules: test/ListRules.Mod $(PROGSRC) $(SHAREDLIBMANIFESTS) | $(OBJ)
+	$(POC) $(POCFLAGS) $(IMPORTS) -import-path test -output-dir $(OBJ) $(LINK) -o $@ $<
+check-pages: $(OBJ)/ListRules
+	@tools/rulebook-headings.py $(RULEBOOK) > $(OBJ)/headings.txt
+	@$(OBJ)/ListRules > $(OBJ)/rules.txt
+	@if diff $(OBJ)/headings.txt $(OBJ)/rules.txt; then \
+	  echo "ok   - all $$(wc -l < $(OBJ)/rules.txt) pages match the rulebook's headings"; \
+	else echo "FAIL - OvaRules (>) differs from the rulebook's headings (<)"; exit 1; fi
 
 # FLTK needs a display even for windows never shown.  An agent never
 # runs these on the user's desktop (AGENTS.md): use test-headless or

@@ -43,8 +43,14 @@ Pages below are its printed page numbers.
   91), and every name on the Quick List (p. 90) was found once, but for
   two found twice, where the first is the description: Weapon's other
   hit is the Attack example on p. 50, and Ammunition's the Affinities
-  note on p. 89. Each page is to be checked by eye in Phase 1, and the
-  check recorded here.
+  note on p. 89. **Checked in Phase 1** (2026-10-09): the entries'
+  headings are set in Calluna-Bold, and every such heading on PDF pages
+  51-91, found by font (`tools/rulebook-headings.py`), is one of the
+  173 names, on the page the table has; `make check-pages` repeats the
+  comparison. Pages 79 (Short-Tempered alone, after the end of
+  Servitude and above art) and 86 (nine Perks) were also checked by
+  eye, and agree. There are 56 Abilities, 69 Weaknesses, 25 Perks and
+  23 Flaws.
 - **The sample characters reproduce the rules below.** All twelve in
   ova_fmt's `test-data/` (pp. 23-47), the two Companions (Arasuni,
   Fenrir) included, were checked by hand (2026-10-09): every ROLL, DX,
@@ -215,13 +221,21 @@ its total red and says why, but never stops the user: the GM decides.
 ## Data tables
 
 `OvaRules` holds, for each item, its name, its kind, its page, and for
-Perks and Flaws its cost (fixed, a range, or the user's), and whether it
-repeats. For Abilities and Weaknesses it also holds the flags the
-calculations need (which roll it changes, whether it changes Health or
-Endurance, whether it may carry a detail such as Knowledge's subject).
-Nothing else.
+Perks and Flaws its cost (fixed, a range, or the user's), and how often
+it may be taken. For Abilities and Weaknesses it also holds the flags
+the calculations need (which roll it changes, whether it changes Health
+or Endurance, TV, half cost) and its linked content (spells, a
+Transformation's form, a Companion, a Vehicle). Every item may carry a
+detail (the samples give one to Attack, Armored, Knowledge, Position
+of Power and others), so that needs no flag. Nothing else.
 
-Pages (printed), from the script above, to be checked in Phase 1:
+`OvaRules.Find` ignores case, and knows two aliases: `Vehicle` for
+`Vehicle (Mecha)` (ova_fmt's `Vehicle.yaml` uses it) and the Quick
+List's `Ranged, Str.-Powered`. The names in ova_fmt's fixtures are all
+found but those two and `Magic, Testing`, a made-up name in a
+formatter test, which is shown with `p. ?`.
+
+Pages (printed), checked against the PDF in Phase 1:
 
 | Page | Abilities |
 |---|---|
@@ -338,7 +352,7 @@ in a printed copy as well as through **?**. That covers:
 - the Abilities and Weaknesses lists: `+3 Attack (Kaze Satsujinsha)`
   in one column, `p. 50` in a narrow right-hand column
   (`Browser.SetColumnWidths`, a tab between them);
-- the name `Choice`s: `Attack  (p. 50)`, the page in the item's text,
+- the name `Choice`s: `Attack (p. 50)`, the page in the item's text,
   since a menu has no columns;
 - the attack dialog's Perks and Flaws, and the menus that add them:
   `Area Effect x2  +20  p. 83`, `Requirement  -10  p. 88`;
@@ -596,10 +610,27 @@ committed in their own repos, with the user's go-ahead.
      leak of pofltk's). The tmux hint and the Ctrl+Q check were each
      shown to fail with the bug planted.
    - `tools/with-sway.sh` is pofltk's, copied.
-1. **`OvaRules`.** The tables, each page checked by eye against the PDF
-   and recorded here; `Label`, `PageText`; `TestRules`: every Quick
-   List name present once, each with a page within its section's range,
-   costs as the Quick List gives them, and the labels' format.
+1. **`OvaRules`.** [done] The tables, each page checked by eye against
+   the PDF and recorded here; `Label`, `PageText`; `TestRules`: every
+   Quick List name present once, each with a page within its section's
+   range, costs as the Quick List gives them, and the labels' format.
+   - `src/OvaRules.Mod`: the 173 items in the book's order, with flags
+     for the calculations (Phase 2 will use them), costs, repeat limits,
+     linked content; `Find`, `Count`, `Get`, `Label` (`Attack (p.
+     50)`), `PageText` (`p. 50`), `LabelOf` (`Magic, Testing (p. ?)`
+     for an unknown name), `PdfIndex`; the Tough/Vigorous, Endurance
+     Reserve, Endurance Use and spell cost tables; the rules' own pages.
+   - `test/TestRules.Mod` (35 checks, no display): its Quick List
+     entries are generated from the PDF's text of p. 90, not typed, and
+     each must be found, of its kind, at its place in the book's order,
+     at its cost. Shown to fail with four planted bugs (a page, two
+     Weaknesses swapped, a cost, a repeat limit).
+   - `make check-pages` (not in `make test`; needs the PDF and mutool):
+     every page against the headings found by font. Shown to fail with
+     a planted page.
+   - The pages were checked by font rather than by looking at each of
+     41 page images, which the plan asked for: the font check covers
+     every heading, and two pages looked at by eye agree with it.
 2. **`OvaCalc`.** Every rule above, with `TestCalc` over the sample
    characters (every one in `test-data/`, as fixtures) and hand-made
    cases for each Perk and Flaw that changes ROLL or DX, floors at 0,
