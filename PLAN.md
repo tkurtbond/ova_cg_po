@@ -103,9 +103,24 @@ Weaknesses -1 to -3 (p. 18).
     Requirement -5 to -20 (p. 87, 88);
   - set by the user and the GM: Unique Perk (+?), Unique Flaw (-?);
   - repeatable: a Perk or Flaw taken more than once is written "x2",
-    "x3" (p. 83), ova_fmt's `counts-as`. Which ones the book allows
-    to repeat is in each one's text; the table marks them, and the
-    window offers a count only for those.
+    "x3" (p. 83), ova_fmt's `counts-as`; its cost is multiplied by the
+    count. "Many Perks and Flaws may be purchased multiple times ... If
+    possible, it will be mentioned in the text" (p. 83), so only those
+    whose text says so repeat (checked 2026-10-09, every entry on
+    pp. 83-89):
+
+    | | No limit | At most 2 | At most 3 |
+    |---|---|---|---|
+    | Perks | Accurate, Area Effect, Armor Piercing, Defensive, Effective, Multiple Targets, Reach, Vampire | Continued Effect ("if taken twice"), Paralyzing ("may be taken twice") | |
+    | Flaws | Assisted (its text says "this Perk", a slip), Backlash, Buildup, Concentration, Inaccurate, Ineffective, Low Penetration ("for each time you take"), Unwieldy | | Ammunition (once, twice, three times: about five uses, three, one) |
+
+    The other 29 are taken once. Cancel and Requirement repeat in
+    neither sense: one cost, chosen within their range. Unique Perk
+    and Unique Flaw are one entry with the cost the user gives. The
+    window offers a count only for the 19 above, up to the limit. The
+    sample characters keep to this: Effective x6 (Miho, Fenrir),
+    Inaccurate x3 (Miho), Ineffective x3 (Karis), Paralyzing x2 (Cora,
+    Karis), and Accurate, Area Effect and Armor Piercing x2.
   - **Affinities** cost nothing (p. 89): a name beside the Perks.
 - **An Ability with Perks and Flaws** costs the same way (p. 83):
   Fukiko's transformed Barrier, Area Effect (+10) and Elaborate
@@ -617,11 +632,12 @@ committed in their own repos, with the user's go-ahead.
 
 ## Open questions
 
-1. **Which Perks and Flaws repeat**: from each one's text (pp. 83-89);
-   recorded in `OvaRules`' flags, as numbers only.
+None just now.
 
-Decided (2026-10-09, by the user):
+Decided (2026-10-09; by the user unless it says checked):
 
+- ~~Which Perks and Flaws repeat~~: from each one's text ("Perk and
+  Flaw costs"; checked 2026-10-09).
 - ~~Fukiko's TV~~: the literal rule, settled by Ai ("Sources and
   findings"; checked 2026-10-09).
 - ~~Where the sheet's two parts go~~: two tabs ("The window").
