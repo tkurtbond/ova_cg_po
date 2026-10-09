@@ -578,10 +578,24 @@ committed in their own repos, with the user's go-ahead.
 
 ## Build order
 
-0. **Skeleton.** `GNUmakefile` (from po_ova_fmt's and pofltk's, with
-   `test-headless` and `test-sway`), `README.md`, `test/Check.Mod`,
+0. **Skeleton.** [done] `GNUmakefile` (from po_ova_fmt's and pofltk's,
+   with `test-headless` and `test-sway`), `README.md`, `test/Check.Mod`,
    `test/poc-gc.supp` (po_ova_fmt's plus pofltk's), a window with a
    menu bar that opens and quits under Xvfb.
+   - `OvaCg` (main): `-h`; a file argument is refused (status 2) until
+     Phase 3; the display check of "Starting". `OvaWindow`: a 1280 x 800
+     `Fl.DoubleWindow`, a menu bar with File > Quit (Ctrl+Q), an empty
+     box for the tabs to come; Quit and the close button hide the
+     window, ending `Fl.Run`.
+   - Tests: `test/cli.sh` (14 checks: `-h`, mistakes, no display, in
+     and out of tmux, empty variables); `TestWindow` (8: opening, File >
+     Quit, the close button, every widget deleted); the program still
+     running after 3 s; `test/quit.sh`, Ctrl+Q sent by `xdotool` ends the
+     real program with status 0 (X11 only). Passed on Xvfb and on a
+     headless sway (2026-10-09); valgrind clean on both (no errors, no
+     leak of pofltk's). The tmux hint and the Ctrl+Q check were each
+     shown to fail with the bug planted.
+   - `tools/with-sway.sh` is pofltk's, copied.
 1. **`OvaRules`.** The tables, each page checked by eye against the PDF
    and recorded here; `Label`, `PageText`; `TestRules`: every Quick
    List name present once, each with a page within its section's range,

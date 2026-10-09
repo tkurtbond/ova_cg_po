@@ -53,17 +53,34 @@ labels are the printed numbers (`/PageLabels`: roman for indexes 0 and
 
 ## Build / test
 
-The makefile is to be written in Phase 0 (PLAN.md); it will have:
-
 ```sh
-make            # obj/ (poc output) and ./po_ova_cg
-make test       # unit tests and the round-trip checks, on no display
-make test-headless   # the GUI tests, on Xvfb
-make test-sway       # the GUI tests, on a headless sway (Wayland)
-make valgrind   # the unit tests under valgrind
-make install    # to $(PREFIX)/bin, default ~/local/bin (DESTDIR for staging)
-make clean
+make                 # obj/ (poc output) and ./po_ova_cg
+make test            # what needs no display: unit tests (TESTS), test/cli.sh
+make test-headless   # make test-gui on Xvfb: window tests (GUITESTS), the
+                     #   program running RUNTIME seconds, test/quit.sh (Ctrl+Q)
+make test-sway       # make test-gui on a headless sway (quit.sh skips: X11 only)
+make valgrind-headless   # every test under valgrind, on Xvfb; also valgrind-sway
+make install         # to $(PREFIX)/bin, default ~/local/bin (DESTDIR for staging)
+make uninstall
+make clean           # rm -rf obj po_ova_cg
+make print-VAR       # show a makefile variable
 ```
+
+- **`make test-gui` and `make valgrind` use whatever display is set**:
+  never run them directly here (that is the desktop); run the
+  `-headless` and `-sway` targets.
+- A test that needs no display goes in `TESTS`, a window test in
+  `GUITESTS`. Window tests delete every widget they open
+  (`OvaWindow.Close`; `Fl.OpenWidgets() = 0` checks it), or
+  `make valgrind`'s `vg-check.sh` (pofltk's, from `POFLTK`) fails.
+- `test/quit.sh` drives the real program with `xdotool`, so it runs on
+  X11 only. On Xvfb with no window manager a window sits 20 pixels
+  below its y (pofltk's note).
+- `tools/with-sway.sh` is pofltk's, copied; keep it the same.
+- **A shell check's own mistakes look like the program's**: `env`
+  takes its options before its assignments (`env -u TMUX DISPLAY= ...`,
+  not `env DISPLAY= -u TMUX ...`, which runs `-u` as the command).
+  Read a FAIL's cause before changing the program.
 
 - **Everything is compiled with `-OC`**, because polibfyaml and pofltk
   require it.

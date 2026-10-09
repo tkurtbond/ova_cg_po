@@ -1,0 +1,32 @@
+# Valgrind suppressions for poc's conservative garbage collector: pofltk's
+# test/poc-gc.supp (from polibfyaml's) and po_ova_fmt's, in one file.
+#
+# GarbageCollectedHeap.Collect scans every word of the machine stack for
+# things that look like heap pointers (poc's rtl/llvm/GarbageCollectedHeap.Mod),
+# including words that were never written. Memcheck reports each such read
+# as an uninitialised-value error with MarkCandidate as the top frame
+# (polibfyaml, confirmed 2026-10-03); and in programs with bigger frames,
+# such a word that happens to point into a block is traced from by
+# DrainMarkStack (po_ova_fmt, confirmed 2026-10-09: 37 such errors from
+# `po_ova_fmt -H`, nothing else). That is how a conservative collector
+# works, not a bug in the program.
+#
+# Only uninitialised-value errors whose TOP frame is one of those two
+# functions are suppressed; the same kinds of error anywhere else, and
+# every invalid read or write and leak, are still reported.
+
+{
+   poc-gc-markcandidate-cond
+   Memcheck:Cond
+   fun:GarbageCollectedHeap.MarkCandidate
+}
+{
+   poc-gc-markcandidate-value8
+   Memcheck:Value8
+   fun:GarbageCollectedHeap.MarkCandidate
+}
+{
+   poc-gc-drainmarkstack-value8
+   Memcheck:Value8
+   fun:GarbageCollectedHeap.DrainMarkStack
+}
