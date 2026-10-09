@@ -45,11 +45,44 @@ Pages below are its printed page numbers.
   hit is the Attack example on p. 50, and Ammunition's the Affinities
   note on p. 89. Each page is to be checked by eye in Phase 1, and the
   check recorded here.
-- **The sample characters reproduce the rules below.** Raine, Shou,
-  Fukiko and Daisuke (ova_fmt's `test-data/`, from pp. 23-47) were
-  checked by hand: every ROLL, DX and END, and Defense, Health and
-  Endurance, come out of the rules as written. TV comes out for Raine,
-  Shou and Daisuke; Fukiko's is an open question.
+- **The sample characters reproduce the rules below.** All twelve in
+  ova_fmt's `test-data/` (pp. 23-47), the two Companions (Arasuni,
+  Fenrir) included, were checked by hand (2026-10-09): every ROLL, DX,
+  END, Defense, Health, Endurance and TV comes out of the rules as
+  written, but for two numbers the book gives by ruling ("Sample
+  characters the rules don't reproduce", below).
+- **TV, settled by Ai.** Fukiko's TV of 12 fits four readings of the
+  TV rule (which Defense counts; whether Frail subtracts; whether
+  Healer adds half). Ai (TV 10) fits only one: Attack Roll 2 + her
+  best Defense, Barrier's 5 (not 4) + DX 5 + Frail -2 = 10; with
+  Frail not counted, or her ordinary Defense, it can't be 10. That is
+  the literal rule, and it gives Fukiko 4 + 5 + 3 - 1 + Healer 1 = 12.
+  Half levels were added only for Magic (Auren: Arcane 3, +2; Cora:
+  Witchcraft 2, +1) and Healer (Fukiko: 2, +1), the book's own
+  examples; never for Psychic, Sixth Sense, Teleport, Shape-Shifter,
+  Life Support or Transformation, which the samples also have.
+- **Companions are Secondary NPCs for TV**: Arasuni 3 + 2 + 5 +
+  Armored 2 + Tough 2 = 14, sheet 10; Fenrir 4 + 5 + 4 + Tough 2 +
+  Vigorous 3 = 18, sheet 14. Both are 4 less, the rule's "Subtract 4
+  from Secondary NPCs (minimum of 1)" (p. 124), and the book says
+  Secondary NPCs have 20 Health and Endurance, "the same as
+  characters created with the Companion Ability" (p. 123). Their
+  Health and Endurance start at 20 (Arasuni: 20 + Tough 2 = 40;
+  Fenrir: 20 + Tough 20, 20 + Vigorous 30).
+
+### Sample characters the rules don't reproduce
+
+The book's own rulings, which the program meets with an override (and
+`TestCalc` checks as overrides, not as failures):
+
+- **Braun's First Day of Sale Shove!**: roll -2 (the book prints it so,
+  p. 33); the rule gives 2 - Clumsy 2 = 0. His TV of 0 follows from
+  the -2: -2 + Defense 2 + DX 1/2 counted as 0. The program computes
+  roll 0 and TV 2 (DX 1/2 counts as 0 in TV, rounding down; to
+  confirm with an NPC whose DX is 1/2).
+- **Natsuki's Stiletto Kick**: DX 3; the rule gives 1 + Attack 2 +
+  Strong 3 = 6. Its text says it is "without her signature gauntlet",
+  her Attack (Iron Fist), so the GM ruled that one attack's DX.
 
 ## The rules the program computes
 
@@ -107,8 +140,11 @@ Weaknesses -1 to -3 (p. 18).
   Strong never add to it.
 - **DX**, the Damage Multiplier (p. 106) = 1 + Attack + Strong - Weak +
   Effective x n - Ineffective x n. A **Ranged** attack (p. 85) loses
-  Strong (Shou's Dark Spark: 5, not 6); **Ranged, Strength-Powered**
-  (p. 86) keeps Strong and Weak. **No Damage** (p. 88) makes it 0. A DX
+  Strong and Weak (Shou's Dark Spark: 5, not 6; Ai's attacks keep DX 5
+  despite her Weak -1); **Ranged, Strength-Powered** (p. 86) keeps
+  Strong and Weak. **Telekinesis** (p. 62) adds its level to the DX of
+  an attack made with it (Ai: 1 + Attack 1 + Telekinesis 3 = 5); the
+  attack dialog has a "made with Telekinesis" check. **No Damage** (p. 88) makes it 0. A DX
   that would be 0 or less without No Damage is 1/2 (Ineffective, p. 88).
 - **DEFENSE** (p. 105) = 2 + Evasive + Quick - Slow. Barrier gives a
   second Defense Roll, 2 + Barrier (p. 51), written as ova_fmt's
@@ -116,16 +152,23 @@ Weaknesses -1 to -3 (p. 18).
 - **HEALTH** = 40 (p. 19) + Tough (p. 63: 10, 20, 30, 40, 60 at +1 to
   +5) - 10 per level of Frail (p. 71). **ENDURANCE** = 40 + Vigorous
   (p. 65: the same table) - 10 per level of Languid (p. 73). A
-  Companion has 20 and 20 (p. 52); Minions 10 and 10 (p. 58).
+  Companion starts at 20 and 20 instead of 40 (p. 52; Arasuni,
+  Fenrir), Tough and Vigorous added the same way; Minions 10 and 10
+  (p. 58).
   Endurance Reserve (p. 53: 20 per level) is a separate store, shown
   beside Endurance, not added to it.
-- **TV**, the Threat Value (p. 124) = the best Attack Roll + Defense
-  Roll + DX, all without Perks and Flaws, + Armored + the levels of the
-  Abilities and Weaknesses that change Health and Endurance (Tough,
-  Vigorous, Frail, Languid), + half (rounded up) of the level of any
-  other Ability that could matter in a fight, which the user marks
-  (Healer and Magic are the book's examples). Raine: 7 + 5 + 4 +
-  Vigorous 2 = 18.
+- **TV**, the Threat Value (p. 124) = the best Attack Roll + the best
+  Defense Roll (Barrier's, if higher) + the best DX, all without Perks
+  and Flaws, + Armored + the signed levels of the Abilities and
+  Weaknesses that change Health and Endurance (Tough and Vigorous add,
+  Frail and Languid subtract), + half (rounded up) of the level of any
+  other Ability that could matter in a fight, which the user marks.
+  Healer and Magic (Arcane, Witchcraft) are marked to start with, as
+  the book's examples and the only ones the samples count; Companion
+  and Minions can't be (their TVs are their own). A Companion's TV is
+  4 less, at least 1 (a Secondary NPC). Every sample checks: Raine 7 +
+  5 + 4 + Vigorous 2 = 18; Ai 2 + 5 + 5 - Frail 2 = 10; Auren 5 + 4 +
+  4 + Armored 1 + Vigorous 2 + Magic 3/2 = 18.
 - **Transformation** (p. 63): the transformed form's Abilities and
   Weaknesses (worth 2 levels per level of Transformation) count when
   the attacks use them; Fukiko's sheet shows her transformed attacks.
@@ -574,17 +617,13 @@ committed in their own repos, with the user's go-ahead.
 
 ## Open questions
 
-1. **Fukiko's TV.** Her sheet says 12. Best Attack Roll 4 + best Defense
-   5 (Barrier) + DX 3 = 12, with Frail not counted; or + Frail (-1) +
-   Healer halved (+1) = 12 too. Which Defense counts, and whether a
-   Weakness's level is subtracted, decides the rule; check against the
-   other samples (Ai, Auren, Braun, Cora, Karis, Miho, Natsuki, Yuu)
-   and the NPCs (p. 133-147) in Phase 2.
-2. **Which Perks and Flaws repeat**: from each one's text (pp. 83-89);
+1. **Which Perks and Flaws repeat**: from each one's text (pp. 83-89);
    recorded in `OvaRules`' flags, as numbers only.
 
 Decided (2026-10-09, by the user):
 
+- ~~Fukiko's TV~~: the literal rule, settled by Ai ("Sources and
+  findings"; checked 2026-10-09).
 - ~~Where the sheet's two parts go~~: two tabs ("The window").
 - ~~Fields ova_fmt lacks~~: added to both ova_fmts ("Changes to
   ova_fmt").
