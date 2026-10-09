@@ -46,8 +46,8 @@ PROGSRC := $(wildcard src/*.Mod src/*.c)
 
 # Test support modules, and test programs (test/<name>.Mod, main
 # modules): TESTS need no display, GUITESTS do.
-TESTSUPPORT := test/Check.Mod
-TESTS       := TestRules
+TESTSUPPORT := test/Check.Mod test/Samples.Mod
+TESTS       := TestRules TestCalc
 GUITESTS    := TestWindow
 TESTBINS    := $(TESTS:%=$(OBJ)/%)
 GUITESTBINS := $(GUITESTS:%=$(OBJ)/%)

@@ -97,6 +97,10 @@ make print-VAR       # show a makefile variable
   needs nothing in the makefile; a new unit test only its name in
   `TESTS`.
 - **Don't run `make install` with the default `PREFIX` unless asked.**
+- **`src/OvaEntities.Mod` and `src/OvaText.Mod` are po_ova_fmt's,
+  copied**, so the generator reads exactly what po_ova_fmt reads.
+  Change them there (and in the Ada ova_fmt first, for a new key), then
+  copy them again; never edit the copies.
 
 ## Windows and the display
 
@@ -127,6 +131,10 @@ callbacks are module-level procedures; no exceptions; no call chaining;
   (PLAN.md, "Modules") import neither pofltk nor polibfyaml, so their
   tests run with no display. Every number on the window comes from
   `OvaCalc`; no widget callback does arithmetic of its own.
+- **`OvaCalc`'s records are allocated by its client** (`NEW`, then
+  `Init*` and `Add*`), so the model can extend them with names and
+  text; `OvaCalc` holds no strings. A warning is a code and the item it
+  is about; the window words it, with `OvaRules.Label`.
 - **Every computed number has an override box beside it** (PLAN.md,
   "Overriding a computed number"). `OvaCalc` takes the overrides as
   input, so a number computed from an overridden one uses the override;
@@ -167,6 +175,10 @@ callbacks are module-level procedures; no exceptions; no call chaining;
   against ova_fmt's fixtures (`test/data/`, copied from the Ada repo's
   `test-data/`, kept the same). A sample character the rules can't
   reproduce is a finding for PLAN.md, not a test to loosen.
+  `test/Samples.Mod` builds a sheet from a fixture; what the files
+  can't say yet (an attack made with Telekinesis or transformed, a
+  sheet shown transformed) and the book's two rulings (as overrides)
+  are set in `TestCalc`'s `Sample`, each commented.
 - **New YAML keys go into the Ada ova_fmt first, then po_ova_fmt**
   (PLAN.md, "Changes to ova_fmt"), each in its own repo, following that
   repo's AGENTS.md (golden files from the Ada binary, fixtures kept the

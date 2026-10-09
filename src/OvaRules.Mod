@@ -46,6 +46,8 @@ CONST
   HalfCost* = 15;        (* may cost half under the limits: Knowledge, Ineptitude (p. 57) *)
   Reserve* = 16;         (* a separate store of Endurance, 20 a level: Endurance Reserve (p. 53) *)
   CostUp* = 17;          (* raises one Ability's Endurance cost: Endurance Use (p. 70) *)
+  OwnCost* = 18;         (* spends Endurance of its own as it is used, so a spell of it
+                            costs more than the table's, "10+": Barrier (p. 51, 58) *)
 
   (* What linked content an Ability has (Item.linked) *)
   NoLink* = 0; Spells* = 1; Form* = 2; Partner* = 3; Machine* = 4;
@@ -188,7 +190,7 @@ BEGIN
   A("Armored", 49, {Armor});
   A("Art of Invisibility", 50, {});
   A("Attack", 50, {Damage});
-  A("Barrier", 51, {SecondDefense});
+  A("Barrier", 51, {SecondDefense, OwnCost});
   A("Beautiful", 51, {});
   A("Charismatic", 51, {});
   A("Combat Expert", 51, {CombatSkill});

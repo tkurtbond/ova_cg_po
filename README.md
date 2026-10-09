@@ -13,8 +13,9 @@ It is written in Oberon-2 for poc, the
 [Peaseblossom](https://github.com/tkurtbond/peaseblossom) Oberon
 compiler, with pofltk (FLTK 1.4) for the window and polibfyaml for YAML.
 
-**Status: Phase 0 of PLAN.md** -- the build, the tests, and a window
-with a menu bar that opens and quits. Nothing else works yet.
+**Status: Phase 2 of PLAN.md** -- the rules and their calculations,
+tested against the book's sample characters, and a window
+with a menu bar that opens and quits. The window shows nothing else yet.
 
 ## Usage
 

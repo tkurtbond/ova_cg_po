@@ -176,7 +176,11 @@ Weaknesses -1 to -3 (p. 18).
   Companion starts at 20 and 20 instead of 40 (p. 52; Arasuni,
   Fenrir), Tough and Vigorous added the same way; Minions 10 and 10
   (p. 58).
-  Endurance Reserve (p. 53: 20 per level) is a separate store, shown
+  Health is not floored (no rule says so); Tough, Vigorous and
+  Endurance Reserve summed past +5 (a form's added to the base's)
+  count as +5, with a warning. A Vehicle's start at 40 and 40 (p. 64:
+  "They behave in the way you expect"). Endurance Reserve (p. 53: 20
+  per level) is a separate store, shown
   beside Endurance, not added to it.
 - **TV**, the Threat Value (p. 124) = the best Attack Roll + the best
   Defense Roll (Barrier's, if higher) + the best DX, all without Perks
@@ -190,6 +194,19 @@ Weaknesses -1 to -3 (p. 18).
   4 less, at least 1 (a Secondary NPC). Every sample checks: Raine 7 +
   5 + 4 + Vigorous 2 = 18; Ai 2 + 5 + 5 - Frail 2 = 10; Auren 5 + 4 +
   4 + Armored 1 + Vigorous 2 + Magic 3/2 = 18.
+  - **"Without Perks and Flaws" means without the ones that add each
+    time** (Accurate, Inaccurate, Effective, Ineffective, and No
+    Damage's 0), found in Phase 2: the best ROLL and DX are taken over
+    the attacks, each less what those added, keeping what Ranged,
+    Ranged, Strength-Powered, Will Attack and Telekinesis do to how the
+    number is made. Ai shows it: her attacks are Ranged and made with
+    Telekinesis, and only with Ranged's dropping her Weak -1 is her DX
+    5 and her TV 10. A DX of 1/2 counts as 0. With no attack, the plain
+    one: 2 + Agile + Combat Expert - Clumsy, and 1 + Attack + Strong -
+    Weak.
+  - An attack made in a form the sheet isn't shown in doesn't count:
+    Miho's Mode SP, made transformed (Combat Expert +2 more, ROLL 10),
+    would make her TV 22, not 20.
 - **Transformation** (p. 63): the transformed form's Abilities and
   Weaknesses (worth 2 levels per level of Transformation) count when
   the attacks use them; Fukiko's sheet shows her transformed attacks.
@@ -213,6 +230,18 @@ half-cost Knowledge are new keys, "Changes to ova_fmt" below):
   three above (p. 57).
 - **Combined Effectiveness**: rarely more than +5 to any roll; the
   program warns when an attack's ROLL bonus or the Defense's goes over.
+  The bonus is the Abilities' alone ("a character's Abilities should
+  rarely give", p. 21): ROLL or Defense less 2, before Accurate and
+  Inaccurate.
+
+How the program applies them (Phase 2): under Scaled Cost, Base Zero
+checks the points (Abilities' less Weaknesses') and the Power Ceiling
+and starting levels the Abilities' points, the Weaknesses' points
+adding to the starting ones; without it, levels. Half cost halves a
+Knowledge's or Ineptitude's level, or its points, rounding away from 0
+(Knowledge 3 counts 2, Ineptitude -3 counts -2), and only when one of
+the three is on (p. 57). A Transformation's form is in no total: its
+level pays for it (p. 63).
 
 The running totals (levels of Abilities, of Weaknesses, the Character
 Total, points under Scaled Cost) are always shown; a broken limit turns
@@ -393,9 +422,11 @@ the box's tooltip says "empty: use the computed value".
   integer with a trailing `+`; anything else is refused with a message
   and the box emptied.
 - **An override counts downstream**: a number computed from another
-  uses the other's override (the totals' overrides are what the limits
-  check; TV, which the book computes without Perks and Flaws, uses
-  overridden Defense and DX when the override is on the base value).
+  uses the other's override. The Character Total and the limits use
+  the totals' overrides; TV uses Defense's and Barrier's, and each
+  attack's ROLL and DX in effect, less what its Accurate, Inaccurate,
+  Effective and Ineffective add ("The combat box"). Braun's TV of 0
+  comes out of his ROLL overridden to -2 that way.
   `OvaCalc` takes the overrides as input, so the rule lives in one
   place.
 - **Clearing** the box returns to the computed number.
@@ -561,6 +592,12 @@ program belongs here too"):
 | `starting-levels` | `options` | Power Ceiling's starting levels |
 | `half-cost-knowledge` | `options` | Knowledge and Ineptitude at half cost |
 | `overrides` | any mapping with computed numbers | the keys the user overrode |
+| `telekinesis` | an attack | `true`: made with Telekinesis, which adds to its DX (p. 62) |
+| `transformed` | an attack | `true`: made in the transformed form (p. 63) |
+| `transformed` | `combat` | `true`: the combat box is the transformed form's |
+
+Endurance Use needs no key: its `detail` names the Ability or attack
+it is tied to.
 
 Each is optional, as every ova_fmt key but `name` is. For each, the
 Ada repo's PLAN.md gets the schema, how every output format prints it
@@ -635,8 +672,40 @@ committed in their own repos, with the user's go-ahead.
    characters (every one in `test-data/`, as fixtures) and hand-made
    cases for each Perk and Flaw that changes ROLL or DX, floors at 0,
    the 1/2 DX, Endurance Use, spells, each limit, and overrides feeding
-   what is computed from them.
-3. **Files.** `OvaEntities` copied, `OvaCharacter`, `OvaSave` (with
+   what is computed from them. [done]
+   - `src/OvaCalc.Mod`: a `Sheet` of `Trait`s (each with its Perks and
+     Flaws as `Mod`s, a Transformation's form, a Magic's `Spell`s, a
+     Companion's or Vehicle's own `Sheet`) and `Attack`s; every computed
+     number a `Number`, holding its override; `Compute` sets them all,
+     reading the overrides others depend on, and lists `Warning`s (a
+     code, and the trait, attack, Perk or Flaw, or spell it is about:
+     the window words them, with labels). The client allocates the
+     records (`Init*`, `Add*`), so `OvaCharacter` can extend them.
+     `Parse` and `Text` are the override box's text: an integer, `1/2`
+     for a DX, `10+` for an END.
+   - `OvaRules` gained `OwnCost`, Barrier's: an Ability that spends
+     Endurance of its own as it is used (p. 51), so a spell of it is
+     written `10+` (Auren's Mana Shield).
+   - `test/TestCalc.Mod` (384 checks, no display): each of the twelve
+     samples in `test/data/` (ova_fmt's `test-data/`, all 18 copied)
+     loaded by `test/Samples.Mod` through `OvaEntities`, and every
+     number its file holds compared, the two Companions' included
+     (231 checks); Braun's ROLL and Natsuki's Stiletto Kick checked
+     computed (0 and 6), then as overrides, with Braun's TV of 0
+     following. What the files have no key for is set in the test: Ai's
+     attacks made with Telekinesis, Fukiko's sheet shown transformed,
+     Miho's Mode SP made transformed (keys decided for Phase 3a). Then hand-made
+     cases for every rule and warning, and `Parse`.
+   - Shown to fail with twelve bugs planted one at a time in `OvaCalc`
+     (Ranged keeping Strong, no Companion -4, TV ignoring a ROLL
+     override, END not floored, half TV rounded down, Telekinesis not
+     added, no `+` on a spell, no half cost, Will Attack ignored, no
+     1/2, Barrier not in TV, the form always counted): each failed the
+     checks aimed at it. Valgrind clean (no errors, nothing lost, only
+     the collector's blocks reachable).
+3. **Files.** `OvaEntities` copied (done in Phase 2, with `OvaText`,
+   for `TestCalc`), `OvaCharacter` (extending `OvaCalc`'s records, and
+   taking over `test/Samples.Mod`'s building), `OvaSave` (with
    `Fyaml.ToFile`); `TestFiles`: each fixture loaded, saved and
    formatted by po_ova_fmt gives the same output as the fixture (`-H`
    and the terse format), and overrides survive a save and a load.
@@ -680,6 +749,14 @@ committed in their own repos, with the user's go-ahead.
 None just now.
 
 Decided (2026-10-09; by the user unless it says checked):
+
+- ~~How a file records what `OvaCalc` needs and ova_fmt has no key
+  for~~ (found in Phase 2): the attack keys `telekinesis: true` (made
+  with Telekinesis, Ai's) and `transformed: true` (made in the
+  transformed form, Miho's Mode SP); the combat key `transformed: true`
+  (the sheet shown transformed, Fukiko's); and Endurance Use's
+  `detail` naming the Ability or attack it is tied to, so it needs no
+  key ("Changes to ova_fmt").
 
 - ~~Which Perks and Flaws repeat~~: from each one's text ("Perk and
   Flaw costs"; checked 2026-10-09).
