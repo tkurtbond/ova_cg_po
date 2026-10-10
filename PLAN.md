@@ -559,20 +559,38 @@ desktop.
   window shows. Each mapping that holds an overridden number also gets
   `overrides:`, the list of its keys the user typed (`overrides: [roll,
   dx]`). On loading, a listed key's number becomes the override; any
-  other number is recomputed, and one that disagrees is reported in a
-  notice (a hand-edited file) and replaced.
+  other number is recomputed, and one that disagrees is **kept as an
+  override, with a notice** (changed in Phase 3 from "replaced": the
+  file is the user's, a GM's ruling or a hand edit, and replacing it
+  would lose what they wrote; until Phase 3a, every sample number the
+  rules can't yet compute, Ai's Telekinesis DX and the rest, comes back
+  this way). A file must hold exactly one character: the generator
+  edits one at a time, and says so of a file with more.
 - **Loading** reuses po_ova_fmt's `OvaEntities` (copied, as po_ova_fmt
   copies `Besm2Out`, and kept in step with it), so the generator reads
   exactly what po_ova_fmt reads.
 - **Saving** builds a document with polibfyaml's emitter
-  (`Fyaml.NewDocument`, `CreateScalar`, `CreateSequence`,
+  (`Fyaml.NewDocument`, `CreateStyledScalar`, `CreateSequence`,
   `CreateMapping`, `SetRoot`, `Append`, `AppendPair`, then `ToFile`,
-  with `emitModeBlock`), so quoting is libfyaml's, not ours. Keys are
-  written in the order of ova_fmt's fixtures. To check in Phase 3: how
-  libfyaml writes multi-line text (Background and the rest), which
-  ova_fmt reads as block scalars, and that the result reads back the
-  same; a scratch program first. A failed write leaves the old file in
-  place: write to `NAME.tmp`, then rename.
+  with `emitModeBlock`), so no YAML text is written by hand. Keys are
+  written in the order of ova_fmt's fixtures. A failed write leaves the
+  old file in place: it goes to `NAME.tmp`, then is renamed.
+- **Found in Phase 3: libfyaml's emitter writes a `CreateScalar`'s text
+  plain even where plain YAML can't hold it** (scratch probes,
+  2026-10-09): `#1 fan` reads back as a comment, blanks at either end
+  are lost, and text starting with a quote, `- `, `? `, `|`, `>`, `%`,
+  `@` or a backquote makes a file that doesn't parse. libfyaml 0.8 has
+  no way to set a scalar's style. Fixed in polibfyaml, with the user's
+  go-ahead: `CreateStyledScalar(text, style)` parses the scalar from
+  YAML text the binding writes itself (double-quoted, a literal block,
+  or plain where surely safe), which the emitter then keeps (its
+  PLAN.md, "Scalar styles"; `TestStyles`). `OvaSave` writes text of
+  more than one line as a literal block, as ova_fmt's fixtures have
+  it, and any other text plain where that is safe, else double-quoted;
+  numbers, booleans and keys plain.
+- OvaEntities trims the background and the other text sections on
+  loading, as both ova_fmts do, so blanks at their ends don't survive
+  a load, though the file keeps them.
 
 ### Changes to ova_fmt
 
@@ -614,7 +632,7 @@ committed in their own repos, with the user's go-ahead.
 | `OvaCg` (main) | the command line (ArgParser: a file to open, `--rulebook`, `--viewer`), then the window |
 | `OvaRules` | the data tables above: names, kinds, pages, costs, flags |
 | `OvaCalc` | the calculations: END, ROLL, DX, Defense, Health, Endurance, TV, totals, limits and warnings |
-| `OvaCharacter` | the character being built, with change notification |
+| `OvaCharacter` | the character being built, loaded from a file (change notification comes with the window, Phase 5) |
 | `OvaEntities` | po_ova_fmt's loader, copied |
 | `OvaSave` | the YAML writer, through polibfyaml's emitter |
 | `OvaViewer` | the rulebook's path, the viewer chosen, reusing a running one (okular over D-Bus, evince, mupdf) |
@@ -709,6 +727,39 @@ committed in their own repos, with the user's go-ahead.
    `Fyaml.ToFile`); `TestFiles`: each fixture loaded, saved and
    formatted by po_ova_fmt gives the same output as the fixture (`-H`
    and the terse format), and overrides survive a save and a load.
+   [done]
+   - `src/OvaCharacter.Mod`: `Character` extends `OvaCalc.Sheet` (and
+     `Trait`, `Mod`, `Attack`, `Spell` theirs) with names, details,
+     notes, text, fluff, and which optional keys the file had; `Build`
+     makes one from what OvaEntities read; `Load` reads a file
+     (`ReadEntity`), builds it, and keeps each number of the file that
+     differs from the rules' as an override, in `notices`.
+   - `src/OvaSave.Mod`: `Save` (through `NAME.tmp`) and `ToText`, the
+     keys of every key OvaEntities reads but none of Phase 3a's.
+   - polibfyaml gained `CreateStyledScalar` ("Saving", above).
+   - `test/TestFiles.Mod` (104 checks): the 15 fixtures with one
+     character loaded, saved into `obj/files/`, loaded again (the same
+     YAML, the same notices), with the notices each must give (none for
+     seven samples; Ai 2, Braun 1, Fukiko 9, Miho 2, Natsuki 1, which
+     Phase 3a's keys and the overrides key will remove; po_ova_fmt's
+     own Escaping, Unsorted and Vehicle, whose numbers aren't the
+     rules'); the files refused (Broken, two characters, missing); a
+     failed save; a character with awkward text (a leading `#`, quotes,
+     a block's first line indented) saved and read back. `test/files.sh`
+     (105 checks): each saved copy formats as its fixture in all seven
+     of po_ova_fmt's formats (terse, `-H`, `-G`, `-M`, `-g`, `-m`,
+     `-O`); `make test` runs it with `PO_OVA_FMT`. `TestCalc` builds
+     through `OvaCharacter` now; `test/Samples.Mod` is gone.
+   - Shown to fail with nine bugs planted in `OvaSave` and
+     `OvaCharacter` (affinity, counts-as, a form's Weaknesses, a spell's
+     ability or Barrier's Defense not written, the computed number
+     written for an override, a fluff key misspelled, the file's numbers
+     ignored, plain `CreateScalar` for text): each failed TestFiles,
+     files.sh or both; the last only the awkward-text check, as no
+     fixture has such text. Valgrind clean.
+   - "Overrides survive a save and a load" needs the overrides key:
+     Phase 3a. Until then they survive as numbers that come back as
+     overrides, with notices (checked: the same notices after a save).
 3a. **ova_fmt's new keys**, in the Ada ova_fmt and then po_ova_fmt
    ("Changes to ova_fmt"), before the generator saves them; then
    `OvaEntities` copied again.

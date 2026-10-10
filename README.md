@@ -13,9 +13,10 @@ It is written in Oberon-2 for poc, the
 [Peaseblossom](https://github.com/tkurtbond/peaseblossom) Oberon
 compiler, with pofltk (FLTK 1.4) for the window and polibfyaml for YAML.
 
-**Status: Phase 2 of PLAN.md** -- the rules and their calculations,
-tested against the book's sample characters, and a window
-with a menu bar that opens and quits. The window shows nothing else yet.
+**Status: Phase 3 of PLAN.md** -- the rules and their calculations,
+tested against the book's sample characters; loading and saving
+characters in ova_fmt's YAML; and a window with a menu bar that opens
+and quits. The window shows nothing else yet.
 
 ## Usage
 
@@ -38,6 +39,10 @@ You need:
   `POC_OBERON_LIBRARIES` (default `/usr/local/sw/versions/oberon/poc/lib`).
   Install them again after upgrading poc, which refuses a library
   another version built.
+- For `make test`: po_ova_fmt, built, at `PO_OVA_FMT` (default
+  `~/Repos/RPG/Tools/po_ova_fmt/po_ova_fmt`): what the generator saves
+  must format as the file it loaded.
+- polibfyaml with `CreateStyledScalar` (2026-10-09 or later).
 - For the window tests: Xvfb (`xvfb-run`) and `xdotool`, or sway.
 - For `make valgrind`: valgrind, and a checkout of pofltk at `POFLTK`
   (default `~/Repos/Oberon/pofltk`), for its `test/vg-check.sh`.

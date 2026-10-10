@@ -46,8 +46,8 @@ PROGSRC := $(wildcard src/*.Mod src/*.c)
 
 # Test support modules, and test programs (test/<name>.Mod, main
 # modules): TESTS need no display, GUITESTS do.
-TESTSUPPORT := test/Check.Mod test/Samples.Mod
-TESTS       := TestRules TestCalc
+TESTSUPPORT := test/Check.Mod
+TESTS       := TestRules TestCalc TestFiles
 GUITESTS    := TestWindow
 TESTBINS    := $(TESTS:%=$(OBJ)/%)
 GUITESTBINS := $(GUITESTS:%=$(OBJ)/%)
@@ -73,18 +73,27 @@ tests: $(PROGRAM) $(TESTBINS) $(GUITESTBINS)
 $(OBJ):
 	mkdir -p $@
 
+# TestFiles saves its copies here, for test/files.sh.
+$(OBJ)/files: | $(OBJ)
+	mkdir -p $@
+
 $(PROGRAM): src/$(MAIN).Mod $(PROGSRC) $(SHAREDLIBMANIFESTS) | $(OBJ)
 	$(POC) $(POCFLAGS) $(IMPORTS) -output-dir $(OBJ) $(LINK) -o $@ $<
 
 $(OBJ)/Test%: test/Test%.Mod $(TESTSUPPORT) $(PROGSRC) $(SHAREDLIBMANIFESTS) | $(OBJ)
 	$(POC) $(POCFLAGS) $(IMPORTS) -import-path test -output-dir $(OBJ) $(LINK) -o $@ $<
 
-# What needs no display: the unit tests, then test/cli.sh; fail at the
-# end if any failed.
-test: $(PROGRAM) $(TESTBINS)
+# po_ova_fmt, the oracle for files: what the generator saves must
+# format as the file it loaded (test/files.sh, after TestFiles).
+PO_OVA_FMT ?= $(HOME)/Repos/RPG/Tools/po_ova_fmt/po_ova_fmt
+
+# What needs no display: the unit tests, test/files.sh, then
+# test/cli.sh; fail at the end if any failed.
+test: $(PROGRAM) $(TESTBINS) | $(OBJ)/files
 	@status=0; for t in $(TESTS); do \
 	  echo "== $$t"; (cd test && timeout $(TIMEOUT) ../$(OBJ)/$$t) || status=1; \
 	done; \
+	echo "== files.sh"; test/files.sh $(PO_OVA_FMT) || status=1; \
 	echo "== cli.sh"; test/cli.sh ./$(PROGRAM) || status=1; \
 	exit $$status
 
@@ -143,7 +152,7 @@ test-sway: tests
 POFLTK ?= $(HOME)/Repos/Oberon/pofltk
 VALGRIND ?= valgrind --leak-check=full --show-leak-kinds=all --errors-for-leak-kinds=none \
   --error-exitcode=99 --suppressions=$(CURDIR)/test/poc-gc.supp
-valgrind: tests display
+valgrind: tests display | $(OBJ)/files
 	@status=0; for t in $(TESTS) $(GUITESTS); do \
 	  echo "== valgrind $$t"; \
 	  (cd test && $(VALGRIND) --log-file=../$(OBJ)/$$t.vg ../$(OBJ)/$$t) || status=1; \

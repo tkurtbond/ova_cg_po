@@ -2,7 +2,7 @@ MODULE TestCalc; (* OvaCalc: the sample characters, and a case for each rule *)
 
 (* The oracle is the book's sample characters (PLAN.md, "Testing"):
    each of the twelve in test/data/ (ova_fmt's test-data/, pp. 23-47) is
-   built into a sheet (Samples) and every number its file holds is
+   built into a sheet (OvaCharacter.Build) and every number its file holds is
    compared with OvaCalc's: each attack's ROLL, DX and END, Defense
    (and Barrier's), Health, Endurance, TV, each Ability's END and
    each spell's, and the same for a Companion with combat stats. The two
@@ -15,7 +15,7 @@ MODULE TestCalc; (* OvaCalc: the sample characters, and a case for each rule *)
    Endurance, TV, each limit and warning, and overrides counting
    downstream. Needs no display. *)
 
-IMPORT Check, OvaCalc, OvaEntities, OvaRules, OvaText, Out, Ropes, Samples, Strings;
+IMPORT Check, OvaCalc, OvaCharacter, OvaEntities, OvaRules, OvaText, Out, Ropes, Strings;
 
 CONST
   DataDir = "data/";
@@ -189,14 +189,14 @@ BEGIN
 END CheckEntity;
 
 PROCEDURE Sample(name: ARRAY OF CHAR);
-  VAR path: ARRAY 64 OF CHAR; e: OvaEntities.Entity; s: OvaCalc.Sheet; a: OvaCalc.Attack; i: INTEGER;
+  VAR path: ARRAY 64 OF CHAR; e: OvaEntities.Entity; s: OvaCalc.Sheet; a: OvaCalc.Attack; i, n: INTEGER;
+    msg: Ropes.Rope;
 BEGIN
   COPY(name, sample);
   path := DataDir; Strings.Append(name, path); Strings.Append(".yaml", path);
-  e := Samples.Load(path);
-  L("loaded"); Check.Check(e # NIL, label);
+  L("loaded"); Check.Check(OvaCharacter.ReadEntity(path, e, n, msg) & (n = 1), label);
   IF e = NIL THEN RETURN END;
-  s := Samples.Build(e);
+  s := OvaCharacter.Build(e);
   (* What the files have no key for. *)
   IF name = "Ai" THEN
     a := s.attacks; WHILE a # NIL DO a.telekinetic := TRUE; a := a.next END

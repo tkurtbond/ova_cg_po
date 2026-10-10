@@ -55,7 +55,8 @@ labels are the printed numbers (`/PageLabels`: roman for indexes 0 and
 
 ```sh
 make                 # obj/ (poc output) and ./po_ova_cg
-make test            # what needs no display: unit tests (TESTS), test/cli.sh
+make test            # what needs no display: unit tests (TESTS), test/files.sh
+                     #   (needs po_ova_fmt built: PO_OVA_FMT), test/cli.sh
 make check-pages     # OvaRules' pages against the rulebook PDF's headings (needs mutool)
 make test-headless   # make test-gui on Xvfb: window tests (GUITESTS), the
                      #   program running RUNTIME seconds, test/quit.sh (Ctrl+Q)
@@ -142,6 +143,10 @@ callbacks are module-level procedures; no exceptions; no call chaining;
   key when saved, and a test.
 - **Save through polibfyaml's emitter** (`Fyaml.NewDocument`, the
   `Create*` procedures, `ToFile`), never by writing YAML text by hand.
+  **Text goes through `CreateStyledScalar`, never `CreateScalar`**: the
+  installed libfyaml writes a `CreateScalar` plain even where that
+  changes or breaks it (`#1 fan`, a leading quote; PLAN.md, "Files").
+  `CreateScalar` is for keys and numbers.
 - **Every Oberon object FLTK can call back into must be reachable from
   a module-level root** (pofltk: the collector can't see FLTK's
   pointers). pofltk keeps open widgets reachable; keep the program's
@@ -185,7 +190,12 @@ callbacks are module-level procedures; no exceptions; no call chaining;
   same), and committed only with the user's go-ahead. The generator
   saves a key only once both ova_fmts read it.
 - **A file the program saves must load in po_ova_fmt** and format the
-  same as the file it was loaded from (round trip, PLAN.md).
+  same as the file it was loaded from (round trip, PLAN.md):
+  `TestFiles` saves each fixture into `obj/files/`, and `test/files.sh`
+  formats both in every po_ova_fmt format and compares. A file's number
+  that differs from the rules' is kept as an override with a notice;
+  `TestFiles` fixes how many each fixture gives, so a new rule or key
+  that changes them shows there.
 - Unit tests print `ok   - <label>` / `FAIL - <label>` and end with
   `All checks passed.` or `<N> check(s) failed.`, exiting 1 on failure,
   as po_ova_fmt's do (`test/Check.Mod`).
