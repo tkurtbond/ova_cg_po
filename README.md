@@ -13,7 +13,7 @@ It is written in Oberon-2 for poc, the
 [Peaseblossom](https://github.com/tkurtbond/peaseblossom) Oberon
 compiler, with pofltk (FLTK 1.4) for the window and polibfyaml for YAML.
 
-**Status: Phase 6 of PLAN.md** -- the rules and their calculations,
+**Status: Phase 7 of PLAN.md** -- the rules and their calculations,
 tested against the book's sample characters; loading and saving
 characters in ova_fmt's YAML, with the keys added to both ova_fmts for
 the generator (overrides among them); opening the rulebook at a page
@@ -24,9 +24,11 @@ and warnings, the Combat Notes, and the combat box with the attack
 dialog, with an override box beside every computed number. The
 Background tab has the summary, the Background, Appearance,
 Personality and Other Notes, the portrait, the fluff and the notes.
-The File menu has New, Open, Save and Save As. Linked content
-(Transformation, Companion, spells, Vehicle), limits and preferences
-are still to come.
+An Ability with linked content opens a dialog for it: a
+Transformation's form, a Magic's spells, or a Companion's or Vehicle's
+sheet; Character > Transformed form shows the sheet in the form. The
+File menu has New, Open, Save and Save As. Limits and preferences are
+still to come.
 
 ## Usage
 

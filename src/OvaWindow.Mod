@@ -20,7 +20,7 @@ MODULE OvaWindow; (* The main window: its menu bar, the sheet's first tab, and t
    answer it. *)
 
 IMPORT Fl, FlButtons, FlBrowsers, FlDialogs, FlInputs, FlLayout, FlMenus, OvaAttackDialog, OvaBackground, OvaCalc,
-  OvaCharacter, OvaPaths, OvaRules, OvaSave, OvaText, OvaViewer, OvaWidgets, Ropes;
+  OvaCharacter, OvaLinkedDialog, OvaPaths, OvaRules, OvaTraitPanel, OvaSave, OvaText, OvaViewer, OvaWidgets, Ropes;
 
 CONST
   Width = 1280; Height = 800; BarHeight = 25; TabHeight = 25;
@@ -53,15 +53,6 @@ TYPE
   (* An Ability's END. *)
   TraitEnd = POINTER TO RECORD (OvaWidgets.TargetDesc) trait: OvaCalc.Trait END;
 
-  Traits = POINTER TO ARRAY OF OvaCharacter.Trait;
-
-  (* The Abilities' or the Weaknesses' list and editor. *)
-  TraitPanel* = POINTER TO TraitPanelDesc;
-  TraitPanelDesc* = RECORD (OvaWidgets.PanelDesc)
-    shown: Traits;  (* shown[i]: line i + 1's *)
-    n: INTEGER
-  END;
-
   (* One attack's row in the combat box. *)
   AttackRow* = POINTER TO AttackRowDesc;
   AttackRowDesc* = RECORD (Fl.GroupDesc)
@@ -86,9 +77,11 @@ VAR
   modified-: BOOLEAN;
 
   nameIn-, playerIn-, taglineIn-: FlInputs.Input;
-  abilities-, weaknesses-: TraitPanel;
+  abilities-, weaknesses-: OvaTraitPanel.TraitPanel;
   abilityEnd-: OvaWidgets.NumberBox;   (* the chosen Ability's END *)
   abilityMods-: FlButtons.Button;      (* its Perks and Flaws *)
+  abilityLinked-: FlButtons.Button;    (* its linked content: "Spells...", "Form...", ... *)
+  transformedItem-: INTEGER;           (* Character > Transformed form *)
   numbers-: ARRAY NSheetNumbers OF OvaWidgets.NumberBox;  (* the sheet's, by SheetNumber.which *)
   warnings-: FlBrowsers.Browser;
   combatNotes-: FlInputs.MultilineInput;
@@ -357,108 +350,44 @@ END SheetBox;
 
 (* ---- Abilities and Weaknesses ---- *)
 
-PROCEDURE (p: TraitPanel) Fill*;
-  VAR t: OvaCalc.Trait; x: OvaCharacter.Trait; line: Rope; s: OvaText.String; page: ARRAY 16 OF CHAR;
-BEGIN
-  p.n := 0; t := character.traits;
-  WHILE t # NIL DO IF t.kind = p.kind THEN INC(p.n) END; t := t.next END;
-  NEW(p.shown, p.n + 1);
-  p.n := 0; t := character.traits;
-  WHILE t # NIL DO
-    IF t.kind = p.kind THEN
-      x := t(OvaCharacter.Trait); p.shown[p.n] := x; INC(p.n);
-      IF x.level > 0 THEN line := R("+") ELSE line := NIL END;
-      OvaText.AddInt(line, x.level); OvaText.Add(line, " ");
-      line := Ropes.Cat(line, x.name);
-      IF x.hasDetail THEN OvaText.Add(line, " ("); line := Ropes.Cat(line, x.detail); OvaText.Add(line, ")") END;
-      line := Ropes.AppendChar(line, 9X);
-      OvaRules.PageText(x.item, page); OvaText.Add(line, page);
-      s := OvaText.Chars(line); p.browser.Add(s^)
-    END;
-    t := t.next
-  END
-END Fill;
-
-(* The line t is on. *)
-PROCEDURE (p: TraitPanel) LineOf(t: OvaCalc.Trait): INTEGER;
-  VAR i: INTEGER; l: OvaCalc.Trait;
-BEGIN
-  i := 0; l := character.traits;
-  WHILE (l # NIL) & (l # t) DO IF l.kind = p.kind THEN INC(i) END; l := l.next END;
-  RETURN i + 1
-END LineOf;
-
-(* The selected Ability's END and Perks and Flaws: the box and button
-   work only for one with them. *)
+(* The selected Ability's END, Perks and Flaws, and linked content: the
+   box and buttons work only for one with them. *)
 PROCEDURE ShowAbility(t: OvaCharacter.Trait);
-  VAR e: TraitEnd;
+  VAR e: TraitEnd; linked: INTEGER;
 BEGIN
+  linked := OvaRules.NoLink;
   IF t = NIL THEN
     abilityEnd.target := NIL; abilityEnd.Deactivate; abilityMods.Deactivate
   ELSE
     NEW(e); e.trait := t; abilityEnd.target := e;
     IF t.hasEnd THEN abilityEnd.Activate ELSE abilityEnd.Deactivate END;
-    abilityMods.Activate
+    abilityMods.Activate;
+    IF t.item # NIL THEN linked := t.item.linked END
   END;
+  CASE linked OF
+    OvaRules.NoLink: abilityLinked.SetLabel("Linked...")
+  | OvaRules.Spells: abilityLinked.SetLabel("Spells...")
+  | OvaRules.Form: abilityLinked.SetLabel("Form...")
+  | OvaRules.Partner: abilityLinked.SetLabel("Companion...")
+  | OvaRules.Machine: abilityLinked.SetLabel("Vehicle...")
+  END;
+  IF linked = OvaRules.NoLink THEN abilityLinked.Deactivate ELSE abilityLinked.Activate END;
   abilityEnd.Display
 END ShowAbility;
 
-PROCEDURE (p: TraitPanel) Load*(line: INTEGER);
-  VAR t: OvaCharacter.Trait; s: OvaText.String;
-BEGIN
-  t := p.shown[line - 1];
-  p.Choose(t.item);
-  p.spinner.SetValue(t.level);
-  s := OvaText.Chars(t.detail); p.text.SetValue(s^);
-  IF p.kind = OvaRules.Ability THEN ShowAbility(t) END
-END Load;
+PROCEDURE AbilitySelected(p: OvaTraitPanel.TraitPanel; t: OvaCharacter.Trait);
+BEGIN ShowAbility(t)
+END AbilitySelected;
 
-(* The detail typed; NIL for none. *)
-PROCEDURE (p: TraitPanel) Detail(): Rope;
-BEGIN RETURN OvaText.Trim(InputText(p.text))
-END Detail;
-
-PROCEDURE (p: TraitPanel) Add*(): INTEGER;
-  VAR it: OvaRules.Item; t: OvaCharacter.Trait;
-BEGIN
-  it := p.Item();
-  IF it = NIL THEN tell(R("Choose a name first.")); RETURN 0 END;
-  t := OvaCharacter.NewTrait(it, p.kind, SHORT(ENTIER(p.spinner.Value())), NIL, p.Detail());
-  OvaCharacter.InsertTrait(character.traits, t);
-  OvaCharacter.Recompute(character);
-  RETURN p.LineOf(t)
-END Add;
-
-(* A name the tables don't have stays, if none is chosen. *)
-PROCEDURE (p: TraitPanel) Change*(line: INTEGER): INTEGER;
-  VAR it: OvaRules.Item; t: OvaCharacter.Trait;
-BEGIN
-  t := p.shown[line - 1];
-  it := p.Item(); IF it = NIL THEN it := t.item END;
-  OvaCharacter.ChangeTrait(character.traits, t, it, SHORT(ENTIER(p.spinner.Value())), p.Detail());
-  OvaCharacter.Recompute(character);
-  RETURN p.LineOf(t)
-END Change;
-
-PROCEDURE (p: TraitPanel) Remove*(line: INTEGER): BOOLEAN;
-BEGIN
-  OvaCharacter.RemoveTrait(character.traits, p.shown[line - 1]);
-  IF p.kind = OvaRules.Ability THEN ShowAbility(NIL) END;
-  OvaCharacter.Recompute(character);
-  RETURN TRUE
-END Remove;
-
-PROCEDURE (p: TraitPanel) Changed*;
+PROCEDURE PanelChanged(p: OvaTraitPanel.TraitPanel);
 BEGIN Changed
-END Changed;
+END PanelChanged;
 
-PROCEDURE OpenTraitPanel(VAR p: TraitPanel; x, kind: INTEGER; title: ARRAY OF CHAR);
+PROCEDURE OpenTraitPanel(VAR p: OvaTraitPanel.TraitPanel; x, kind: INTEGER; title: ARRAY OF CHAR);
 BEGIN
-  NEW(p); p.n := 0; NEW(p.shown, 1);
-  OvaWidgets.OpenPanel(p, x, Top + 65, 305, 220, kind, title, "level", "detail");
-  IF kind = OvaRules.Ability THEN p.spinner.SetBounds(1, 5); p.spinner.SetValue(1)
-  ELSE p.spinner.SetBounds(-3, -1); p.spinner.SetValue(-1)
-  END
+  NEW(p); OvaTraitPanel.Open(p, x, Top + 65, 305, 220, kind, title);
+  p.changed := PanelChanged;
+  IF kind = OvaRules.Ability THEN p.selected := AbilitySelected END
 END OpenTraitPanel;
 
 PROCEDURE ModsDone(changed: BOOLEAN);
@@ -468,11 +397,29 @@ BEGIN
 END ModsDone;
 
 PROCEDURE ModsAction(w: Fl.Widget);
-  VAR line: INTEGER;
+  VAR t: OvaCharacter.Trait;
 BEGIN
-  line := abilities.browser.Value();
-  IF line > 0 THEN OvaAttackDialog.EditMods(character, abilities.shown[line - 1], ModsDone) END
+  t := abilities.Selected();
+  IF t # NIL THEN OvaAttackDialog.EditMods(character, t, ModsDone) END
 END ModsAction;
+
+(* After the linked dialog: what it changed is in the character already. *)
+PROCEDURE LinkedDone;
+BEGIN abilities.Refresh(abilities.browser.Value())
+END LinkedDone;
+
+PROCEDURE LinkedChanged;
+BEGIN Changed
+END LinkedChanged;
+
+PROCEDURE LinkedAction(w: Fl.Widget);
+  VAR t: OvaCharacter.Trait;
+BEGIN
+  t := abilities.Selected();
+  IF (t # NIL) & (t.item # NIL) & (t.item.linked # OvaRules.NoLink) THEN
+    OvaLinkedDialog.Edit(character, t, LinkedDone)
+  END
+END LinkedAction;
 
 (* ---- The combat box ---- *)
 
@@ -582,14 +529,34 @@ BEGIN
   i.SetWhen(Fl.WhenChanged); i.action := TextAction
 END TextInput;
 
+(* ---- The transformed form ---- *)
+
+(* Character > Transformed form: the sheet shown, and computed, in the
+   Transformation's form (p. 63), as Fukiko's is; the combat key
+   transformed. *)
+PROCEDURE TransformedAction(w: Fl.Widget);
+BEGIN
+  character.transformed := bar.ItemFlags(transformedItem) * FlMenus.MenuValue # {};
+  Changed
+END TransformedAction;
+
+(* The menu's toggle set from the character. *)
+PROCEDURE ShowTransformed;
+  VAR f: SET;
+BEGIN
+  f := bar.ItemFlags(transformedItem);
+  IF character.transformed THEN f := f + FlMenus.MenuValue ELSE f := f - FlMenus.MenuValue END;
+  bar.SetItemFlags(transformedItem, f)
+END ShowTransformed;
+
 (* ---- Everything shown ---- *)
 
 PROCEDURE ShowAll;
 BEGIN
   SetInput(nameIn, character.name); SetInput(playerIn, character.player);
   SetInput(taglineIn, character.tagline); SetInput(combatNotes, character.combatNotes);
-  ShowAbility(NIL);
-  abilities.Refresh(0); weaknesses.Refresh(0);
+  abilities.Show(character, NIL, character); weaknesses.Show(character, NIL, character);
+  ShowTransformed;
   ShowRows;
   IF path # NIL THEN OvaBackground.Show(character, OvaPaths.Dir(path)) ELSE OvaBackground.Show(character, NIL) END;
   ShowTitle
@@ -724,6 +691,8 @@ BEGIN
   y := abilities.bottom + 5;
   NEW(abilityMods); FlButtons.OpenButton(abilityMods, LeftX, y, 140, Row, "Perks and Flaws...");
   abilityMods.action := ModsAction;
+  NEW(abilityLinked); FlButtons.OpenButton(abilityLinked, LeftX + 305 + 10, y, 140, Row, "Linked...");
+  abilityLinked.action := LinkedAction;
   NEW(abilityEnd); OvaWidgets.OpenNumberBox(abilityEnd, LeftX + 190, y, "END");
   abilityEnd.SetAlign(Fl.AlignLeft); abilityEnd.allowPlus := FALSE; abilityEnd.changed := NumberChanged;
   y := y + Row + 25;
@@ -773,6 +742,8 @@ BEGIN
   saveItem := bar.Add("&File/&Save", ORD("s"), Fl.Command, SaveAction, {});
   saveAsItem := bar.Add("&File/Save &As...", ORD("s"), Fl.Command + Fl.Shift, SaveAsAction, FlMenus.MenuDivider);
   quitItem := bar.Add("&File/&Quit", ORD("q"), Fl.Command, Quit, {});
+  transformedItem := bar.Add("&Character/&Transformed form", ORD("t"), Fl.Command, TransformedAction,
+    FlMenus.MenuToggle);
   rulebookItem := bar.Add("&Rulebook/&Open", 0, {}, RulebookAction, {});
   NEW(tabs); FlLayout.OpenTabs(tabs, 0, BarHeight, Width, Height - BarHeight, "");
   BuildSheetTab;
@@ -789,6 +760,7 @@ END Build;
 PROCEDURE Close*;
 BEGIN
   IF OvaAttackDialog.dialog # NIL THEN OvaAttackDialog.Cancel END;
+  IF OvaLinkedDialog.dialog # NIL THEN OvaLinkedDialog.Close END;
   IF rebuild.Pending() THEN Fl.RemoveTimeout(rebuild) END;
   OvaWidgets.ClosePanel(abilities); OvaWidgets.ClosePanel(weaknesses);
   window.Delete;
@@ -803,6 +775,7 @@ BEGIN
   tell := DialogTell; ask := DialogAsk; choosePath := DialogPath;
   OvaWidgets.openPage := OpenPage; OvaAttackDialog.tell := Tell;
   OvaBackground.tell := Tell; OvaBackground.changed := BackgroundChanged;
+  OvaTraitPanel.tell := Tell; OvaLinkedDialog.tell := Tell; OvaLinkedDialog.changed := LinkedChanged;
   rulebookOption := NIL; OvaViewer.Default(viewer);
   character := NIL; path := NIL; modified := FALSE
 END OvaWindow.

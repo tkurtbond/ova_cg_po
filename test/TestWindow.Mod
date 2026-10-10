@@ -10,7 +10,8 @@ MODULE TestWindow; (* OvaWindow: the first tab, driven as a user would, and its 
    every name shown; an override changes what is shown, saved, and
    computed from it, and clearing it undoes that. *)
 
-IMPORT Check, Fl, FlBrowsers, OvaAttackDialog, OvaCalc, OvaCharacter, OvaRules, OvaSave, OvaText, OvaWidgets, OvaWindow,
+IMPORT Check, Fl, FlBrowsers, OvaAttackDialog, OvaCalc, OvaCharacter, OvaRules, OvaSave, OvaText, OvaTraitPanel,
+  OvaWidgets, OvaWindow,
   Out, Ropes;
 
 CONST SavePath = "../obj/window.yaml";
@@ -106,7 +107,7 @@ END AllShown;
 
 (* Whether p's browser has a line for each trait of its kind, in the
    model's order: "+2 Flight (on a broom)", a tab, and its page. *)
-PROCEDURE ListShown(p: OvaWindow.TraitPanel): BOOLEAN;
+PROCEDURE ListShown(p: OvaTraitPanel.TraitPanel): BOOLEAN;
   VAR l: OvaCalc.Trait; x: OvaCharacter.Trait; r: Rope; line, pg: ARRAY 256 OF CHAR; n: INTEGER; ok: BOOLEAN;
 BEGIN
   ok := TRUE; n := 0; l := OvaWindow.character.traits;

@@ -48,7 +48,7 @@ PROGSRC := $(wildcard src/*.Mod src/*.c)
 # modules): TESTS need no display, GUITESTS do.
 TESTSUPPORT := test/Check.Mod
 TESTS       := TestRules TestCalc TestFiles TestModel TestPaths TestSpawn TestViewer
-GUITESTS    := TestWindow TestBackground
+GUITESTS    := TestWindow TestBackground TestLinked
 TESTBINS    := $(TESTS:%=$(OBJ)/%)
 GUITESTBINS := $(GUITESTS:%=$(OBJ)/%)
 # Seconds a test may run before it counts as hung, and how long the

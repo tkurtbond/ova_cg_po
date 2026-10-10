@@ -574,11 +574,19 @@ BEGIN
   t.next := NIL
 END RemoveTrait;
 
+(* What linked content an item has: OvaRules.NoLink for none, or NIL. *)
+PROCEDURE Linked(it: OvaRules.Item): INTEGER;
+BEGIN IF it = NIL THEN RETURN OvaRules.NoLink ELSE RETURN it.linked END
+END Linked;
+
 (* Changes t to item it at level with detail, and moves it to its new
-   place in list. Its Perks, Flaws and linked content stay. *)
+   place in list. Its Perks and Flaws stay; its linked content stays
+   if it keeps the same kind (Magic, Arcane to Magic, Witchcraft keeps
+   the spells), and is dropped if not, as the file couldn't hold it. *)
 PROCEDURE ChangeTrait*(VAR list: OvaCalc.Trait; t: Trait; it: OvaRules.Item; level: INTEGER; detail: Rope);
 BEGIN
   RemoveTrait(list, t);
+  IF Linked(it) # Linked(t.item) THEN t.form := NIL; t.spells := NIL; t.partner := NIL END;
   IF it # t.item THEN
     t.item := it;
     IF it # NIL THEN t.name := Ropes.FromString(it.name) END;
@@ -587,6 +595,44 @@ BEGIN
   t.level := level; t.hasDetail := detail # NIL; t.detail := detail;
   InsertTrait(list, t)
 END ChangeTrait;
+
+(* A new sheet for t, a Companion (a Secondary NPC's sheet, p. 52) or a
+   Vehicle (a character's, p. 64): named t's detail, or what it is;
+   with a combat block, not a Fragment. *)
+PROCEDURE NewPartner*(t: Trait): Character;
+  VAR c: Character;
+BEGIN
+  ASSERT((t.item # NIL) & ((t.item.linked = OvaRules.Partner) OR (t.item.linked = OvaRules.Machine)));
+  NEW(c);
+  IF t.item.linked = OvaRules.Partner THEN
+    InitCharacter(c, OvaCalc.CompanionSheet); c.label := Ropes.FromString("Companion")
+  ELSE
+    InitCharacter(c, OvaCalc.Character); c.label := Ropes.FromString("Vehicle")
+  END;
+  IF t.hasDetail THEN c.name := t.detail ELSE c.name := c.label END;
+  RETURN c
+END NewPartner;
+
+(* A new spell named name, mimicking ability (the Ability's name; it,
+   OvaRules', or NIL) at level. *)
+PROCEDURE NewSpell*(name, ability: Rope; it: OvaRules.Item; level: INTEGER): Spell;
+  VAR sp: Spell;
+BEGIN
+  NEW(sp); OvaCalc.InitSpell(sp, it, level); sp.name := name; sp.ability := ability;
+  RETURN sp
+END NewSpell;
+
+PROCEDURE RemoveSpell*(t: OvaCalc.Trait; sp: OvaCalc.Spell);
+  VAR p: OvaCalc.Spell;
+BEGIN
+  IF t.spells = sp THEN t.spells := sp.next
+  ELSE
+    p := t.spells;
+    WHILE (p # NIL) & (p.next # sp) DO p := p.next END;
+    IF p # NIL THEN p.next := sp.next END
+  END;
+  sp.next := NIL
+END RemoveSpell;
 
 (* A new attack named name, with no Perks or Flaws. *)
 PROCEDURE NewAttack*(name: Rope): Attack;

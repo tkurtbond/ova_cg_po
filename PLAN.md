@@ -353,8 +353,9 @@ Viewer command...).
      to +5, or -1 to -3), a detail `Input`, and Add, Change, Remove and
      **?** buttons. **?** opens the rulebook at the chosen name's page.
      An Ability with linked content (Transformation, Companion, Magic's
-     spells, Vehicle) gets an Edit button that opens a dialog of the
-     same shape for its own items;
+     spells, Vehicle) activates a button under the Abilities, labelled
+     for it (Form..., Companion..., Spells..., Vehicle...), that opens
+     the linked dialog (Phase 7);
    - the running totals and limit warnings, under the two lists;
    - **Combat Notes**, a multi-line input;
    - **the combat box**: a scrolled list of attacks, one row each:
@@ -671,7 +672,8 @@ committed in their own repos, with the user's go-ahead.
 | `OvaBackground` | the second tab: the summary, the prose, the portrait, the fluff and the notes |
 | `OvaPaths` | paths made absolute, a file's directory, a path relative to a directory, rebasing the portrait's |
 | `OvaAttackDialog` | the attack dialog, and the Perks/Flaws editor an Ability with Perks uses |
-| `OvaLinkedDialog` | Transformation, Companion, spells, Vehicle |
+| `OvaTraitPanel` | a list of Abilities or Weaknesses and its editor: the character's, a form's, a partner's |
+| `OvaLinkedDialog` | an Ability's linked content: a Transformation's form, a Magic's spells, a Companion's or Vehicle's sheet |
 | `OvaText`, `OvaOut` | po_ova_fmt's, copied, as needed |
 
 `OvaRules`, `OvaCalc`, `OvaCharacter`, `OvaSave`, `OvaSpawn`,
@@ -1014,7 +1016,71 @@ committed in their own repos, with the user's go-ahead.
      `OvaPaths`, `..` kept as a name (4) and one `..` too few (5).
      Valgrind clean on Xvfb and sway.
 7. **Linked content**: Transformation (and the transformed form's
-   combat box), Companion, spells, Vehicle.
+   combat box), Companion, spells, Vehicle. [done]
+   - **One button**, under the Abilities' editor, labelled for the
+     selected Ability's linked content (Form..., Spells...,
+     Companion..., Vehicle...; "Linked..." and inactive for none),
+     rather than a button per kind.
+   - **`OvaTraitPanel`**: the first tab's Abilities and Weaknesses
+     panel, moved out of `OvaWindow` and generalized, so the same panel
+     edits the character's traits, a form's (an owner's `form` list),
+     and a partner's. After a change it recomputes `top`, the
+     character the list belongs to, and calls `changed`.
+   - **`OvaLinkedDialog`**, one modal dialog in three shapes: a form
+     (its Abilities and Weaknesses, the selected one's Perks, Flaws and
+     END, and a line of its levels against the 2 a level Transformation
+     pays for, in red when over; p. 63); spells (name, the Ability
+     mimicked, level, and END with its override box; p. 57-58); a
+     partner's sheet (name, Fragment, combat stats, Abilities and
+     Weaknesses, attacks through the attack dialog, and the numbers
+     with their override boxes; Barrier's and Reserve's inactive
+     unless it has them). **It edits live and has only Close**, like
+     the first tab: every change is in the character at once. Close
+     waits while the attack dialog is open.
+   - **Character > Transformed form** (a toggle, Ctrl+T) shows and
+     computes the sheet in the form, and saves `transformed:`; the
+     combat box shows the form's numbers at once.
+   - `OvaCharacter.ChangeTrait` drops the form, spells or partner when
+     an Ability changes to one with another kind of linked content
+     (Magic, Arcane to Witchcraft keeps the spells; to Flight drops
+     them). A partner's sheet is made when its dialog first opens: a
+     Companion's starts as a Companion's sheet (20 and 20, p. 52), a
+     Vehicle's as a character's (p. 64); its name is the Ability's
+     detail, or the label ("Companion", "Vehicle") without one, and a
+     blank name typed becomes the label too, since the file needs one.
+   - **Found, and fixed in pofltk: deferred deletion freed twice.** A
+     widget deleted, or its group cleared, inside a callback is queued
+     with `Fl::delete_widget` but stays in its group; clearing or
+     deleting that group again outside a callback, before the queue
+     ran, deleted it at once, and the queue then freed it again (a
+     segfault in `Fl::do_widget_deletion`). The program never met it,
+     since `Fl::run` empties the queue between callbacks, but
+     `TestLinked` did: File > New from the menu, then
+     `OvaWindow.Load` called directly. pofltk now runs the queue
+     before deleting outside a callback (its `doc/fltk-issues.md`, 72;
+     2026-10-10, with the user's go-ahead), and `TestLinked` needs no
+     workaround.
+   - `TestLinked` (51 checks, on Xvfb and sway): the button's labels;
+     Fukiko's form listed, its levels against Transformation's, an
+     Ability added (her HEALTH counts it, saved, over in red), a form
+     Barrier's Perks and END, Close waiting for the attack dialog;
+     Transformed form off and on; Azyrus (a Fragment, no combat stats
+     then combat stats, renamed, a blank name, an Ability, a HEALTH
+     override saved, an attack added and removed); Auren's six spells
+     with their pages and END, one added, a level and an override, a
+     nameless one refused, one selected and removed; Magic, Arcane to
+     Witchcraft and to Flight; a new Companion (its sheet, 20 and 20,
+     saved) and a new Vehicle with no detail; Vehicle.yaml's
+     Thunderhawk; every widget deleted.
+   - Shown to fail with bugs planted: the spells kept on a change to
+     Flight (1 check failed), a Companion made on a character's sheet
+     (2), the over-budget line not red (1), Reserve's box active (1),
+     Spells... mislabelled (1), Transformed form inverted (2), the
+     combat box not shown again after the toggle (1), a
+     partner not named its detail (2), a Vehicle labelled Companion
+     (1); and, before pofltk's fix, the segfault.
+     `TestWindow` and `TestBackground` unchanged by the move to
+     `OvaTraitPanel`. Valgrind clean on Xvfb and sway.
 8. **Limits and warnings**, the settings dialog, preferences.
 9. **Finish**: valgrind clean, `make install`, README's user guide.
 
@@ -1026,7 +1092,7 @@ committed in their own repos, with the user's go-ahead.
 - `make test-viewers`: `OvaViewer` with the real okular, evince and
   mupdf, on `test/viewer.sh`'s own headless sway and private bus.
 - `make test-headless` / `test-sway`: the window tests (`TestWindow`,
-  `TestBackground`),
+  `TestBackground`, `TestLinked`),
   never on the desktop (AGENTS.md).
 - `make valgrind`: the unit tests and window tests under valgrind, with
   po_ova_fmt's and pofltk's suppressions and pofltk's `vg-check.sh`.
