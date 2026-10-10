@@ -182,6 +182,12 @@ callbacks are module-level procedures; no exceptions; no call chaining;
   `Fl.Wait`.
 - **Don't name a method after a widget's**: a `NumberBox` (a `Group`)
   shows its number with `Display`, since `Show` would replace FLTK's.
+- **`FlText.TextBuffer.Modified` runs when the program sets the text
+  too**, not only when the user types: `OvaBackground` sets `filling`
+  while it shows a character, so a load isn't a change.
+- **A portrait's path is relative to the YAML file**, so anything that
+  moves the file (Save As) rebases it with `OvaPaths.Rebase`; paths are
+  text, never looked up on disk.
 - **Browser lines are 1-based (`Value()` 0: none), `Choice` items
   0-based (-1: none).** A browser that shows names has
   `SetFormatChar(0X)`, so a name starting with `@` isn't a format code.

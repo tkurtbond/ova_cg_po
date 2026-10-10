@@ -1,10 +1,11 @@
-MODULE OvaWindow; (* The main window: its menu bar, and the sheet's first tab *)
+MODULE OvaWindow; (* The main window: its menu bar, the sheet's first tab, and the file *)
 
 (* PLAN.md, "The window". One window, a menu bar, and two tabs: the
    first, "Character", is the sheet's right half: the names, the
    Abilities and Weaknesses, the totals and warnings, the Combat Notes,
    and the combat box, with a box beside every computed number for its
-   override; the second, "Background", is Phase 6's.
+   override; the second, "Background", the sheet's left half, is
+   OvaBackground's.
 
    The character is OvaCharacter's, in a module variable: every change
    a widget makes goes into it, then OvaCharacter.Recompute, then the
@@ -18,8 +19,8 @@ MODULE OvaWindow; (* The main window: its menu bar, and the sheet's first tab *)
    (tell, ask, choosePath, and OvaWidgets.openPage), so a test can
    answer it. *)
 
-IMPORT Fl, FlButtons, FlBrowsers, FlDialogs, FlInputs, FlLayout, FlMenus, OvaAttackDialog, OvaCalc,
-  OvaCharacter, OvaRules, OvaSave, OvaText, OvaViewer, OvaWidgets, Ropes;
+IMPORT Fl, FlButtons, FlBrowsers, FlDialogs, FlInputs, FlLayout, FlMenus, OvaAttackDialog, OvaBackground, OvaCalc,
+  OvaCharacter, OvaPaths, OvaRules, OvaSave, OvaText, OvaViewer, OvaWidgets, Ropes;
 
 CONST
   Width = 1280; Height = 800; BarHeight = 25; TabHeight = 25;
@@ -278,6 +279,11 @@ BEGIN
   ShowTitle;
   ShowNumbers
 END Changed;
+
+(* After a change on the Background tab: text alone, nothing to compute. *)
+PROCEDURE BackgroundChanged;
+BEGIN modified := TRUE; ShowTitle
+END BackgroundChanged;
 
 (* ---- Numbers ---- *)
 
@@ -585,6 +591,7 @@ BEGIN
   ShowAbility(NIL);
   abilities.Refresh(0); weaknesses.Refresh(0);
   ShowRows;
+  IF path # NIL THEN OvaBackground.Show(character, OvaPaths.Dir(path)) ELSE OvaBackground.Show(character, NIL) END;
   ShowTitle
 END ShowAll;
 
@@ -624,13 +631,20 @@ BEGIN
   RETURN TRUE
 END Load;
 
-(* Saves to p; FALSE, said why, if it can't. *)
+(* Saves to p; FALSE, said why, if it can't. The portrait's path,
+   relative to the file, is rebased to p's directory first (OvaPaths),
+   and put back if the save fails. *)
 PROCEDURE SaveTo(p: Rope): BOOLEAN;
-  VAR msg: Rope; s: OvaText.String;
+  VAR msg, old, from, to: Rope; s: OvaText.String;
 BEGIN
+  old := character.portrait;
+  IF path # NIL THEN from := OvaPaths.Dir(path) ELSE from := NIL END;
+  to := OvaPaths.Dir(p);
+  character.portrait := OvaPaths.Rebase(old, from, to);
   s := OvaText.Chars(p);
-  IF ~OvaSave.Save(character, s^, msg) THEN tell(msg); RETURN FALSE END;
+  IF ~OvaSave.Save(character, s^, msg) THEN character.portrait := old; tell(msg); RETURN FALSE END;
   path := p; modified := FALSE; ShowTitle;
+  OvaBackground.SetDir(to);
   RETURN TRUE
 END SaveTo;
 
@@ -751,7 +765,6 @@ END BuildSheetTab;
 
 (* Opens the window, not yet shown, with a new character. *)
 PROCEDURE Build*;
-  VAR b: Fl.Box;
 BEGIN
   NEW(window); Fl.OpenDoubleWindow(window, Width, Height, Title);
   NEW(bar); FlMenus.OpenMenuBar(bar, 0, 0, Width, BarHeight, "");
@@ -763,10 +776,8 @@ BEGIN
   rulebookItem := bar.Add("&Rulebook/&Open", 0, {}, RulebookAction, {});
   NEW(tabs); FlLayout.OpenTabs(tabs, 0, BarHeight, Width, Height - BarHeight, "");
   BuildSheetTab;
-  NEW(backgroundTab); Fl.OpenGroup(backgroundTab, 0, BarHeight + TabHeight, Width, Height - BarHeight - TabHeight,
-    "Background");
-  NEW(b); Fl.OpenBox(b, 0, BarHeight + TabHeight, Width, 100, "(Phase 6)");
-  backgroundTab.End;
+  NEW(backgroundTab);
+  OvaBackground.Build(backgroundTab, 0, BarHeight + TabHeight, Width, Height - BarHeight - TabHeight);
   tabs.End;
   window.End;
   window.action := Quit;
@@ -781,6 +792,7 @@ BEGIN
   IF rebuild.Pending() THEN Fl.RemoveTimeout(rebuild) END;
   OvaWidgets.ClosePanel(abilities); OvaWidgets.ClosePanel(weaknesses);
   window.Delete;
+  OvaBackground.Close;
   window := NIL; bar := NIL; tabs := NIL; sheetTab := NIL; backgroundTab := NIL;
   abilities := NIL; weaknesses := NIL; rows := NIL; attackBox := NIL; warnings := NIL;
   nameIn := NIL; playerIn := NIL; taglineIn := NIL; combatNotes := NIL; abilityEnd := NIL; abilityMods := NIL;
@@ -790,6 +802,7 @@ END Close;
 BEGIN
   tell := DialogTell; ask := DialogAsk; choosePath := DialogPath;
   OvaWidgets.openPage := OpenPage; OvaAttackDialog.tell := Tell;
+  OvaBackground.tell := Tell; OvaBackground.changed := BackgroundChanged;
   rulebookOption := NIL; OvaViewer.Default(viewer);
   character := NIL; path := NIL; modified := FALSE
 END OvaWindow.

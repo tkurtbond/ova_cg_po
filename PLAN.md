@@ -374,7 +374,11 @@ Viewer command...).
    Personality and Other Notes, each a `FlText.TextEditor`; and the
    sheet's fluff fields (Concept, Age, Gender, Height, Weight, Hair,
    Eyes, Association, Hobbies, Favorite Food, Allies, Enemies, Love
-   Interests; p. 20) in a `FlLayout.Grid`.
+   Interests; p. 20) in a `FlLayout.Grid`. Added in Phase 6, so that
+   everything a file holds can be edited: the Summary (a line), the
+   fluff's Birthday, which ova_fmt has, and the headed notes ova_fmt
+   prints as callouts (`notes:`, a list of headers with Add, Change and
+   Remove; a new note goes last).
 
 ### Page numbers beside names
 
@@ -663,13 +667,15 @@ committed in their own repos, with the user's go-ahead.
 | `OvaViewer` | the rulebook's path, the viewer chosen, reusing a running one (okular over D-Bus, evince, mupdf) |
 | `OvaSpawn` (with `OvaSpawn.c`) | starting a program detached; running one and capturing its output |
 | `OvaWidgets` | what the window and its dialogs share: `NumberBox` (a computed number and its override box), the **?** `HelpButton`, and `Panel` (a list and its editor) |
-| `OvaWindow` | the main window, its menu bar and both tabs |
+| `OvaWindow` | the main window, its menu bar, the first tab, and the file |
+| `OvaBackground` | the second tab: the summary, the prose, the portrait, the fluff and the notes |
+| `OvaPaths` | paths made absolute, a file's directory, a path relative to a directory, rebasing the portrait's |
 | `OvaAttackDialog` | the attack dialog, and the Perks/Flaws editor an Ability with Perks uses |
 | `OvaLinkedDialog` | Transformation, Companion, spells, Vehicle |
 | `OvaText`, `OvaOut` | po_ova_fmt's, copied, as needed |
 
-`OvaRules`, `OvaCalc`, `OvaCharacter`, `OvaSave`, `OvaSpawn` and
-`OvaViewer` import no pofltk: they are tested with no display.
+`OvaRules`, `OvaCalc`, `OvaCharacter`, `OvaSave`, `OvaSpawn`,
+`OvaViewer` and `OvaPaths` import no pofltk: they are tested with no display.
 
 ## Build order
 
@@ -964,6 +970,49 @@ committed in their own repos, with the user's go-ahead.
      `p. ?` and warning are checked in `TestWindow` with a made-up name
      instead.
 6. **The second tab**: the text fields, the fluff grid, the portrait.
+   [done]
+   - `OvaBackground`, its own module, since `OvaWindow` was already
+     large: `Build` makes the tab inside the window's Tabs, `Show`
+     shows a character from a file in a directory, `SetDir` after a
+     Save As; it reports each change through `changed` (the window
+     marks the title), and asks through `tell` and `chooseImage`, which
+     a test sets. Every change goes into the character as the user
+     types, trimmed as the loader trims it (blank is absent), so a file
+     saved loads the same; the fluff's block is written while any field
+     has text. The editors' buffers report changes from
+     `TextBuffer.Modified`, which FLTK also calls when the program sets
+     the text: a `filling` flag keeps a load from counting as a change.
+   - **The portrait's path** is saved relative to the YAML file
+     (`OvaPaths.Relative` to the file's directory), and found from it;
+     a character never saved holds the absolute path until its first
+     save. Save and Save As rebase it (`OvaPaths.Rebase`) to the new
+     file's directory, and put it back if the save fails. An image
+     that can't be read leaves the path, and the box says so; it is no
+     error, since a file may name an image not copied with it (Sheet's
+     `images/hana.png`). Paths are handled as text: `..` takes out the
+     name before it, and symbolic links aren't followed. `OvaSave`
+     double-quotes a path starting with `.`, as it does any text it
+     can't be sure is safe plain.
+   - `TestPaths` (21 checks, no display): normalizing, absolute,
+     `Dir`, relative (below, beside, up to the root, a name's prefix
+     not a directory), rebasing. `TestBackground` (41 checks, on Xvfb
+     and sway): a new character's empty tab; Sheet's text, fluff and
+     missing portrait shown; Raine's notes listed and one selected;
+     typing in a section (the title marked, saved, trimmed, emptied and
+     not saved); the summary; the fluff (its keys, the block dropped
+     with every field empty and back with one); notes refused without
+     text, added, changed, removed; an image this test writes as a PNG
+     chosen, shown scaled, saved relative, kept by a failed save,
+     rebased by Save As, found again on loading; the chooser
+     cancelled; the portrait removed; New, and a first save making an
+     absolute path relative.
+   - Shown to fail with bugs planted: no rebase on Save As (4 checks
+     failed), a failed save keeping the rebased path (4), the prose not
+     trimmed (6), `fluff:` kept with every field empty (1), showing a
+     character counting as a change (2), the portrait found from the
+     working directory (4), a note with no text added (3); in
+     `OvaPaths`, `..` kept as a name (4) and one `..` too few (5).
+     Valgrind clean on Xvfb and sway.
 7. **Linked content**: Transformation (and the transformed form's
    combat box), Companion, spells, Vehicle.
 8. **Limits and warnings**, the settings dialog, preferences.
@@ -972,11 +1021,12 @@ committed in their own repos, with the user's go-ahead.
 ## Testing
 
 - `make test` (no display): `TestRules`, `TestCalc`, `TestFiles`,
-  `TestModel`, `TestSpawn`, `TestViewer` (on fake viewers and a fake gdbus),
+  `TestModel`, `TestPaths`, `TestSpawn`, `TestViewer` (on fake viewers and a fake gdbus),
   `test/files.sh`, and a command-line check (`test/cli.sh`).
 - `make test-viewers`: `OvaViewer` with the real okular, evince and
   mupdf, on `test/viewer.sh`'s own headless sway and private bus.
-- `make test-headless` / `test-sway`: the window tests (`TestWindow`),
+- `make test-headless` / `test-sway`: the window tests (`TestWindow`,
+  `TestBackground`),
   never on the desktop (AGENTS.md).
 - `make valgrind`: the unit tests and window tests under valgrind, with
   po_ova_fmt's and pofltk's suppressions and pofltk's `vg-check.sh`.
