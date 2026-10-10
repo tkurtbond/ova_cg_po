@@ -90,6 +90,9 @@ The book's own rulings, which the program meets with an override (and
   Strong 3 = 6. Its text says it is "without her signature gauntlet",
   her Attack (Iron Fist), so the GM ruled that one attack's DX.
 
+The fixtures list both in their `overrides:` (Phase 3a), so ova_fmt
+prints them with `*` and the generator loads them as overrides.
+
 ## The rules the program computes
 
 Each rule cites its page. Levels are signed: Abilities +1 to +5,
@@ -562,9 +565,10 @@ desktop.
   other number is recomputed, and one that disagrees is **kept as an
   override, with a notice** (changed in Phase 3 from "replaced": the
   file is the user's, a GM's ruling or a hand edit, and replacing it
-  would lose what they wrote; until Phase 3a, every sample number the
-  rules can't yet compute, Ai's Telekinesis DX and the rest, comes back
-  this way). A file must hold exactly one character: the generator
+  would lose what they wrote). Since Phase 3a no sample gives a notice;
+  po_ova_fmt's own Escaping, Unsorted and Vehicle, whose numbers were
+  never the rules', do. A copy saved lists every override, so it loads
+  with none. A file must hold exactly one character: the generator
   edits one at a time, and says so of a file with more.
 - **Loading** reuses po_ova_fmt's `OvaEntities` (copied, as po_ova_fmt
   copies `Besm2Out`, and kept in step with it), so the generator reads
@@ -760,9 +764,44 @@ committed in their own repos, with the user's go-ahead.
    - "Overrides survive a save and a load" needs the overrides key:
      Phase 3a. Until then they survive as numbers that come back as
      overrides, with notices (checked: the same notices after a save).
+     Done in Phase 3a.
 3a. **ova_fmt's new keys**, in the Ada ova_fmt and then po_ova_fmt
    ("Changes to ova_fmt"), before the generator saves them; then
-   `OvaEntities` copied again.
+   `OvaEntities` copied again. [done]
+   - The Ada ova_fmt: every key of "Changes to ova_fmt", printed as
+     decided (its PLAN.md, §9 step 9, has the details: `overrides` is a
+     list of the mapping's computed keys, anything else a load error;
+     the `*` is `\*` in reST and Markdown; `telekinesis` and
+     `transformed` aren't printed, being the calculation's inputs,
+     which the user may revisit). `test-data/Sheet.yaml`, written by
+     hand, uses every key; each number it doesn't list is the rules',
+     checked here (it loads with no notices). The samples gained the
+     keys: Ai's attacks `telekinesis`, Fukiko's combat `transformed`,
+     Miho's Mode SP `transformed`, and Braun's and Natsuki's rulings
+     `overrides` (now printed with `*`). Every other output of every
+     fixture was the same bytes before and after (po_ova_fmt's 368
+     golden cases).
+   - po_ova_fmt ported it (its PLAN.md, "Keys for the character
+     generator"), golden files regenerated (390 cases, two new `bad-`
+     and `edge-overrides` fixtures), planted bugs caught, valgrind
+     clean.
+   - Here: `OvaEntities` copied again; `OvaCharacter` reads the text
+     keys, `threat-value-half` (into `halfTV`, the rules' default when
+     absent; `hasHalfTV` says it was written), `telekinesis`,
+     `transformed`, the two options, and adopts a listed number as an
+     override with no notice; `OvaSave` writes them all, and each
+     mapping's `overrides:` for its overridden numbers. `TestFiles`
+     (110 checks): every sample, and Sheet, loads with no notices
+     (there were 15), and each saved copy with none. `TestCalc` checks
+     that `Build` reads the flags instead of setting them. `files.sh`
+     compares Escaping's, Unsorted's and Vehicle's copies (whose
+     noticed numbers the copies list, so print with `*`) with the
+     marks taken out of both outputs, every other copy exactly.
+   - Shown to fail with six bugs planted in `OvaCharacter` and
+     `OvaSave` (a listed number given a notice, no `overrides:`
+     written, `telekinesis` not written, `health` always listed, the
+     combat's `transformed` not read, `other-notes` not written): each
+     failed between 2 and 84 checks. Valgrind clean.
 4. **The viewer.** `OvaSpawn` and `OvaViewer`. `TestSpawn`: a missing
    program's `ENOENT`, arguments arriving exactly (a recording script,
    `test/fake-viewer.sh`, with a path holding a space and a `'`), the

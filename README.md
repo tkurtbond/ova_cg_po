@@ -13,10 +13,11 @@ It is written in Oberon-2 for poc, the
 [Peaseblossom](https://github.com/tkurtbond/peaseblossom) Oberon
 compiler, with pofltk (FLTK 1.4) for the window and polibfyaml for YAML.
 
-**Status: Phase 3 of PLAN.md** -- the rules and their calculations,
+**Status: Phase 3a of PLAN.md** -- the rules and their calculations,
 tested against the book's sample characters; loading and saving
-characters in ova_fmt's YAML; and a window with a menu bar that opens
-and quits. The window shows nothing else yet.
+characters in ova_fmt's YAML, with the keys added to both ova_fmts for
+the generator (overrides among them); and a window with a menu bar
+that opens and quits. The window shows nothing else yet.
 
 ## Usage
 

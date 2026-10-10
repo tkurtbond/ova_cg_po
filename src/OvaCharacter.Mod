@@ -8,12 +8,12 @@ MODULE OvaCharacter; (* The character being built: OvaCalc's sheet, with its nam
 
    A file is read by OvaEntities, po_ova_fmt's loader (copied), so the
    generator reads exactly what po_ova_fmt reads, and then built into a
-   Character. Every number the file holds is compared with the one
-   OvaCalc computes; one that differs is kept as an override, with a
+   Character. A number the file's overrides: key lists is an override.
+   Every other number the file holds is compared with the one OvaCalc
+   computes; one that differs is kept as an override too, with a
    notice saying so: the file is the user's (a GM's ruling, a hand
    edit, or a case the rules here don't cover), and nothing in it is
-   lost. Once ova_fmt has the overrides key (Phase 3a), a number it
-   lists will be an override with no notice.
+   lost.
 
    Imports nothing of the window, so its tests need no display. *)
 
@@ -35,8 +35,10 @@ TYPE
   CharacterDesc* = RECORD (OvaCalc.SheetDesc)
     label*: Rope;  (* a partner's sheet: "Companion" or "Vehicle"; NIL for the character *)
     name*: Rope;
-    hasTagline*, hasSummary*, hasBackground*, hasPersonality*: BOOLEAN;
-    tagline*, summary*, background*, personality*: Rope;
+    hasPlayer*, hasPortrait*: BOOLEAN;
+    player*, portrait*: Rope;  (* portrait: the image's path, relative to the file *)
+    hasTagline*, hasSummary*, hasBackground*, hasAppearance*, hasPersonality*, hasOtherNotes*: BOOLEAN;
+    tagline*, summary*, background*, appearance*, personality*, otherNotes*: Rope;
     notes*: Note;
     hasFluff*: BOOLEAN;
     hasFluffField*: ARRAY NFluff OF BOOLEAN;
@@ -44,7 +46,8 @@ TYPE
     hasOptions*: BOOLEAN;  (* an options: block, even an empty one *)
     isFragment*: BOOLEAN;  (* an NPC Fragment, or a simple Companion *)
     hasCombat*: BOOLEAN;   (* a combat: block: a Fragment or Companion may have none *)
-    hasThreatValue*: BOOLEAN
+    hasThreatValue*: BOOLEAN;
+    hasCombatNotes*: BOOLEAN; combatNotes*: Rope
   END;
 
   (* An Ability or Weakness. *)
@@ -52,7 +55,8 @@ TYPE
   TraitDesc* = RECORD (OvaCalc.TraitDesc)
     name*: Rope;
     hasDetail*: BOOLEAN; detail*: Rope;
-    hasNote*: BOOLEAN; note*: Rope
+    hasNote*: BOOLEAN; note*: Rope;
+    hasHalfTV*: BOOLEAN    (* halfTV is written: threat-value-half; else the rules' *)
   END;
 
   (* A Perk or Flaw. *)
@@ -93,13 +97,17 @@ PROCEDURE InitCharacter(c: Character; kind: INTEGER);
 BEGIN
   OvaCalc.InitSheet(c, kind);
   c.label := NIL; c.name := NIL;
-  c.hasTagline := FALSE; c.hasSummary := FALSE; c.hasBackground := FALSE; c.hasPersonality := FALSE;
-  c.tagline := NIL; c.summary := NIL; c.background := NIL; c.personality := NIL;
+  c.hasPlayer := FALSE; c.hasPortrait := FALSE; c.player := NIL; c.portrait := NIL;
+  c.hasTagline := FALSE; c.hasSummary := FALSE; c.hasBackground := FALSE; c.hasAppearance := FALSE;
+  c.hasPersonality := FALSE; c.hasOtherNotes := FALSE;
+  c.tagline := NIL; c.summary := NIL; c.background := NIL; c.appearance := NIL;
+  c.personality := NIL; c.otherNotes := NIL;
   c.notes := NIL;
   c.hasFluff := FALSE;
   FOR i := 0 TO NFluff - 1 DO c.hasFluffField[i] := FALSE; c.fluff[i] := NIL END;
   c.hasOptions := FALSE; c.isFragment := FALSE;
-  c.hasCombat := TRUE; c.hasThreatValue := TRUE
+  c.hasCombat := TRUE; c.hasThreatValue := TRUE;
+  c.hasCombatNotes := FALSE; c.combatNotes := NIL
 END InitCharacter;
 
 (* A new, empty character. *)
@@ -129,6 +137,8 @@ BEGIN
   NEW(t); OvaCalc.InitTrait(t, Find(x.name), kind, x.level);
   t.name := x.name; t.hasDetail := x.hasDetail; t.detail := x.detail;
   t.hasNote := x.hasNote; t.note := x.note;
+  t.hasHalfTV := x.hasThreatValueHalf;
+  IF x.hasThreatValueHalf THEN t.halfTV := x.threatValueHalf END;
   Mods(x.perks, FALSE, t.mods); Mods(x.flaws, TRUE, t.mods);
   RETURN t
 END SubTrait;
@@ -143,11 +153,14 @@ PROCEDURE Attacks(x: OvaEntities.Combat; c: Character);
   VAR i: INTEGER; y: OvaEntities.Attack; a: Attack;
 BEGIN
   c.hasCombat := x.hasCombat; c.hasThreatValue := x.hasThreatValue;
+  c.hasCombatNotes := x.hasNotes; c.combatNotes := x.notes;
+  c.transformed := x.transformed;
   FOR i := 0 TO x.attacks.n - 1 DO
     y := x.attacks.items[i](OvaEntities.Attack);
     NEW(a); OvaCalc.InitAttack(a);
     a.name := y.name; a.hasAffinity := y.hasAffinity; a.affinity := y.affinity;
     a.hasDescription := y.hasDescription; a.description := y.description;
+    a.telekinetic := y.telekinesis; a.transformed := y.transformed;
     Mods(y.perks, FALSE, a.mods); Mods(y.flaws, TRUE, a.mods);
     OvaCalc.AddAttack(c, a)
   END
@@ -178,10 +191,14 @@ PROCEDURE Build*(e: OvaEntities.Entity): Character;
 BEGIN
   c := New();
   c.name := e.name;
+  c.hasPlayer := e.hasPlayer; c.player := e.player;
+  c.hasPortrait := e.hasPortrait; c.portrait := e.portrait;
   c.hasTagline := e.hasTagline; c.tagline := e.tagline;
   c.hasSummary := e.hasSummary; c.summary := e.summary;
   c.hasBackground := e.hasBackground; c.background := e.background;
+  c.hasAppearance := e.hasAppearance; c.appearance := e.appearance;
   c.hasPersonality := e.hasPersonality; c.personality := e.personality;
+  c.hasOtherNotes := e.hasOtherNotes; c.otherNotes := e.otherNotes;
   c.isFragment := e.isFragment;
   FOR i := 0 TO e.abilities.n - 1 DO
     a := e.abilities.items[i](OvaEntities.Ability);
@@ -201,6 +218,7 @@ BEGIN
     w := e.weaknesses.items[i](OvaEntities.Weakness);
     NEW(t); OvaCalc.InitTrait(t, Find(w.name), OvaRules.Weakness, w.level);
     t.name := w.name; t.hasDetail := w.hasDetail; t.detail := w.detail; t.hasNote := FALSE; t.note := NIL;
+    t.hasHalfTV := FALSE;
     OvaCalc.AddTrait(c.traits, t)
   END;
   Attacks(e.combat, c);
@@ -217,7 +235,9 @@ BEGIN
   IF e.hasOptions THEN
     c.options.baseZero := e.options.hasBaseZero; c.options.baseZeroRange := e.options.baseZero;
     c.options.powerCeiling := e.options.hasPowerCeiling; c.options.ceiling := e.options.powerCeiling;
+    c.options.startingLevels := e.options.hasStartingLevels; c.options.starting := e.options.startingLevels;
     c.options.scaledCost := e.options.scaledCost;
+    c.options.halfCostKnowledge := e.options.halfCostKnowledge;
     c.options.combinedEffectiveness := e.options.combinedEffectiveness
   END;
   OvaCalc.Compute(c);
@@ -237,10 +257,12 @@ BEGIN
   OvaText.Append(notices, r)
 END Notice;
 
-(* The file's text for n: if it differs from the computed number, it
-   becomes n's override. Text that isn't a number for n is noted and
-   dropped, the computed number kept. *)
-PROCEDURE Adopt(VAR n: OvaCalc.Number; file: Rope; allowHalf, allowPlus: BOOLEAN; where: Rope; what: ARRAY OF CHAR);
+(* The file's text for n: n's override if listed (the mapping's
+   overrides: names it), or if it differs from the computed number,
+   with a notice. Text that isn't a number for n is noted and dropped,
+   the computed number kept. *)
+PROCEDURE Adopt(VAR n: OvaCalc.Number; file: Rope; allowHalf, allowPlus, listed: BOOLEAN; where: Rope;
+                what: ARRAY OF CHAR);
   VAR f: OvaText.String; computed, got: ARRAY 32 OF CHAR; t: OvaCalc.Number; r: Rope;
 BEGIN
   f := OvaText.Chars(file);
@@ -253,12 +275,14 @@ BEGIN
     OvaText.Append(notices, r)
   ELSE
     OvaCalc.Text(t, got);
-    IF got # computed THEN n := t; Notice(where, what, got, computed) END
+    IF listed THEN n := t
+    ELSIF got # computed THEN n := t; Notice(where, what, got, computed)
+    END
   END
 END Adopt;
 
-PROCEDURE AdoptInt(VAR n: OvaCalc.Number; i: INTEGER; where: Rope; what: ARRAY OF CHAR);
-BEGIN Adopt(n, OvaText.Int(i), FALSE, FALSE, where, what)
+PROCEDURE AdoptInt(VAR n: OvaCalc.Number; i: INTEGER; listed: BOOLEAN; where: Rope; what: ARRAY OF CHAR);
+BEGIN Adopt(n, OvaText.Int(i), FALSE, FALSE, listed, where, what)
 END AdoptInt;
 
 (* where, ": ", and name. *)
@@ -276,20 +300,21 @@ BEGIN
   FOR i := 0 TO x.attacks.n - 1 DO
     y := x.attacks.items[i](OvaEntities.Attack);
     at := Within(where, y.name);
-    AdoptInt(a.roll, y.roll, at, "ROLL");
-    Adopt(a.dx, y.dx, TRUE, FALSE, at, "DX");
-    AdoptInt(a.end, y.endurance, at, "END");
+    AdoptInt(a.roll, y.roll, OvaEntities.OvRoll IN y.overrides, at, "ROLL");
+    Adopt(a.dx, y.dx, TRUE, FALSE, OvaEntities.OvDx IN y.overrides, at, "DX");
+    AdoptInt(a.end, y.endurance, OvaEntities.OvEndurance IN y.overrides, at, "END");
     a := a.next
   END;
   slash := Ropes.IndexChar(x.defense, "/", 0);
-  IF slash < 0 THEN Adopt(c.defense, x.defense, FALSE, FALSE, where, "DEFENSE")
+  IF slash < 0 THEN Adopt(c.defense, x.defense, FALSE, FALSE, OvaEntities.OvDefense IN x.overrides, where, "DEFENSE")
   ELSE
-    Adopt(c.defense, Ropes.Substring(x.defense, 0, slash), FALSE, FALSE, where, "DEFENSE");
+    Adopt(c.defense, Ropes.Substring(x.defense, 0, slash), FALSE, FALSE,
+      OvaEntities.OvDefense IN x.overrides, where, "DEFENSE");
     Adopt(c.barrier, Ropes.Substring(x.defense, slash + 1, Ropes.Length(x.defense) - slash - 1),
-      FALSE, FALSE, where, "Barrier's DEFENSE")
+      FALSE, FALSE, OvaEntities.OvBarrier IN x.overrides, where, "Barrier's DEFENSE")
   END;
-  AdoptInt(c.health, x.health, where, "HEALTH");
-  AdoptInt(c.endurance, x.endurance, where, "ENDURANCE")
+  AdoptInt(c.health, x.health, OvaEntities.OvHealth IN x.overrides, where, "HEALTH");
+  AdoptInt(c.endurance, x.endurance, OvaEntities.OvEndurance IN x.overrides, where, "ENDURANCE")
 END AdoptCombat;
 
 PROCEDURE AdoptSubItems(l: OvaEntities.List; t: OvaCalc.Trait; where: Rope);
@@ -297,7 +322,9 @@ PROCEDURE AdoptSubItems(l: OvaEntities.List; t: OvaCalc.Trait; where: Rope);
 BEGIN
   FOR i := 0 TO l.n - 1 DO
     x := l.items[i](OvaEntities.SubItem);
-    IF x.hasEndurance THEN AdoptInt(t.end, x.endurance, Within(where, x.name), "END") END;
+    IF x.hasEndurance THEN
+      AdoptInt(t.end, x.endurance, OvaEntities.OvEndurance IN x.overrides, Within(where, x.name), "END")
+    END;
     t := t.next
   END
 END AdoptSubItems;
@@ -310,12 +337,14 @@ BEGIN
   t := c.traits;
   FOR i := 0 TO e.abilities.n - 1 DO
     a := e.abilities.items[i](OvaEntities.Ability);
-    IF a.hasEndurance THEN AdoptInt(t.end, a.endurance, Within(c.name, a.name), "END") END;
+    IF a.hasEndurance THEN
+      AdoptInt(t.end, a.endurance, OvaEntities.OvEndurance IN a.overrides, Within(c.name, a.name), "END")
+    END;
     AdoptSubItems(a.subAbilities, t.form, Within(c.name, a.name));
     sp := t.spells;
     FOR j := 0 TO a.spells.n - 1 DO
       x := a.spells.items[j](OvaEntities.Spell);
-      Adopt(sp.end, x.endurance, FALSE, TRUE, Within(c.name, x.name), "END");
+      Adopt(sp.end, x.endurance, FALSE, TRUE, OvaEntities.OvEndurance IN x.overrides, Within(c.name, x.name), "END");
       sp := sp.next
     END;
     IF a.subEntity # NIL THEN
@@ -332,11 +361,14 @@ BEGIN
     a := e.abilities.items[i](OvaEntities.Ability);
     IF (a.subEntity # NIL) & a.subEntity.combat.hasCombat & a.subEntity.combat.hasThreatValue THEN
       p := t.partner(Character);
-      AdoptInt(p.tv, a.subEntity.combat.threatValue, p.name, "TV")
+      AdoptInt(p.tv, a.subEntity.combat.threatValue, OvaEntities.OvThreatValue IN a.subEntity.combat.overrides,
+        p.name, "TV")
     END;
     t := t.next
   END;
-  IF e.combat.hasCombat & e.combat.hasThreatValue THEN AdoptInt(c.tv, e.combat.threatValue, c.name, "TV") END;
+  IF e.combat.hasCombat & e.combat.hasThreatValue THEN
+    AdoptInt(c.tv, e.combat.threatValue, OvaEntities.OvThreatValue IN e.combat.overrides, c.name, "TV")
+  END;
   OvaCalc.Compute(c)
 END AdoptNumbers;
 
@@ -393,8 +425,9 @@ BEGIN
   RETURN ok
 END ReadEntity;
 
-(* The character in the file at path, its numbers the file's: each that
-   differs from the rules' is kept as an override, in notices. FALSE,
+(* The character in the file at path, its numbers the file's: each its
+   mapping's overrides: lists is an override, and each other that
+   differs from the rules' is kept as one too, in notices. FALSE,
    with msg, if the file can't be read, OvaEntities finds a problem, or
    it doesn't hold exactly one character (the generator edits one at a
    time). *)

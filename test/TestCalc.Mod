@@ -190,21 +190,25 @@ END CheckEntity;
 
 PROCEDURE Sample(name: ARRAY OF CHAR);
   VAR path: ARRAY 64 OF CHAR; e: OvaEntities.Entity; s: OvaCalc.Sheet; a: OvaCalc.Attack; i, n: INTEGER;
-    msg: Ropes.Rope;
+    msg: Ropes.Rope; ok: BOOLEAN;
 BEGIN
   COPY(name, sample);
   path := DataDir; Strings.Append(name, path); Strings.Append(".yaml", path);
   L("loaded"); Check.Check(OvaCharacter.ReadEntity(path, e, n, msg) & (n = 1), label);
   IF e = NIL THEN RETURN END;
   s := OvaCharacter.Build(e);
-  (* What the files have no key for. *)
+  (* The Phase 3a keys the samples carry, as Build reads them; and the
+     book's two rulings, which Build leaves to Load's overrides. *)
   IF name = "Ai" THEN
-    a := s.attacks; WHILE a # NIL DO a.telekinetic := TRUE; a := a.next END
-  ELSIF name = "Fukiko" THEN s.transformed := TRUE
+    a := s.attacks; ok := a # NIL;
+    WHILE a # NIL DO ok := ok & a.telekinetic & ~a.transformed; a := a.next END;
+    L("both attacks made with Telekinesis"); Check.Check(ok, label)
+  ELSIF name = "Fukiko" THEN L("the sheet shown transformed"); Check.Check(s.transformed, label)
   ELSIF name = "Miho" THEN
     i := AttackIndex(e.combat, "Mode SP: Miho Ray");
     L("has Mode SP"); Check.Check(i >= 0, label);
-    IF i >= 0 THEN a := NthAttack(s, i); a.transformed := TRUE END
+    IF i >= 0 THEN a := NthAttack(s, i); L("Mode SP made transformed"); Check.Check(a.transformed, label) END;
+    L("the sheet not transformed"); Check.Check(~s.transformed, label)
   ELSIF name = "Braun" THEN
     (* The rule: 2 - Clumsy 2 = 0, TV 0 + 2 + 0 = 2; the book's -2 as
        an override makes TV 0. *)

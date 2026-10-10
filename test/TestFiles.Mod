@@ -3,11 +3,12 @@ MODULE TestFiles; (* OvaCharacter and OvaSave: loading, saving, and loading agai
 (* PLAN.md, "Files". Each fixture holding one character is loaded,
    saved into ../obj/files/ (for test/files.sh, which formats both with
    po_ova_fmt and compares), and loaded again: the second load must
-   give the same YAML and the same notices. The notices are the numbers
-   kept as overrides; until Phase 3a's keys, they are exactly the
-   samples' numbers the files can't yet say how to compute. Then the
-   files that can't be loaded, a failed save, and a character with text
-   plain YAML can't hold. Needs no display. *)
+   give the same YAML, and no notices, since the copy's overrides: keys
+   list every number kept as an override. The notices are the numbers
+   the first load kept as overrides, those the file differs from the
+   rules on without listing them. Then the files that can't be loaded,
+   a failed save, and a character with text plain YAML can't hold.
+   Needs no display. *)
 
 IMPORT Check, Fyaml, OvaCalc, OvaCharacter, OvaEntities, OvaSave, OvaText, Out, Ropes, Strings;
 
@@ -52,7 +53,8 @@ BEGIN
   ok := OvaCharacter.Load(saved, c2, msg);
   L(name, "the copy loaded"); Check.Check(ok, label);
   IF ok THEN
-    L(name, "the copy has the same notices"); Check.Check(OvaCharacter.notices.n = n, label);
+    L(name, "the copy has no notices: it lists its overrides"); Check.Check(OvaCharacter.notices.n = 0, label);
+    IF OvaCharacter.notices.n > 0 THEN ShowNotices END;
     text2 := OvaSave.ToText(c2);
     L(name, "the copy saves the same"); Check.Check((text # NIL) & Ropes.Equal(text, text2), label)
   END
@@ -60,15 +62,16 @@ END RoundTrip;
 
 PROCEDURE Fixtures;
 BEGIN
-  (* The samples. Those with notices: what Phase 3a's keys will let
-     the rules compute, Ai's attacks made with Telekinesis (2 DX),
-     Fukiko's sheet shown transformed (4 ROLL, 3 DX, Barrier's Defense,
-     and TV), Miho's Mode SP made transformed (its ROLL, and TV, which
-     counts it until it is marked); and the book's two rulings, Braun's
-     ROLL (his TV of 0 then follows) and Natsuki's Stiletto Kick's DX. *)
-  RoundTrip("Ai", 2); RoundTrip("Auren", 0); RoundTrip("Braun", 1); RoundTrip("Cora", 0);
-  RoundTrip("Daisuke", 0); RoundTrip("Fukiko", 9); RoundTrip("Karis", 0); RoundTrip("Miho", 2);
-  RoundTrip("Natsuki", 1); RoundTrip("Raine", 0); RoundTrip("Shou", 0); RoundTrip("Yuu", 0);
+  (* The samples: every number is the rules', given the Phase 3a keys
+     the fixtures carry (Ai's attacks made with Telekinesis, Fukiko's
+     sheet shown transformed, Miho's Mode SP made transformed), but the
+     book's two rulings, Braun's ROLL and Natsuki's Stiletto Kick's DX,
+     which their overrides: list. Without those keys there were 15
+     notices (Phase 3). Sheet uses every key. *)
+  RoundTrip("Ai", 0); RoundTrip("Auren", 0); RoundTrip("Braun", 0); RoundTrip("Cora", 0);
+  RoundTrip("Daisuke", 0); RoundTrip("Fukiko", 0); RoundTrip("Karis", 0); RoundTrip("Miho", 0);
+  RoundTrip("Natsuki", 0); RoundTrip("Raine", 0); RoundTrip("Shou", 0); RoundTrip("Yuu", 0);
+  RoundTrip("Sheet", 0);
   (* po_ova_fmt's own, for its formats: their numbers were never the
      rules', so they come back as overrides. *)
   RoundTrip("Escaping", 5); RoundTrip("Unsorted", 8); RoundTrip("Vehicle", 5)

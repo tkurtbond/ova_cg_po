@@ -180,10 +180,11 @@ callbacks are module-level procedures; no exceptions; no call chaining;
   against ova_fmt's fixtures (`test/data/`, copied from the Ada repo's
   `test-data/`, kept the same). A sample character the rules can't
   reproduce is a finding for PLAN.md, not a test to loosen.
-  `test/Samples.Mod` builds a sheet from a fixture; what the files
-  can't say yet (an attack made with Telekinesis or transformed, a
-  sheet shown transformed) and the book's two rulings (as overrides)
-  are set in `TestCalc`'s `Sample`, each commented.
+  `OvaCharacter.Build` makes a sheet from a fixture, with the Phase 3a
+  keys the samples carry (an attack made with Telekinesis or
+  transformed, a sheet shown transformed); the book's two rulings,
+  which the fixtures list in `overrides:`, are set in `TestCalc`'s
+  `Sample` as overrides, each commented.
 - **New YAML keys go into the Ada ova_fmt first, then po_ova_fmt**
   (PLAN.md, "Changes to ova_fmt"), each in its own repo, following that
   repo's AGENTS.md (golden files from the Ada binary, fixtures kept the
@@ -192,10 +193,12 @@ callbacks are module-level procedures; no exceptions; no call chaining;
 - **A file the program saves must load in po_ova_fmt** and format the
   same as the file it was loaded from (round trip, PLAN.md):
   `TestFiles` saves each fixture into `obj/files/`, and `test/files.sh`
-  formats both in every po_ova_fmt format and compares. A file's number
-  that differs from the rules' is kept as an override with a notice;
-  `TestFiles` fixes how many each fixture gives, so a new rule or key
-  that changes them shows there.
+  formats both in every po_ova_fmt format and compares. A number a
+  file's `overrides:` lists is an override; any other that differs
+  from the rules' is kept as one too, with a notice. `TestFiles` fixes
+  how many each fixture gives (none but po_ova_fmt's Escaping,
+  Unsorted and Vehicle, which `files.sh` names too), so a new rule or
+  key that changes them shows there; a saved copy must give none.
 - Unit tests print `ok   - <label>` / `FAIL - <label>` and end with
   `All checks passed.` or `<N> check(s) failed.`, exiting 1 on failure,
   as po_ova_fmt's do (`test/Check.Mod`).

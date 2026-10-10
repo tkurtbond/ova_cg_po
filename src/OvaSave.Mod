@@ -11,9 +11,8 @@ MODULE OvaSave; (* Writes a character as YAML in ova_fmt's format *)
 
    One document, a sequence of one entity, its keys in the order of
    ova_fmt's fixtures. The numbers written are the ones in effect: an
-   override where there is one. Only keys both ova_fmts read are
-   written (AGENTS.md); the overrides key and the others of PLAN.md,
-   "Changes to ova_fmt", come with Phase 3a.
+   override where there is one, which the mapping's overrides: key
+   then lists. Only keys both ova_fmts read are written (AGENTS.md).
 
    A failed save leaves the old file as it was: the document goes to
    NAME.tmp, which then replaces NAME. *)
@@ -74,6 +73,23 @@ PROCEDURE Pair(m: Node; key: ARRAY OF CHAR; v: Node);
 BEGIN IF ok THEN ok := m.AppendPair(d.CreateScalar(key), v, err) END
 END Pair;
 
+(* Adds k to set if n is overridden. *)
+PROCEDURE Over(VAR set: SET; k: INTEGER; VAR n: OvaCalc.Number);
+BEGIN IF n.overridden THEN INCL(set, k) END
+END Over;
+
+(* "overrides: [...]", the keys in set in OvaEntities' order, if any. *)
+PROCEDURE Overrides(m: Node; set: SET);
+  VAR seq: Node; k: INTEGER; name: ARRAY 16 OF CHAR;
+BEGIN
+  IF set = {} THEN RETURN END;
+  seq := d.CreateSequence();
+  FOR k := 0 TO MAX(SET) DO
+    IF k IN set THEN OvaEntities.KeyName(k, name); seq.Append(d.CreateScalar(name)) END
+  END;
+  Pair(m, "overrides", seq)
+END Overrides;
+
 PROCEDURE TextPair(m: Node; key: ARRAY OF CHAR; has: BOOLEAN; r: Rope);
 BEGIN IF has THEN Pair(m, key, Text(r)) END
 END TextPair;
@@ -116,7 +132,7 @@ PROCEDURE^ Partner(c: OvaCharacter.Character): Node;
 
 PROCEDURE TraitNode(x: OvaCalc.Trait): Node;
   VAR t: OvaCharacter.Trait; n, seq, sn: Node; f: OvaCalc.Trait; sp: OvaCalc.Spell; s: OvaCharacter.Spell;
-    p: OvaCharacter.Character; key: ARRAY 16 OF CHAR; lc: OvaText.String;
+    p: OvaCharacter.Character; key: ARRAY 16 OF CHAR; lc: OvaText.String; set: SET;
 BEGIN
   t := x(OvaCharacter.Trait);
   n := d.CreateMapping();
@@ -126,6 +142,8 @@ BEGIN
   Mods(n, "perks", t.mods, FALSE); Mods(n, "flaws", t.mods, TRUE);
   IF t.hasEnd OR t.end.overridden THEN Pair(n, "endurance", Num(t.end)) END;
   TextPair(n, "note", t.hasNote, t.note);
+  IF t.hasHalfTV THEN Pair(n, "threat-value-half", Bool(t.halfTV)) END;
+  set := {}; Over(set, OvaEntities.OvEndurance, t.end); Overrides(n, set);
   IF t.form # NIL THEN
     seq := NIL; f := t.form;
     WHILE f # NIL DO
@@ -155,6 +173,7 @@ BEGIN
       Pair(sn, "ability", Text(s.ability));
       Pair(sn, "level", Int(s.level));
       Pair(sn, "endurance", Num(s.end));
+      set := {}; Over(set, OvaEntities.OvEndurance, s.end); Overrides(sn, set);
       seq.Append(sn);
       sp := sp.next
     END;
@@ -186,7 +205,7 @@ END Traits;
 (* ---- Combat ---- *)
 
 PROCEDURE Combat(m: Node; c: OvaCharacter.Character);
-  VAR n, seq, an: Node; x: OvaCalc.Attack; a: OvaCharacter.Attack; def, b: ARRAY 32 OF CHAR;
+  VAR n, seq, an: Node; x: OvaCalc.Attack; a: OvaCharacter.Attack; def, b: ARRAY 32 OF CHAR; set: SET;
 BEGIN
   IF ~c.hasCombat THEN RETURN END;
   n := d.CreateMapping();
@@ -198,6 +217,13 @@ BEGIN
   Pair(n, "health", Num(c.health));
   Pair(n, "endurance", Num(c.endurance));
   IF c.hasThreatValue THEN Pair(n, "threat-value", Num(c.tv)) END;
+  IF c.transformed THEN Pair(n, "transformed", Bool(TRUE)) END;
+  set := {};
+  Over(set, OvaEntities.OvDefense, c.defense); Over(set, OvaEntities.OvBarrier, c.barrier);
+  Over(set, OvaEntities.OvHealth, c.health); Over(set, OvaEntities.OvEndurance, c.endurance);
+  IF c.hasThreatValue THEN Over(set, OvaEntities.OvThreatValue, c.tv) END;
+  Overrides(n, set);
+  TextPair(n, "notes", c.hasCombatNotes, c.combatNotes);
   IF c.attacks # NIL THEN
     seq := d.CreateSequence(); x := c.attacks;
     WHILE x # NIL DO
@@ -211,6 +237,12 @@ BEGIN
       Pair(an, "roll", Num(a.roll));
       Pair(an, "dx", Num(a.dx));
       Pair(an, "endurance", Num(a.end));
+      IF a.telekinetic THEN Pair(an, "telekinesis", Bool(TRUE)) END;
+      IF a.transformed THEN Pair(an, "transformed", Bool(TRUE)) END;
+      set := {};
+      Over(set, OvaEntities.OvRoll, a.roll); Over(set, OvaEntities.OvDx, a.dx);
+      Over(set, OvaEntities.OvEndurance, a.end);
+      Overrides(an, set);
       seq.Append(an);
       x := x.next
     END;
@@ -240,15 +272,21 @@ BEGIN
   m := d.CreateMapping();
   Pair(m, "name", Text(c.name));
   IF c.isFragment THEN Pair(m, "fragment", Bool(TRUE)) END;
+  TextPair(m, "player", c.hasPlayer, c.player);
+  TextPair(m, "portrait", c.hasPortrait, c.portrait);
   TextPair(m, "tagline", c.hasTagline, c.tagline);
   TextPair(m, "summary", c.hasSummary, c.summary);
   TextPair(m, "background", c.hasBackground, c.background);
+  TextPair(m, "appearance", c.hasAppearance, c.appearance);
   TextPair(m, "personality", c.hasPersonality, c.personality);
+  TextPair(m, "other-notes", c.hasOtherNotes, c.otherNotes);
   IF c.hasOptions THEN
     o := d.CreateMapping();
     IF c.options.baseZero THEN Pair(o, "base-zero", Int(c.options.baseZeroRange)) END;
     IF c.options.powerCeiling THEN Pair(o, "power-ceiling", Int(c.options.ceiling)) END;
+    IF c.options.startingLevels THEN Pair(o, "starting-levels", Int(c.options.starting)) END;
     IF c.options.scaledCost THEN Pair(o, "scaled-cost", Bool(TRUE)) END;
+    IF c.options.halfCostKnowledge THEN Pair(o, "half-cost-knowledge", Bool(TRUE)) END;
     IF c.options.combinedEffectiveness THEN Pair(o, "combined-effectiveness", Bool(TRUE)) END;
     Pair(m, "options", o)
   END;
