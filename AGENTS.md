@@ -61,7 +61,7 @@ make check-pages     # OvaRules' pages against the rulebook PDF's headings (need
 make test-viewers    # OvaViewer with real okular, evince, mupdf (test/viewer.sh;
                      #   its own headless sway and private bus; ~30 s)
 make test-headless   # make test-gui on Xvfb: window tests (GUITESTS), the
-                     #   program running RUNTIME seconds, test/quit.sh (Ctrl+Q)
+                     #   program running RUNTIME seconds, test/quit.sh (Ctrl+E, Ctrl+Q)
 make test-sway       # make test-gui on a headless sway (quit.sh skips: X11 only)
 make valgrind-headless   # every test under valgrind, on Xvfb; also valgrind-sway
                      #   (forked children silent: --child-silent-after-fork)
@@ -180,6 +180,11 @@ callbacks are module-level procedures; no exceptions; no call chaining;
   callback**: a combat-box row's Remove rebuilds the rows from an
   `Fl.Timer` (`Fl.AddTimeout(rebuild, 0.0D0)`), which a test runs with
   `Fl.Wait`.
+- **A menu shortcut must be a key no input takes**: a key goes to the
+  focused widget first, and `Fl_Input` types Ctrl+H, I, J, L and M
+  into itself and takes Ctrl+A, C, V, X and Z (so does
+  `Fl_Text_Editor`, the last five). `test/quit.sh` checks Ctrl+E from
+  Character Name (PLAN.md, Phase 9).
 - **Don't name a method after a widget's**: a `NumberBox` (a `Group`)
   shows its number with `Display`, since `Show` would replace FLTK's.
 - **`FlText.TextBuffer.Modified` runs when the program sets the text

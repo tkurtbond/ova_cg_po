@@ -882,7 +882,7 @@ BEGIN
   saveItem := bar.Add("&File/&Save", ORD("s"), Fl.Command, SaveAction, {});
   saveAsItem := bar.Add("&File/Save &As...", ORD("s"), Fl.Command + Fl.Shift, SaveAsAction, FlMenus.MenuDivider);
   quitItem := bar.Add("&File/&Quit", ORD("q"), Fl.Command, Quit, {});
-  limitsItem := bar.Add("&Character/&Limits...", ORD("l"), Fl.Command, LimitsAction, {});
+  limitsItem := bar.Add("&Character/&Limits...", ORD("e"), Fl.Command, LimitsAction, {});
   transformedItem := bar.Add("&Character/&Transformed form", ORD("t"), Fl.Command, TransformedAction,
     FlMenus.MenuToggle);
   rulebookItem := bar.Add("&Rulebook/&Open", 0, {}, RulebookAction, FlMenus.MenuDivider);

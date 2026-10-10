@@ -1086,7 +1086,8 @@ committed in their own repos, with the user's go-ahead.
    - The limits' rules and warnings were `OvaCalc`'s since Phase 2;
      this phase adds the dialog that turns them on, the red totals,
      and the preferences.
-   - **`OvaSettings`**, Character > Limits... (Ctrl+L): a check box
+   - **`OvaSettings`**, Character > Limits... (Ctrl+E; Ctrl+L until
+     Phase 9, which found a text input types it): a check box
      for each rule, with its number (Base Zero's range, the starting
      levels, the Power Ceiling) beside it, active only while the rule
      is on, and a **?** for its page (21; half cost 57). Half cost is
@@ -1141,6 +1142,30 @@ committed in their own repos, with the user's go-ahead.
      rulebook not asked for (3), the range's spinner ignored (4), and
      a file's empty block dropped (1).
 9. **Finish**: valgrind clean, `make install`, README's user guide.
+   [done]
+   - **README's user guide**, "Using the window": the menus and their
+     keys, each tab, the dialogs, overrides, the limits and the
+     rulebook, written from the code and from the window captured on
+     Xvfb with Miho loaded.
+   - **Limits' shortcut is Ctrl+E**, not Ctrl+L: capturing the Limits
+     dialog for the guide, Ctrl+L typed a form feed into Character
+     Name, where the cursor starts, and marked the character changed.
+     FLTK's `Fl_Input` inserts Ctrl+H, I, J, L and M literally
+     (`Fl_Input::handle_key`, FLTK 1.4.5), and a key the focused widget
+     takes never reaches the menu's shortcuts; it also takes Ctrl+A, C,
+     V, X and Z, as `Fl_Text_Editor` does. Ctrl+E is none of these.
+     `test/quit.sh` now sends Ctrl+E with the cursor in Character Name
+     and checks that Limits opens and the title has no mark, then that
+     Escape closes it, before Ctrl+Q; with Ctrl+L sent to the old
+     build it failed.
+   - `make test-gui` makes `obj/files` itself, so `make test-headless`
+     right after `make clean` no longer fails four `TestBackground`
+     checks (its Save As writes there).
+   - `make install` checked with `DESTDIR`: `po_ova_cg` alone, mode
+     755, in `$(DESTDIR)$(PREFIX)/bin`; `make uninstall` removes it.
+   - From `make clean`: `make test`, `test-headless` and `test-sway`
+     pass; valgrind clean on Xvfb and sway (no errors in any of the
+     11 programs, nothing of pofltk's left; 2026-10-10).
 
 ## Testing
 

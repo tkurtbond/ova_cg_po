@@ -13,26 +13,12 @@ It is written in Oberon-2 for poc, the
 [Peaseblossom](https://github.com/tkurtbond/peaseblossom) Oberon
 compiler, with pofltk (FLTK 1.4) for the window and polibfyaml for YAML.
 
-**Status: Phase 8 of PLAN.md** -- the rules and their calculations,
-tested against the book's sample characters; loading and saving
-characters in ova_fmt's YAML, with the keys added to both ova_fmts for
-the generator (overrides among them); opening the rulebook at a page
-in okular, evince, mupdf or another viewer, reusing one already open;
-and both tabs of the window. The Character tab has the names, the
-Abilities and Weaknesses with their pages and **?** buttons, the totals
-and warnings, the Combat Notes, and the combat box with the attack
-dialog, with an override box beside every computed number. The
-Background tab has the summary, the Background, Appearance,
-Personality and Other Notes, the portrait, the fluff and the notes.
-An Ability with linked content opens a dialog for it: a
-Transformation's form, a Magic's spells, or a Companion's or Vehicle's
-sheet; Character > Transformed form shows the sheet in the form, and
-Character > Limits... turns on the rules that limit a character (Base
-Zero, starting levels, a Power Ceiling, Scaled Cost, half-cost
-Knowledge, Combined Effectiveness), a total they find too high shown
-in red. The File menu has New, Open, Save and Save As; the Rulebook
-menu opens the rulebook, and chooses its PDF and the viewer, which are
-kept between runs.
+**Status: complete** (the nine phases of PLAN.md). It covers what the
+character sheet holds: the names, the Abilities and Weaknesses, the
+attacks with their Perks and Flaws, the derived numbers with an
+override beside each, the limits of p. 21, linked content (a
+Transformation's form, a Magic's spells, a Companion or a Vehicle), and
+the sheet's other half, the background, portrait, fluff and notes.
 
 ## Usage
 
@@ -50,6 +36,113 @@ with Rulebook > Viewer.... Those two choices are kept in
 can't be read, or holds mistakes, is reported and the program exits
 with status 1. The program needs a display (`DISPLAY` or
 `WAYLAND_DISPLAY`); without one it says so and exits with status 1.
+
+## Using the window
+
+The window is the character sheet in two tabs: **Character**, the
+sheet's right half, and **Background**, its left. Every change goes
+into the character at once and every number is recomputed as you work;
+the title shows the file's name, and ` *` after it while there are
+unsaved changes.
+
+### Menus
+
+| Menu | Item | Key |
+|---|---|---|
+| File | New, Open..., Save, Save As..., Quit | Ctrl+N, Ctrl+O, Ctrl+S, Ctrl+Shift+S, Ctrl+Q |
+| Character | Limits... | Ctrl+E |
+| Character | Transformed form | Ctrl+T |
+| Rulebook | Open, Choose PDF..., Viewer... | |
+
+New, Open and Quit ask first whether to save unsaved changes (Save,
+Don't save, Cancel), and so does the window's close button.
+
+### The Character tab
+
+**Abilities and Weaknesses.** Each list shows a trait's level, name
+and detail, and the rulebook page its name is on. To add one, choose
+its name from the menu under the list (each name shows its page), set
+its level and its detail, and press **Add**. Clicking a line puts it
+back in those controls: change them and press **Change** to replace
+it, or **Remove** to take it out. **?** opens the rulebook at the
+chosen name's page.
+
+With an Ability selected, **Perks and Flaws...** opens the attack
+dialog for its Perks and Flaws, without the attack's own fields; its
+END, when it has one, is beside the button. An Ability with linked
+content turns the button under the Weaknesses into one for it:
+
+- **Form...**, a Transformation's: the transformed form's Abilities
+  and Weaknesses, two levels for each level of Transformation.
+- **Spells...**, a Magic's: each spell's name, the Ability it mimics,
+  its level, and its END.
+- **Companion...** or **Vehicle...**: the partner's own sheet: its
+  name, whether it is a Fragment, whether it has combat stats, and its
+  Abilities, Weaknesses, attacks and numbers.
+
+These dialogs change the character as you work, and **Close** closes
+them.
+
+**Totals and warnings.** Under the lists are the Abilities' and
+Weaknesses' levels and the Character Total (and the Scaled Cost points
+when Scaled Cost is on). Warnings say what the rules find wrong, with
+the pages of the rules: a name the rulebook doesn't have (shown with
+`p. ?`), a level out of range, a Perk taken too often, a Perk or Flaw
+the rules don't allow with the others, a limit broken. A total a limit
+finds too high turns red.
+
+**Attacks.** Each attack is a row with its ROLL, DX and END. **Add
+attack...** and **Edit** open the attack dialog: the attack's name,
+affinity and description, whether it is made with Telekinesis or in
+the transformed form, and its Perks and Flaws, chosen as the traits
+are, with how many times (for one that can be taken more than once)
+and a cost (for one whose cost you choose: Cancel, Requirement,
+Unique). Its ROLL, DX and END follow each change. **OK** keeps it;
+**Cancel** puts it back as it was, and takes out an attack just added.
+**Remove** deletes the row's attack.
+
+Below the attacks are DEFENSE, HEALTH, ENDURANCE and TV, with
+Barrier's second DEFENSE and an Endurance Reserve when the character
+has them.
+
+**Overrides.** Beside every computed number is an empty box. Type a
+number there to override it, for a GM's ruling, a house rule, or a
+case the rules here don't cover: the computed number stays shown
+beside it, and anything computed from it uses the override. A number
+is an integer, except that an attack's DX may be `1/2` and a spell's
+END may end in `+` (`10+`); anything else is refused with a message.
+Empty the box to go back to the computed number. A file whose numbers
+differ from the rules' keeps them as overrides, and says which when it
+opens.
+
+**Character > Transformed form** shows and computes the sheet in the
+Transformation's form (p. 63), and is saved with the character.
+
+**Character > Limits...** turns on the rules of p. 21 and 57: Base
+Zero (the Character Total within so many points of zero), starting
+levels, a Power Ceiling, Scaled Cost, Knowledge and Ineptitude at half
+cost, and Combined Effectiveness. Each number is active only while its
+rule is on, and each rule has a **?**. The window follows each change;
+**OK** keeps them, and **Cancel**, the close button or Escape puts
+them back. They are saved with the character.
+
+### The Background tab
+
+The Summary; the Background, Appearance, Personality and Other Notes;
+the Character Portrait, an image chosen with **Choose...** (its path
+is saved relative to the character's file, and **Remove** takes it
+off); the sheet's fluff (Concept, Age, Birthday and the rest); and the
+notes, each a header and text, added, changed and removed as the
+traits are.
+
+### The rulebook
+
+The program holds no rules text. Every name shows its page in the
+rulebook, and **?** or **Rulebook > Open** opens the rulebook's PDF in
+your PDF viewer, reusing a viewer that already shows it (okular or
+evince). If the program can't find the PDF it asks for it once.
+**Rulebook > Choose PDF...** and **Viewer...** choose the PDF and the
+viewer, and they are kept for the next time.
 
 ## Building
 

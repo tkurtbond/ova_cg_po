@@ -130,10 +130,11 @@ display:
 # The window tests, then the program itself, which waits for the user:
 # it must still be running after RUNTIME seconds, when timeout ends it
 # (status 124): it started, drew, and didn't crash.  Then test/quit.sh:
-# started again, it quits on Ctrl+Q (X11 only; skipped on Wayland).
+# started again, Ctrl+E opens Limits from a text input and it quits on
+# Ctrl+Q (X11 only; skipped on Wayland).
 # The program's own runs keep their preferences in obj/config, not the
 # user's ~/.config.
-test-gui: tests display
+test-gui: tests display | $(OBJ)/files
 	@export XDG_CONFIG_HOME=$(CURDIR)/$(OBJ)/config; \
 	status=0; for t in $(GUITESTS); do \
 	  echo "== $$t"; (cd test && timeout $(TIMEOUT) ../$(OBJ)/$$t) || status=1; \
