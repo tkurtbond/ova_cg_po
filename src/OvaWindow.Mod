@@ -16,11 +16,15 @@ MODULE OvaWindow; (* The main window: its menu bar, the sheet's first tab, and t
 
    What would wait for the user -- a message, a question, a file
    chooser, the rulebook's viewer -- goes through a procedure variable
-   (tell, ask, choosePath, and OvaWidgets.openPage), so a test can
-   answer it. *)
+   (tell, ask, choosePath, choosePdf, askText, and OvaWidgets.openPage),
+   so a test can answer it.
 
-IMPORT Fl, FlButtons, FlBrowsers, FlDialogs, FlInputs, FlLayout, FlMenus, OvaAttackDialog, OvaBackground, OvaCalc,
-  OvaCharacter, OvaLinkedDialog, OvaPaths, OvaRules, OvaTraitPanel, OvaSave, OvaText, OvaViewer, OvaWidgets, Ropes;
+   The rulebook's path and the viewer the user chooses are kept in the
+   preferences (UsePreferences), between runs. *)
+
+IMPORT Fl, FlButtons, FlBrowsers, FlDialogs, FlInputs, FlLayout, FlMenus, FlPreferences, OvaAttackDialog,
+  OvaBackground, OvaCalc, OvaCharacter, OvaLinkedDialog, OvaPaths, OvaRules, OvaSettings, OvaTraitPanel, OvaSave,
+  OvaText, OvaViewer, OvaWidgets, Ropes;
 
 CONST
   Width = 1280; Height = 800; BarHeight = 25; TabHeight = 25;
@@ -68,7 +72,8 @@ VAR
   bar-: FlMenus.MenuBar;
   tabs-: FlLayout.Tabs;
   sheetTab-, backgroundTab-: Fl.Group;
-  newItem-, openItem-, saveItem-, saveAsItem-, quitItem-, rulebookItem-: INTEGER;
+  newItem-, openItem-, saveItem-, saveAsItem-, quitItem-: INTEGER;
+  limitsItem-, rulebookItem-, choosePdfItem-, viewerItem-: INTEGER;
 
   (* The character, the file it came from or was saved to (NIL: none),
      and whether it has changed since. *)
@@ -97,10 +102,22 @@ VAR
   tell*: PROCEDURE (text: Rope);
   ask*: PROCEDURE (question: Rope): INTEGER;
   choosePath*: PROCEDURE (save: BOOLEAN; VAR path: Rope): BOOLEAN;
+  (* choosePdf asks for the rulebook's PDF; askText for a line of text,
+     showing text as it is. *)
+  choosePdf*: PROCEDURE (VAR path: Rope): BOOLEAN;
+  askText*: PROCEDURE (prompt: Rope; VAR text: Rope): BOOLEAN;
 
-  (* The rulebook: --rulebook's path (NIL: none), and the viewer. *)
+  (* The rulebook: --rulebook's path, or the one chosen this run (NIL:
+     none), and the one saved in the preferences (NIL: none). *)
   rulebookOption*: Rope;
+  savedRulebook-: Rope;
+  (* The viewer, and whether --viewer chose it, so the preferences'
+     doesn't replace it. *)
   viewer*: OvaViewer.Viewer;
+  viewerOption*: BOOLEAN;
+  (* Where the rulebook and viewer are kept (NIL: nowhere). *)
+  preferences-: FlPreferences.Preferences;
+  wasModified: BOOLEAN;  (* modified, when Limits... opened *)
 
 PROCEDURE^ ShowAll;
 PROCEDURE^ ShowRows;
@@ -170,6 +187,29 @@ BEGIN
   RETURN ok
 END DialogPath;
 
+PROCEDURE DialogPdf(VAR p: Rope): BOOLEAN;
+  VAR c: FlDialogs.NativeFileChooser; name: ARRAY 4096 OF CHAR; filter: ARRAY 16 OF CHAR; ok: BOOLEAN;
+BEGIN
+  NEW(c); FlDialogs.OpenNativeFileChooser(c, FlDialogs.BrowseFile);
+  c.SetTitle("The rulebook's PDF");
+  filter := "PDF *.pdf"; filter[3] := 9X;  (* FLTK's "name<tab>pattern" *)
+  c.SetFilter(filter);
+  ok := c.Show() = FlDialogs.Chosen;
+  IF ok THEN c.FileName(0, name); p := Ropes.FromString(name); ok := p # NIL END;
+  c.Close;
+  RETURN ok
+END DialogPdf;
+
+PROCEDURE DialogText(prompt: Rope; VAR text: Rope): BOOLEAN;
+  VAR s: OvaText.String; value: ARRAY 4096 OF CHAR; ok: BOOLEAN;
+BEGIN
+  s := OvaText.Chars(text); COPY(s^, value);
+  s := OvaText.Chars(prompt);
+  ok := FlDialogs.Input(s^, value);
+  IF ok THEN text := Ropes.FromString(value) END;
+  RETURN ok
+END DialogText;
+
 (* tell as it is now: the dialog's, which a test may have replaced. *)
 PROCEDURE Tell(text: Rope);
 BEGIN tell(text)
@@ -177,23 +217,89 @@ END Tell;
 
 (* ---- The rulebook ---- *)
 
-(* Opens the rulebook at printed page page, or says why it can't. *)
+(* Keeps text under name in the preferences, written at once. *)
+PROCEDURE Keep(name: ARRAY OF CHAR; text: Rope);
+  VAR s: OvaText.String;
+BEGIN
+  IF preferences # NIL THEN
+    s := OvaText.Chars(text); preferences.SetText(name, s^);
+    IF ~preferences.Flush() THEN tell(R("The preferences couldn't be written.")) END
+  END
+END Keep;
+
+(* What the preferences hold under name; NIL for nothing. *)
+PROCEDURE Kept(name: ARRAY OF CHAR): Rope;
+  VAR s: OvaText.String;
+BEGIN
+  NEW(s, preferences.TextLength(name) + 1); preferences.GetText(name, "", s^);
+  RETURN OvaText.Trim(Ropes.FromString(s^))
+END Kept;
+
+(* Takes the rulebook's path and the viewer from p (NIL: none), where
+   the ones the user chooses are kept; --viewer's wins over the one kept,
+   and --rulebook's and OVA_RULEBOOK's over the path kept
+   (OvaViewer.FindRulebook). A viewer kept that isn't one is ignored. *)
+PROCEDURE UsePreferences*(p: FlPreferences.Preferences);
+  VAR v: OvaViewer.Viewer;
+BEGIN
+  preferences := p; savedRulebook := NIL;
+  IF p # NIL THEN
+    savedRulebook := Kept("rulebook");
+    IF ~viewerOption & OvaViewer.Parse(Kept("viewer"), v) THEN viewer := v END
+  END
+END UsePreferences;
+
+(* Asks for the rulebook's PDF, uses it from now on, and keeps it. *)
+PROCEDURE ChooseRulebook(): BOOLEAN;
+  VAR p: Rope;
+BEGIN
+  IF ~choosePdf(p) THEN RETURN FALSE END;
+  p := OvaPaths.Absolute(p, NIL);
+  rulebookOption := p; savedRulebook := p; Keep("rulebook", p);
+  RETURN TRUE
+END ChooseRulebook;
+
+(* Opens the rulebook at printed page page. If it isn't found, asks for
+   it once; if not given, says why. *)
 PROCEDURE OpenPage(page: INTEGER);
   VAR pdf, msg: Rope;
 BEGIN
-  IF ~OvaViewer.FindRulebook(rulebookOption, NIL, pdf) THEN
-    msg := R("The rulebook isn't at "); msg := Ropes.Cat(msg, pdf);
-    OvaText.Add(msg, ": give its path with --rulebook, or in OVA_RULEBOOK.");
-    tell(msg)
-  ELSE
-    IF OvaViewer.Open(viewer, pdf, page, msg) THEN END;
-    IF msg # NIL THEN tell(msg) END
-  END
+  IF ~OvaViewer.FindRulebook(rulebookOption, savedRulebook, pdf) THEN
+    IF ~ChooseRulebook() OR ~OvaViewer.FindRulebook(rulebookOption, savedRulebook, pdf) THEN
+      msg := R("The rulebook isn't at "); msg := Ropes.Cat(msg, pdf);
+      OvaText.Add(msg, ": choose it with Rulebook > Choose PDF..., or give it with --rulebook or OVA_RULEBOOK.");
+      tell(msg);
+      RETURN
+    END
+  END;
+  IF OvaViewer.Open(viewer, pdf, page, msg) THEN END;
+  IF msg # NIL THEN tell(msg) END
 END OpenPage;
 
 PROCEDURE RulebookAction(w: Fl.Widget);
 BEGIN OvaWidgets.openPage(1)
 END RulebookAction;
+
+PROCEDURE ChoosePdfAction(w: Fl.Widget);
+BEGIN IF ChooseRulebook() THEN END
+END ChoosePdfAction;
+
+(* Rulebook > Viewer...: a viewer's name or a command, kept. *)
+PROCEDURE ViewerAction(w: Fl.Widget);
+  VAR text, msg: Rope; v: OvaViewer.Viewer;
+BEGIN
+  text := OvaViewer.Name(viewer);
+  IF askText(R("Viewer: okular, evince, mupdf, xdg-open, or a command (%f the PDF, %p its page, %l the printed page)"),
+      text) THEN
+    IF OvaViewer.Parse(text, v) THEN
+      viewer := v; Keep("viewer", OvaViewer.Name(v))
+    ELSE
+      msg := R("Not a viewer: "); msg := Ropes.Cat(msg, text);
+      OvaText.Add(msg, ". Give okular, evince, mupdf, xdg-open, or a command with %f for the PDF.");
+      tell(msg)
+    END
+  END
+END ViewerAction;
 
 (* ---- Title and changes ---- *)
 
@@ -249,12 +355,34 @@ BEGIN
   END
 END ShowWarnings;
 
+(* Whether a warning has code. *)
+PROCEDURE Warned(code: INTEGER): BOOLEAN;
+  VAR w: OvaCalc.Warning;
+BEGIN
+  w := character.warnings;
+  WHILE (w # NIL) & (w.code # code) DO w := w.next END;
+  RETURN w # NIL
+END Warned;
+
+PROCEDURE Red(b: OvaWidgets.NumberBox; on: BOOLEAN);
+BEGIN
+  IF on THEN b.shown.SetTextColor(Fl.Red) ELSE b.shown.SetTextColor(Fl.ForegroundColor) END;
+  b.shown.Redraw
+END Red;
+
 (* Every number box shown again: Barrier's and the Reserve's only when
-   the character has them, Scaled Cost's points only under it. *)
+   the character has them, Scaled Cost's points only under it. A total
+   a limit finds too high is red (p. 21): Base Zero's the Character
+   Total, or the points under Scaled Cost; a Power Ceiling's or the
+   starting levels' the Abilities'. *)
 PROCEDURE ShowNumbers;
-  VAR i: INTEGER; r: AttackRow;
+  VAR i: INTEGER; r: AttackRow; baseZero: BOOLEAN;
 BEGIN
   FOR i := 0 TO NSheetNumbers - 1 DO numbers[i].Display END;
+  baseZero := Warned(OvaCalc.BaseZeroBroken);
+  Red(numbers[Total], baseZero & ~character.options.scaledCost);
+  Red(numbers[Points], baseZero & character.options.scaledCost);
+  Red(numbers[AbilityLevels], Warned(OvaCalc.CeilingBroken) OR Warned(OvaCalc.StartingBroken));
   IF character.hasBarrier THEN numbers[Barrier].Show ELSE numbers[Barrier].Hide END;
   IF character.hasReserve THEN numbers[Reserve].Show ELSE numbers[Reserve].Hide END;
   IF character.options.scaledCost THEN numbers[Points].Show ELSE numbers[Points].Hide END;
@@ -531,6 +659,18 @@ END TextInput;
 
 (* ---- The transformed form ---- *)
 
+(* Character > Limits...: OvaSettings, which tells Changed each change.
+   Cancel puts the options back, and the title's mark as it was. *)
+PROCEDURE LimitsDone(ok: BOOLEAN);
+BEGIN
+  IF ~ok THEN modified := wasModified; ShowTitle END
+END LimitsDone;
+
+PROCEDURE LimitsAction(w: Fl.Widget);
+BEGIN
+  IF OvaSettings.dialog = NIL THEN wasModified := modified; OvaSettings.Edit(character, LimitsDone) END
+END LimitsAction;
+
 (* Character > Transformed form: the sheet shown, and computed, in the
    Transformation's form (p. 63), as Fukiko's is; the combat key
    transformed. *)
@@ -742,9 +882,12 @@ BEGIN
   saveItem := bar.Add("&File/&Save", ORD("s"), Fl.Command, SaveAction, {});
   saveAsItem := bar.Add("&File/Save &As...", ORD("s"), Fl.Command + Fl.Shift, SaveAsAction, FlMenus.MenuDivider);
   quitItem := bar.Add("&File/&Quit", ORD("q"), Fl.Command, Quit, {});
+  limitsItem := bar.Add("&Character/&Limits...", ORD("l"), Fl.Command, LimitsAction, {});
   transformedItem := bar.Add("&Character/&Transformed form", ORD("t"), Fl.Command, TransformedAction,
     FlMenus.MenuToggle);
-  rulebookItem := bar.Add("&Rulebook/&Open", 0, {}, RulebookAction, {});
+  rulebookItem := bar.Add("&Rulebook/&Open", 0, {}, RulebookAction, FlMenus.MenuDivider);
+  choosePdfItem := bar.Add("&Rulebook/&Choose PDF...", 0, {}, ChoosePdfAction, {});
+  viewerItem := bar.Add("&Rulebook/&Viewer...", 0, {}, ViewerAction, {});
   NEW(tabs); FlLayout.OpenTabs(tabs, 0, BarHeight, Width, Height - BarHeight, "");
   BuildSheetTab;
   NEW(backgroundTab);
@@ -761,6 +904,7 @@ PROCEDURE Close*;
 BEGIN
   IF OvaAttackDialog.dialog # NIL THEN OvaAttackDialog.Cancel END;
   IF OvaLinkedDialog.dialog # NIL THEN OvaLinkedDialog.Close END;
+  IF OvaSettings.dialog # NIL THEN OvaSettings.Cancel END;
   IF rebuild.Pending() THEN Fl.RemoveTimeout(rebuild) END;
   OvaWidgets.ClosePanel(abilities); OvaWidgets.ClosePanel(weaknesses);
   window.Delete;
@@ -772,10 +916,12 @@ BEGIN
 END Close;
 
 BEGIN
-  tell := DialogTell; ask := DialogAsk; choosePath := DialogPath;
+  tell := DialogTell; ask := DialogAsk; choosePath := DialogPath; choosePdf := DialogPdf; askText := DialogText;
   OvaWidgets.openPage := OpenPage; OvaAttackDialog.tell := Tell;
   OvaBackground.tell := Tell; OvaBackground.changed := BackgroundChanged;
   OvaTraitPanel.tell := Tell; OvaLinkedDialog.tell := Tell; OvaLinkedDialog.changed := LinkedChanged;
-  rulebookOption := NIL; OvaViewer.Default(viewer);
+  OvaSettings.changed := Changed;
+  rulebookOption := NIL; savedRulebook := NIL; preferences := NIL;
+  OvaViewer.Default(viewer); viewerOption := FALSE;
   character := NIL; path := NIL; modified := FALSE
 END OvaWindow.

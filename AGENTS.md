@@ -198,6 +198,9 @@ callbacks are module-level procedures; no exceptions; no call chaining;
   (PLAN.md, "The rulebook viewer"): an argument vector, no shell and no
   quoting, detached in its own session so closing the terminal doesn't
   close the viewer, and a missing program reported as `ENOENT`.
+- **Never write the user's preferences** (`~/.config/po_ova_cg/`): a
+  test opens its own file in `obj/` (`FlPreferences.OpenFile`), and
+  `make test-gui` runs the program with `XDG_CONFIG_HOME` in `obj/`.
 - **Reuse the user's running viewer** (okular over D-Bus, evince by
   itself); start one only when none shows the rulebook.
 - **Viewer experiments and tests run on a headless sway inside

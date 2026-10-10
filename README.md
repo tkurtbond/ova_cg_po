@@ -13,7 +13,7 @@ It is written in Oberon-2 for poc, the
 [Peaseblossom](https://github.com/tkurtbond/peaseblossom) Oberon
 compiler, with pofltk (FLTK 1.4) for the window and polibfyaml for YAML.
 
-**Status: Phase 7 of PLAN.md** -- the rules and their calculations,
+**Status: Phase 8 of PLAN.md** -- the rules and their calculations,
 tested against the book's sample characters; loading and saving
 characters in ova_fmt's YAML, with the keys added to both ova_fmts for
 the generator (overrides among them); opening the rulebook at a page
@@ -26,9 +26,13 @@ Background tab has the summary, the Background, Appearance,
 Personality and Other Notes, the portrait, the fluff and the notes.
 An Ability with linked content opens a dialog for it: a
 Transformation's form, a Magic's spells, or a Companion's or Vehicle's
-sheet; Character > Transformed form shows the sheet in the form. The
-File menu has New, Open, Save and Save As. Limits and preferences are
-still to come.
+sheet; Character > Transformed form shows the sheet in the form, and
+Character > Limits... turns on the rules that limit a character (Base
+Zero, starting levels, a Power Ceiling, Scaled Cost, half-cost
+Knowledge, Combined Effectiveness), a total they find too high shown
+in red. The File menu has New, Open, Save and Save As; the Rulebook
+menu opens the rulebook, and chooses its PDF and the viewer, which are
+kept between runs.
 
 ## Usage
 
@@ -37,9 +41,12 @@ po_ova_cg [options] [file.yaml]
 ```
 
 `-h` lists the options: `-r`/`--rulebook PATH` gives the rulebook's PDF
-(else `OVA_RULEBOOK`, else `~/Reference/RPG/OVA/`), and `-v`/`--viewer`
-the viewer (`okular`, `evince`, `mupdf`, `xdg-open`, or a command with
-`%f` for the PDF, `%p` its page and `%l` the printed page). A file that
+(else `OVA_RULEBOOK`, else the one chosen with Rulebook > Choose
+PDF..., else `~/Reference/RPG/OVA/`), and `-v`/`--viewer` the viewer
+(`okular`, `evince`, `mupdf`, `xdg-open`, or a command with `%f` for
+the PDF, `%p` its page and `%l` the printed page), else the one chosen
+with Rulebook > Viewer.... Those two choices are kept in
+`$XDG_CONFIG_HOME/po_ova_cg/po_ova_cg.prefs` (else under `~/.config`). A file that
 can't be read, or holds mistakes, is reported and the program exits
 with status 1. The program needs a display (`DISPLAY` or
 `WAYLAND_DISPLAY`); without one it says so and exits with status 1.

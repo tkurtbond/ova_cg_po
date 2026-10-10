@@ -8,17 +8,21 @@ MODULE OvaCg; (* po_ova_cg: an OVA character generator; the main module *)
    status 1, before FLTK is asked to open one (FLTK's own "Can't open
    display" is for a display that is set but can't be opened). *)
 
-IMPORT ArgParser, Err, Fl, OvaCharacter, OvaText, OvaViewer, OvaWindow, Out, Platform, Ropes;
+IMPORT ArgParser, Err, Fl, FlPreferences, OvaCharacter, OvaText, OvaViewer, OvaWindow, Out, Platform, Ropes;
 
 CONST
   Program = "po_ova_cg";
   FailureStatus = 1;
+  (* The preferences' file: $XDG_CONFIG_HOME (else ~/.config), then
+     po_ova_cg/po_ova_cg.prefs (FLTK's vendor and application). *)
+  Vendor = "po_ova_cg"; Application = "po_ova_cg";
 
 VAR
   parser: ArgParser.Parser;
   helpShown: BOOLEAN;
   file: Ropes.Rope;  (* the file argument; NIL for none *)
   character: OvaCharacter.Character;
+  preferences: FlPreferences.Preferences;
 
 PROCEDURE Fail(status: INTEGER; a, b: ARRAY OF CHAR);
 BEGIN
@@ -41,6 +45,7 @@ BEGIN
     Fail(ArgParser.UsageErrorStatus,
       "--viewer takes okular, evince, mupdf, xdg-open, or a command with %f for the PDF: ", arg)
   END;
+  OvaWindow.viewerOption := TRUE;
   RETURN TRUE
 END DoViewer;
 
@@ -59,7 +64,8 @@ BEGIN
   parser := ArgParser.NewParser("po_ova_cg [options] [file.yaml]", DoArgument);
   parser.AddOption(ArgParser.MakeOption("h", "help", "Display this text.", DoHelp));
   parser.AddOption(ArgParser.MakeStringOption("r", "rulebook",
-    "The rulebook's PDF (else OVA_RULEBOOK, else ~/Reference/RPG/OVA/).", DoRulebook));
+    "The rulebook's PDF (else OVA_RULEBOOK, else the one chosen before, else ~/Reference/RPG/OVA/).",
+    DoRulebook));
   parser.AddOption(ArgParser.MakeStringOption("v", "viewer",
     "okular, evince, mupdf, xdg-open, or a command: %f the PDF, %p its page, %l the printed page.", DoViewer));
   parser.ParseArguments(1)
@@ -105,8 +111,11 @@ BEGIN
     IF file # NIL THEN LoadFile END;
     RequireDisplay;
     OvaWindow.Build;
+    NEW(preferences); FlPreferences.Open(preferences, FlPreferences.User, Vendor, Application);
+    OvaWindow.UsePreferences(preferences);
     OvaWindow.window.Show;
     IF character # NIL THEN OvaWindow.Adopt(character, file) END;
-    Fl.Run
+    Fl.Run;
+    preferences.Close
   END
 END OvaCg.

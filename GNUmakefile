@@ -48,7 +48,7 @@ PROGSRC := $(wildcard src/*.Mod src/*.c)
 # modules): TESTS need no display, GUITESTS do.
 TESTSUPPORT := test/Check.Mod
 TESTS       := TestRules TestCalc TestFiles TestModel TestPaths TestSpawn TestViewer
-GUITESTS    := TestWindow TestBackground TestLinked
+GUITESTS    := TestWindow TestBackground TestLinked TestLimits
 TESTBINS    := $(TESTS:%=$(OBJ)/%)
 GUITESTBINS := $(GUITESTS:%=$(OBJ)/%)
 # Seconds a test may run before it counts as hung, and how long the
@@ -131,8 +131,11 @@ display:
 # it must still be running after RUNTIME seconds, when timeout ends it
 # (status 124): it started, drew, and didn't crash.  Then test/quit.sh:
 # started again, it quits on Ctrl+Q (X11 only; skipped on Wayland).
+# The program's own runs keep their preferences in obj/config, not the
+# user's ~/.config.
 test-gui: tests display
-	@status=0; for t in $(GUITESTS); do \
+	@export XDG_CONFIG_HOME=$(CURDIR)/$(OBJ)/config; \
+	status=0; for t in $(GUITESTS); do \
 	  echo "== $$t"; (cd test && timeout $(TIMEOUT) ../$(OBJ)/$$t) || status=1; \
 	done; \
 	echo "== $(PROGRAM) (must still be running after $(RUNTIME) s)"; \

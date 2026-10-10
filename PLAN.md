@@ -343,7 +343,7 @@ The first tab is the one shown when the window opens.
 
 The menu bar, above the tabs: File (New, Open, Save, Save As, Quit),
 Character (Limits..., Transformed form), Rulebook (Open, Choose PDF...,
-Viewer command...).
+Viewer...).
 
 1. **First tab, "Character" (the sheet's right half)**:
    - Character Name and Player Name inputs, and a tagline;
@@ -673,6 +673,7 @@ committed in their own repos, with the user's go-ahead.
 | `OvaPaths` | paths made absolute, a file's directory, a path relative to a directory, rebasing the portrait's |
 | `OvaAttackDialog` | the attack dialog, and the Perks/Flaws editor an Ability with Perks uses |
 | `OvaTraitPanel` | a list of Abilities or Weaknesses and its editor: the character's, a form's, a partner's |
+| `OvaSettings` | Character > Limits...: the rules that limit a character, in its `options:` |
 | `OvaLinkedDialog` | an Ability's linked content: a Transformation's form, a Magic's spells, a Companion's or Vehicle's sheet |
 | `OvaText`, `OvaOut` | po_ova_fmt's, copied, as needed |
 
@@ -1081,7 +1082,64 @@ committed in their own repos, with the user's go-ahead.
      (1); and, before pofltk's fix, the segfault.
      `TestWindow` and `TestBackground` unchanged by the move to
      `OvaTraitPanel`. Valgrind clean on Xvfb and sway.
-8. **Limits and warnings**, the settings dialog, preferences.
+8. **Limits and warnings**, the settings dialog, preferences. [done]
+   - The limits' rules and warnings were `OvaCalc`'s since Phase 2;
+     this phase adds the dialog that turns them on, the red totals,
+     and the preferences.
+   - **`OvaSettings`**, Character > Limits... (Ctrl+L): a check box
+     for each rule, with its number (Base Zero's range, the starting
+     levels, the Power Ceiling) beside it, active only while the rule
+     is on, and a **?** for its page (21; half cost 57). Half cost is
+     active only with Base Zero, a Power Ceiling or Scaled Cost, the
+     rules it applies under (p. 57), but keeps its value. A number
+     never set starts at p. 21's example (decided 2026-10-10): Base
+     Zero's 5, 5 starting levels, a Power Ceiling of 15; one turned off
+     keeps what it was. It edits live, as the attack dialog does, with
+     OK and Cancel; Cancel (or the close button) puts back the options
+     and the title's mark. The `options:` block is saved while a rule
+     is on, or if the file had one and the user changed nothing that
+     is saved (a number counts only while its rule is on: found
+     writing `TestLimits`, where turning a rule on and off again
+     otherwise dropped a file's empty block).
+   - **Red totals** (p. 21's "says why" is the warning beside them):
+     Base Zero's the Character Total, or the points under Scaled Cost,
+     which it measures; a Power Ceiling's and the starting levels' the
+     Abilities' levels, even under Scaled Cost, where they count the
+     Abilities' points, which no box shows.
+   - **Preferences**: `FlPreferences`, `$XDG_CONFIG_HOME/po_ova_cg/
+     po_ova_cg.prefs` (FLTK's vendor and application both
+     `po_ova_cg`), holding `rulebook` and `viewer`, written as each is
+     chosen. `OvaCg` opens them after the window and closes them on
+     quitting; FLTK writes nothing back unless one changed (its
+     source, `RootNode::~RootNode`), and `make test-gui` points
+     `XDG_CONFIG_HOME` into `obj/`, so the tests' runs of the program
+     never touch the user's. The window's `UsePreferences` reads them:
+     `--viewer`'s viewer wins over the one kept, and one kept that
+     isn't a viewer is ignored; the rulebook kept comes after
+     `--rulebook` and `OVA_RULEBOOK` (`OvaViewer.FindRulebook`).
+   - **The Rulebook menu**: Open, Choose PDF... (a file chooser,
+     filtered to PDFs; the path made absolute, used from then on in
+     this run even over `--rulebook`, and kept), Viewer... (a line of
+     text: a viewer's name or a command, refused with a message if it
+     isn't one, else kept). A rulebook not found is asked for once,
+     with the same chooser; cancelled, the message says where it
+     looked and how to give it.
+   - `TestLimits` (35 checks, on Xvfb and sway): a new character with
+     Attack +3 through each rule, its number, what is saved, and which
+     total is red; half cost's activity and count; Cancel, OK, the
+     close button; an empty `options:` block kept; Sheet's limits
+     shown; Choose PDF..., Viewer... (a name, a command, not a viewer,
+     cancelled), kept in a preferences file in `obj/` and read back,
+     `--viewer` winning, a bad viewer kept ignored; a rulebook not
+     found asked for, cancelled, then chosen and opened, and found the
+     next time.
+   - Shown to fail with bugs planted: the Total red under Scaled Cost
+     (1 check failed), the starting levels not red (1), Cancel keeping
+     the options (2) or the title's mark (1), half cost always active
+     (3), a ceiling of 20 to start (2), the kept viewer beating
+     `--viewer` (1), the chosen PDF kept relative (3), a missing
+     rulebook not asked for (3), the range's spinner ignored (4), and
+     a file's empty block dropped (1).
 9. **Finish**: valgrind clean, `make install`, README's user guide.
 
 ## Testing
@@ -1092,7 +1150,7 @@ committed in their own repos, with the user's go-ahead.
 - `make test-viewers`: `OvaViewer` with the real okular, evince and
   mupdf, on `test/viewer.sh`'s own headless sway and private bus.
 - `make test-headless` / `test-sway`: the window tests (`TestWindow`,
-  `TestBackground`, `TestLinked`),
+  `TestBackground`, `TestLinked`, `TestLimits`),
   never on the desktop (AGENTS.md).
 - `make valgrind`: the unit tests and window tests under valgrind, with
   po_ova_fmt's and pofltk's suppressions and pofltk's `vg-check.sh`.
