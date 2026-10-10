@@ -127,6 +127,13 @@ make print-VAR       # show a makefile variable
   (`xvfb-run`, `import -window root`), not by showing it.
 - Every widget opened must be deleted by the end of a test, or
   pofltk's `vg-check.sh` reports it.
+- **Nothing in the window waits for the user**: a message, the
+  save-first question, the file chooser and the rulebook go through
+  procedure variables (`OvaWindow.tell`, `ask`, `choosePath`,
+  `OvaWidgets.openPage`), and the attack dialog calls back on OK or
+  Cancel (`OvaAttackDialog.Ok`, `Cancel` for tests). `TestWindow` sets
+  its own, so it never shows a modal dialog; anything new that would
+  wait gets one too.
 
 ## Working with ropes, pofltk and poc here
 
@@ -169,6 +176,15 @@ callbacks are module-level procedures; no exceptions; no call chaining;
   variables too.
 - **Labels FLTK keeps are copied by pofltk**, so a local string may die
   with its procedure.
+- **Never delete a widget, or clear its group, inside its own
+  callback**: a combat-box row's Remove rebuilds the rows from an
+  `Fl.Timer` (`Fl.AddTimeout(rebuild, 0.0D0)`), which a test runs with
+  `Fl.Wait`.
+- **Don't name a method after a widget's**: a `NumberBox` (a `Group`)
+  shows its number with `Display`, since `Show` would replace FLTK's.
+- **Browser lines are 1-based (`Value()` 0: none), `Choice` items
+  0-based (-1: none).** A browser that shows names has
+  `SetFormatChar(0X)`, so a name starting with `@` isn't a format code.
 - A programmer error halts (`ASSERT`); bad input, a cancelled dialog or
   a viewer that won't start comes back as `FALSE` with a message, shown
   in a dialog.

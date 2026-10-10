@@ -23,9 +23,25 @@ check "-h needs no display" test ! -s "$out/stderr"
 run --no-such-option
 check "an unknown option exits 2" test $st -eq 2
 
+run --viewer nonsense
+check "a --viewer it doesn't know exits 2" test $st -eq 2
+check "and says what it takes" grep -q '^po_ova_cg: --viewer takes okular, evince, mupdf, xdg-open' "$out/stderr"
+
+run test/data/Ai.yaml test/data/Braun.yaml
+check "two files exit 2" test $st -eq 2
+check "and say one at a time" grep -qx 'po_ova_cg: one file at a time: test/data/Braun.yaml' "$out/stderr"
+
+# The file is read before the display is looked for, so these need none.
 run some-file.yaml
-check "a file argument exits 2 until Phase 3" test $st -eq 2
-check "a file argument says why" grep -q "opening a file isn't written yet: some-file.yaml" "$out/stderr"
+check "a file that isn't there exits 1" test $st -eq 1
+check "and says why" grep -qx 'po_ova_cg: some-file.yaml: error: No such file or directory' "$out/stderr"
+
+run test/data/Broken.yaml
+check "a file with mistakes exits 1" test $st -eq 1
+check "and lists them" grep -q 'missing required key "name"' "$out/stderr"
+
+run -v okular -r /nowhere.pdf test/data/Ai.yaml
+check "a good file and options: on to the display" grep -q '^po_ova_cg: no display' "$out/stderr"
 
 run
 check "no display exits 1" test $st -eq 1

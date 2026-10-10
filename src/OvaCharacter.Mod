@@ -85,6 +85,77 @@ VAR
      as an override. *)
   notices-: OvaText.List;
 
+(* ---- Endurance Use ---- *)
+
+(* Whether name, or name and detail as "Name (detail)", is target,
+   ignoring case. *)
+PROCEDURE Names(name, detail, target: Rope): BOOLEAN;
+  VAR full: Rope;
+BEGIN
+  target := OvaText.FoldCI(OvaText.Trim(target));
+  full := name;
+  IF detail # NIL THEN OvaText.Add(full, " ("); full := Ropes.Cat(full, detail); OvaText.Add(full, ")") END;
+  RETURN (target # NIL) & (Ropes.Equal(OvaText.FoldCI(name), target) OR Ropes.Equal(OvaText.FoldCI(full), target))
+END Names;
+
+(* Ties each Endurance Use in list to the Ability in list, or else the
+   attack of s, that its detail names (PLAN.md, "Changes to ova_fmt":
+   it needs no key of its own), setting their use; one naming nothing
+   ties to nothing. *)
+PROCEDURE LinkList(list: OvaCalc.Trait; s: OvaCalc.Sheet);
+  VAR w, t: OvaCalc.Trait; a: OvaCalc.Attack; found: BOOLEAN;
+BEGIN
+  w := list;
+  WHILE w # NIL DO
+    IF (w.kind = OvaRules.Weakness) & (w.item # NIL) & (OvaRules.CostUp IN w.item.flags) & w(Trait).hasDetail THEN
+      found := FALSE; t := list;
+      WHILE ~found & (t # NIL) DO
+        IF (t.kind = OvaRules.Ability) & Names(t(Trait).name, t(Trait).detail, w(Trait).detail) THEN
+          t.use := w.level; found := TRUE
+        END;
+        t := t.next
+      END;
+      a := s.attacks;
+      WHILE ~found & (a # NIL) DO
+        IF Names(a(Attack).name, NIL, w(Trait).detail) THEN a.use := w.level; found := TRUE END;
+        a := a.next
+      END
+    END;
+    w := w.next
+  END
+END LinkList;
+
+PROCEDURE ClearUse(list: OvaCalc.Trait);
+BEGIN WHILE list # NIL DO list.use := 0; list := list.next END
+END ClearUse;
+
+(* Every Endurance Use of s, its Transformations' forms and its
+   partners, tied to what it names. *)
+PROCEDURE Link(s: OvaCalc.Sheet);
+  VAR t: OvaCalc.Trait; a: OvaCalc.Attack;
+BEGIN
+  ClearUse(s.traits);
+  a := s.attacks; WHILE a # NIL DO a.use := 0; a := a.next END;
+  t := s.traits;
+  WHILE t # NIL DO
+    ClearUse(t.form);
+    t := t.next
+  END;
+  LinkList(s.traits, s);
+  t := s.traits;
+  WHILE t # NIL DO
+    LinkList(t.form, s);
+    IF t.partner # NIL THEN Link(t.partner) END;
+    t := t.next
+  END
+END Link;
+
+(* Every number of c computed again, after a change: what OvaCalc.Compute
+   does, with each Endurance Use tied first. *)
+PROCEDURE Recompute*(c: Character);
+BEGIN Link(c); OvaCalc.Compute(c)
+END Recompute;
+
 (* ---- Building from what OvaEntities read ---- *)
 
 PROCEDURE Find(name: Rope): OvaRules.Item;
@@ -240,7 +311,7 @@ BEGIN
     c.options.halfCostKnowledge := e.options.halfCostKnowledge;
     c.options.combinedEffectiveness := e.options.combinedEffectiveness
   END;
-  OvaCalc.Compute(c);
+  Recompute(c);
   RETURN c
 END Build;
 
@@ -355,7 +426,7 @@ BEGIN
     t := t.next
   END;
   AdoptCombat(e.combat, c, c.name);
-  OvaCalc.Compute(c);
+  Recompute(c);
   t := c.traits;
   FOR i := 0 TO e.abilities.n - 1 DO
     a := e.abilities.items[i](OvaEntities.Ability);
@@ -369,7 +440,7 @@ BEGIN
   IF e.combat.hasCombat & e.combat.hasThreatValue THEN
     AdoptInt(c.tv, e.combat.threatValue, OvaEntities.OvThreatValue IN e.combat.overrides, c.name, "TV")
   END;
-  OvaCalc.Compute(c)
+  Recompute(c)
 END AdoptNumbers;
 
 (* ---- Files ---- *)
@@ -446,6 +517,154 @@ BEGIN
   AdoptNumbers(e, c);
   RETURN TRUE
 END Load;
+
+(* ---- Editing (the window's) ----
+
+   Every change the window makes goes through these, then Recompute.
+   Traits and Mods are kept in the order the file's loader sorts them
+   (OvaEntities.SortByName: by name, then detail, ignoring case), so
+   the window lists them as ova_fmt prints them; attacks keep the order
+   they were added in, as a file's do. *)
+
+(* Whether a comes before b: by name, then detail, folded. *)
+PROCEDURE Before(an, ad, bn, bd: Rope): BOOLEAN;
+  VAR c: INTEGER;
+BEGIN
+  c := Ropes.Compare(OvaText.FoldCI(an), OvaText.FoldCI(bn));
+  IF c = 0 THEN c := Ropes.Compare(OvaText.FoldCI(ad), OvaText.FoldCI(bd)) END;
+  RETURN c < 0
+END Before;
+
+(* A new Ability or Weakness (kind), named for it, or name if it is
+   NIL (a name the tables don't have); detail NIL for none. *)
+PROCEDURE NewTrait*(it: OvaRules.Item; kind, level: INTEGER; name, detail: Rope): Trait;
+  VAR t: Trait;
+BEGIN
+  NEW(t); OvaCalc.InitTrait(t, it, kind, level);
+  IF it # NIL THEN t.name := Ropes.FromString(it.name) ELSE t.name := name END;
+  t.hasDetail := detail # NIL; t.detail := detail;
+  t.hasNote := FALSE; t.note := NIL; t.hasHalfTV := FALSE;
+  RETURN t
+END NewTrait;
+
+(* Puts t into list in its place: Abilities before Weaknesses, each
+   sorted. *)
+PROCEDURE InsertTrait*(VAR list: OvaCalc.Trait; t: Trait);
+  VAR p, prev: OvaCalc.Trait;
+BEGIN
+  prev := NIL; p := list;
+  WHILE (p # NIL) & ((p.kind < t.kind)
+      OR (p.kind = t.kind) & ~Before(t.name, t.detail, p(Trait).name, p(Trait).detail)) DO
+    prev := p; p := p.next
+  END;
+  t.next := p;
+  IF prev = NIL THEN list := t ELSE prev.next := t END
+END InsertTrait;
+
+(* Takes t out of list; nothing if it isn't there. *)
+PROCEDURE RemoveTrait*(VAR list: OvaCalc.Trait; t: OvaCalc.Trait);
+  VAR p: OvaCalc.Trait;
+BEGIN
+  IF list = t THEN list := t.next
+  ELSE
+    p := list;
+    WHILE (p # NIL) & (p.next # t) DO p := p.next END;
+    IF p # NIL THEN p.next := t.next END
+  END;
+  t.next := NIL
+END RemoveTrait;
+
+(* Changes t to item it at level with detail, and moves it to its new
+   place in list. Its Perks, Flaws and linked content stay. *)
+PROCEDURE ChangeTrait*(VAR list: OvaCalc.Trait; t: Trait; it: OvaRules.Item; level: INTEGER; detail: Rope);
+BEGIN
+  RemoveTrait(list, t);
+  IF it # t.item THEN
+    t.item := it;
+    IF it # NIL THEN t.name := Ropes.FromString(it.name) END;
+    t.hasHalfTV := FALSE; t.halfTV := (it # NIL) & (OvaRules.HalfTV IN it.flags)
+  END;
+  t.level := level; t.hasDetail := detail # NIL; t.detail := detail;
+  InsertTrait(list, t)
+END ChangeTrait;
+
+(* A new attack named name, with no Perks or Flaws. *)
+PROCEDURE NewAttack*(name: Rope): Attack;
+  VAR a: Attack;
+BEGIN
+  NEW(a); OvaCalc.InitAttack(a);
+  a.name := name; a.hasAffinity := FALSE; a.affinity := NIL;
+  a.hasDescription := FALSE; a.description := NIL;
+  RETURN a
+END NewAttack;
+
+PROCEDURE RemoveAttack*(c: Character; a: OvaCalc.Attack);
+  VAR p: OvaCalc.Attack;
+BEGIN
+  IF c.attacks = a THEN c.attacks := a.next
+  ELSE
+    p := c.attacks;
+    WHILE (p # NIL) & (p.next # a) DO p := p.next END;
+    IF p # NIL THEN p.next := a.next END
+  END;
+  a.next := NIL
+END RemoveAttack;
+
+(* A new Perk, or Flaw if isFlaw, taken times times at cost each (a
+   RangeCost's or UserCost's; else ignored). *)
+PROCEDURE NewMod*(it: OvaRules.Item; isFlaw: BOOLEAN; times, cost: INTEGER): Mod;
+  VAR m: Mod;
+BEGIN
+  NEW(m); OvaCalc.InitMod(m, it, times, cost);
+  m.name := Ropes.FromString(it.name); m.hasDetail := FALSE; m.detail := NIL;
+  m.isFlaw := isFlaw;
+  m.hasCost := it.costKind # OvaRules.FixedCost;
+  RETURN m
+END NewMod;
+
+(* Puts m into list in its place: Perks before Flaws, each sorted. *)
+PROCEDURE InsertMod*(VAR list: OvaCalc.Mod; m: Mod);
+  VAR p, prev: OvaCalc.Mod;
+BEGIN
+  prev := NIL; p := list;
+  WHILE (p # NIL) & (~p(Mod).isFlaw & m.isFlaw
+      OR (p(Mod).isFlaw = m.isFlaw) & ~Before(m.name, m.detail, p(Mod).name, p(Mod).detail)) DO
+    prev := p; p := p.next
+  END;
+  m.next := p;
+  IF prev = NIL THEN list := m ELSE prev.next := m END
+END InsertMod;
+
+PROCEDURE RemoveMod*(VAR list: OvaCalc.Mod; m: OvaCalc.Mod);
+  VAR p: OvaCalc.Mod;
+BEGIN
+  IF list = m THEN list := m.next
+  ELSE
+    p := list;
+    WHILE (p # NIL) & (p.next # m) DO p := p.next END;
+    IF p # NIL THEN p.next := m.next END
+  END;
+  m.next := NIL
+END RemoveMod;
+
+(* A copy of list, each Mod copied: what a dialog puts back on
+   Cancel. *)
+PROCEDURE CopyMods*(list: OvaCalc.Mod): OvaCalc.Mod;
+  VAR first, last: OvaCalc.Mod; m: Mod;
+BEGIN
+  first := NIL; last := NIL;
+  WHILE list # NIL DO
+    NEW(m); m^ := list(Mod)^; m.next := NIL;
+    IF last = NIL THEN first := m ELSE last.next := m END;
+    last := m; list := list.next
+  END;
+  RETURN first
+END CopyMods;
+
+(* Sets a text field and its flag: r NIL (empty) is none. *)
+PROCEDURE SetText*(VAR has: BOOLEAN; VAR field: Rope; r: Rope);
+BEGIN field := r; has := r # NIL
+END SetText;
 
 BEGIN
   OvaText.Clear(notices)

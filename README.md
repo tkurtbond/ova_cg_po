@@ -13,21 +13,30 @@ It is written in Oberon-2 for poc, the
 [Peaseblossom](https://github.com/tkurtbond/peaseblossom) Oberon
 compiler, with pofltk (FLTK 1.4) for the window and polibfyaml for YAML.
 
-**Status: Phase 4 of PLAN.md** -- the rules and their calculations,
+**Status: Phase 5 of PLAN.md** -- the rules and their calculations,
 tested against the book's sample characters; loading and saving
 characters in ova_fmt's YAML, with the keys added to both ova_fmts for
 the generator (overrides among them); opening the rulebook at a page
-in okular, evince, mupdf or another viewer, reusing one already open
-(not yet reachable from the window); and a window with a menu bar
-that opens and quits. The window shows nothing else yet.
+in okular, evince, mupdf or another viewer, reusing one already open;
+and the window's first tab: the names, the Abilities and Weaknesses
+with their pages and **?** buttons, the totals and warnings, the Combat
+Notes, and the combat box with the attack dialog, an override box
+beside every computed number, and New, Open, Save and Save As. The
+Background tab, linked content (Transformation, Companion, spells,
+Vehicle), limits and preferences are still to come.
 
 ## Usage
 
 ```
-po_ova_cg [options]
+po_ova_cg [options] [file.yaml]
 ```
 
-`-h` lists the options. The program needs a display (`DISPLAY` or
+`-h` lists the options: `-r`/`--rulebook PATH` gives the rulebook's PDF
+(else `OVA_RULEBOOK`, else `~/Reference/RPG/OVA/`), and `-v`/`--viewer`
+the viewer (`okular`, `evince`, `mupdf`, `xdg-open`, or a command with
+`%f` for the PDF, `%p` its page and `%l` the printed page). A file that
+can't be read, or holds mistakes, is reported and the program exits
+with status 1. The program needs a display (`DISPLAY` or
 `WAYLAND_DISPLAY`); without one it says so and exits with status 1.
 
 ## Building

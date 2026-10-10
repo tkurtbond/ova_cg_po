@@ -357,8 +357,11 @@ Viewer command...).
      same shape for its own items;
    - the running totals and limit warnings, under the two lists;
    - **Combat Notes**, a multi-line input;
-   - **the combat box**: a table (`FlTable`) of attacks, one row each:
-     name, ROLL, DX, END, computed, never typed. Add/Edit opens the
+   - **the combat box**: a scrolled list of attacks, one row each:
+     name, ROLL, DX, END, computed, each with its override box, and
+     Edit and Remove (Phase 5: rows of widgets in an `FlLayout.Scroll`,
+     not an `FlTable`, since every number needs its own box beside it,
+     which a table would have to place as widgets anyway). Add/Edit opens the
      **attack dialog**: name, description, affinity, the Perks and the
      Flaws each as a browser of names with a count (repeatable ones
      only) and a cost (Cancel, Requirement, Unique), each with **?**,
@@ -654,11 +657,12 @@ committed in their own repos, with the user's go-ahead.
 | `OvaCg` (main) | the command line (ArgParser: a file to open, `--rulebook`, `--viewer`), then the window |
 | `OvaRules` | the data tables above: names, kinds, pages, costs, flags |
 | `OvaCalc` | the calculations: END, ROLL, DX, Defense, Health, Endurance, TV, totals, limits and warnings |
-| `OvaCharacter` | the character being built, loaded from a file (change notification comes with the window, Phase 5) |
+| `OvaCharacter` | the character being built, loaded from a file; the edits the window makes, and `Recompute` (Endurance Use tied, then `OvaCalc.Compute`) |
 | `OvaEntities` | po_ova_fmt's loader, copied |
 | `OvaSave` | the YAML writer, through polibfyaml's emitter |
 | `OvaViewer` | the rulebook's path, the viewer chosen, reusing a running one (okular over D-Bus, evince, mupdf) |
 | `OvaSpawn` (with `OvaSpawn.c`) | starting a program detached; running one and capturing its output |
+| `OvaWidgets` | what the window and its dialogs share: `NumberBox` (a computed number and its override box), the **?** `HelpButton`, and `Panel` (a list and its editor) |
 | `OvaWindow` | the main window, its menu bar and both tabs |
 | `OvaAttackDialog` | the attack dialog, and the Perks/Flaws editor an Ability with Perks uses |
 | `OvaLinkedDialog` | Transformation, Companion, spells, Vehicle |
@@ -883,6 +887,82 @@ committed in their own repos, with the user's go-ahead.
    it as pofltk's tests do, checking the model, the shown numbers, and
    the page beside every name shown, and that an override changes what
    is shown, saved, and computed from it, and clearing it undoes that.
+   [done]
+   - `OvaCharacter`: `Recompute` ties each Endurance Use to the
+     Ability, else the attack, its detail names ("Name" or "Name
+     (detail)", ignoring case), then runs `OvaCalc.Compute`; `Build`
+     and the loader use it. Phase 3 had left the tie out, so
+     Endurance Use counted in no END (found writing `TestModel`). The edits:
+     `NewTrait`, `InsertTrait` (Abilities before Weaknesses, each by
+     name, then detail, ignoring case, as the loader keeps them),
+     `RemoveTrait`, `ChangeTrait` (moved to its new place), `NewAttack`,
+     `RemoveAttack`, `NewMod`, `InsertMod` (Perks before Flaws),
+     `RemoveMod`, `CopyMods`, `SetText`. `TestModel` (18 checks, no
+     display): the orders, the changes, the tie, and a save and load
+     with no notices.
+   - `OvaWidgets`: `NumberBox` (the computed number, read-only, and
+     the override box; its `Target` says where the number lives, so it
+     reads and sets the model, never a copy; the text is taken on
+     leaving the box or Enter, and refused text said so and the box
+     emptied), `HelpButton` (through `openPage`), and `Panel`, the
+     shape of the Abilities, the Weaknesses, and the dialog's Perks and
+     Flaws: a browser with the page column, a `Choice` of
+     `OvaRules.Label`s, a `Spinner`, a text field, Add, Change, Remove
+     and **?**; its extension says what the lines are and what the
+     buttons do.
+   - `OvaAttackDialog`: one dialog for an attack (name, affinity,
+     description, made with Telekinesis, made transformed, Perks,
+     Flaws, ROLL, DX, END) and for an Ability's Perks and Flaws (its
+     END alone). It edits the model as the user works, so its numbers
+     are `OvaCalc`'s; Cancel puts back what was there (a deep copy of
+     the mods, the attack's record), or takes out an attack just added.
+     It is modal but doesn't wait: OK and Cancel call back.
+   - `OvaWindow`: the menu bar (File: New, Open, Save, Save As, Quit,
+     with their shortcuts; Rulebook > Open), the tabs, and the first
+     tab: the names and tagline, the two panels, the chosen Ability's
+     END and its Perks and Flaws button, the totals (Scaled Cost's
+     points only under it), the warnings in words with each item's
+     page, the Combat Notes, and the combat box with DEFENSE, Barrier's
+     (only with Barrier), HEALTH, ENDURANCE, the Reserve (only with
+     one) and TV under it. The title has the file's name and `*` for
+     unsaved changes; New, Open, Quit and the close button ask first.
+     Messages, the question, the file chooser and the rulebook go
+     through procedure variables (`tell`, `ask`, `choosePath`,
+     `OvaWidgets.openPage`) a test answers. A row's Remove rebuilds
+     the rows from a timer, since FLTK can't delete the button whose
+     callback is running. `OvaCg` takes the file argument (loaded
+     before the display is looked for: a bad file exits 1 with the
+     reasons), `--rulebook` and `--viewer`.
+   - `TestWindow` (71 checks, on Xvfb and on sway): the menu items; a
+     fixture loaded, every list line and every Choice and Perk/Flaw
+     label against `OvaRules`' page, every number box against the
+     model; an override shown, marked, saved in `overrides`, cleared,
+     refused (`lots`, a HEALTH of `1/2`); Braun's TV from his ROLL
+     override, cleared and set again; an unknown name with `p. ?` in
+     its list line and its warning; Add, Change and Remove of an
+     Ability; Endurance Use added and the Ability's END shown and
+     overridden; an Ability's Perk added, cancelled, added; an attack
+     added through the dialog, with a counted Perk and a costed Flaw,
+     a bad cost, edited and cancelled, a new one cancelled, OK with no
+     name refused, a row removed; the player and Combat Notes saved;
+     Save As, the file loaded again the same; New, and Quit and the
+     close button asking. `test/cli.sh` covers the new command line.
+   - Shown to fail with bugs planted: the override not stored (5
+     checks failed), no page column (6), the rows' numbers not shown
+     again (12), Cancel keeping the edited mods (2), no `*` in the title
+     (1), Remove not rebuilding the rows (1), an unknown name's warning
+     without `(p. ?)` (1); in `OvaCharacter`, no
+     Endurance Use tie (3) and traits appended unsorted (4). Valgrind
+     clean on Xvfb and sway.
+   - Seen on a screenshot of `Sheet.yaml`: its Ability was plain
+     "Magic", which isn't an `OvaRules` name (the book has "Magic,
+     Arcane" and "Magic, Witchcraft"), so it showed `p. ?` and a
+     warning. Renamed "Magic, Arcane" in all three repos' copies (the
+     user's decision, 2026-10-09; po_ova_fmt's golden files
+     regenerated); its spell's END is still overridden (15, the rules'
+     10), and it loads with no warnings or notices. An unknown name's
+     `p. ?` and warning are checked in `TestWindow` with a made-up name
+     instead.
 6. **The second tab**: the text fields, the fluff grid, the portrait.
 7. **Linked content**: Transformation (and the transformed form's
    combat box), Companion, spells, Vehicle.
@@ -892,12 +972,12 @@ committed in their own repos, with the user's go-ahead.
 ## Testing
 
 - `make test` (no display): `TestRules`, `TestCalc`, `TestFiles`,
-  `TestSpawn`, `TestViewer` (on fake viewers and a fake gdbus),
+  `TestModel`, `TestSpawn`, `TestViewer` (on fake viewers and a fake gdbus),
   `test/files.sh`, and a command-line check (`test/cli.sh`).
 - `make test-viewers`: `OvaViewer` with the real okular, evince and
   mupdf, on `test/viewer.sh`'s own headless sway and private bus.
-- `make test-headless` / `test-sway`: the window tests, never on the
-  desktop (AGENTS.md).
+- `make test-headless` / `test-sway`: the window tests (`TestWindow`),
+  never on the desktop (AGENTS.md).
 - `make valgrind`: the unit tests and window tests under valgrind, with
   po_ova_fmt's and pofltk's suppressions and pofltk's `vg-check.sh`.
 - The oracle for calculations is the sample characters; the oracle for
