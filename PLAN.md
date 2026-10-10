@@ -481,7 +481,7 @@ desktop.
 
   | Viewer | Reuse | How |
   |---|---|---|
-  | okular | yes, over D-Bus | look on the session bus for `org.kde.okular*` services; in each, the objects `/okular`, `/okular2`, ... are its tabs, and `org.kde.okular.currentDocument` says which shows the rulebook. If one does: `/okularshell` `openDocument(file://PDF)` brings that tab forward (no new tab), then that tab's `goToPage(index)`. If none: start `okular --unique -p INDEX PDF` |
+  | okular | yes, over D-Bus | look on the session bus for okular's services, `org.kde.okular` and `org.kde.okular-PID` (not the `Instance_` alias); in each, the objects `/okular`, `/okular2`, ... are its tabs, and `org.kde.okular.currentDocument` says which shows the rulebook. If one does: `/okularshell` `openDocument(file://PDF)`, with only `%`, `#`, `?` and control characters encoded, brings that tab forward (no new tab), then that tab's `goToPage(index)`. If none: start `okular --unique -p INDEX PDF` |
   | evince | yes, by itself | `evince -i INDEX PDF` (or `--page-label=LABEL`): a running evince with that file takes the page and no second window opens; the command exits at once |
   | mupdf | no | `mupdf PDF INDEX`; mupdf has no remote control, so the program ends the mupdf it started last (by its pid) before starting the next, so lookups don't pile up windows |
   | xdg-open | no page | `xdg-open PDF`; the program then says which page to turn to |
@@ -492,11 +492,14 @@ desktop.
   (fork, `setsid`, fork, `execvp`), with standard input, output and
   error on `/dev/null`, and reports a failed `exec` (as `errno`) through
   a close-on-exec pipe; `Capture` runs a program and returns its
-  standard output and status, for the D-Bus queries (`busctl --user
-  list`, `gdbus call`). Arguments are an argument vector, never a shell
-  command line, so nothing is quoted. Without `gdbus`, okular is
+  standard output and status, for the D-Bus queries (`gdbus call`,
+  `ListNames` among them). Arguments are an argument vector, never a
+  shell command line, so nothing is quoted. Without `gdbus`, okular is
   started `--unique` instead (it then reuses only the instance it
-  started).
+  started). A started program is a `Process`, its pid and its start
+  time (`/proc/PID/stat`), so `Terminate` (mupdf's replacement) ends it
+  only if that pid is still the same process, never a later one given
+  the pid, and never a viewer found by name.
 - **xdg-open and FLTK's `fl_open_uri`** (which runs `xdg-open
   file://...`) can't choose a page, so they are the last resort.
 
@@ -518,6 +521,21 @@ desktop.
   by `-i` or `--page-label`: pages 50, 60 and 85 shown correctly.
 - **mupdf** (1.28.2, X11 only, under Xwayland) opens a new window
   every time, at the right page.
+- **okular's `openDocument` matches the URL as given** (Phase 4, on
+  okular 25, a PDF named `O'Brien #1 100% ?.pdf` in `viewer test/`):
+  a tab opened from a plain path holds `'` and blanks unencoded, so
+  `file://` with every reserved byte encoded (`%27`, `%20`) didn't
+  match and opened the PDF again in a new tab; `file://` and the raw
+  path matched, but not with `#`, `%` or `?` in it (the URL ends at the
+  first two, and `%` starts an escape); a plain path, no `file://`,
+  added an empty tab. With only `%`, `#`, `?` (and control
+  characters) encoded it matched every time, with no new tab, and
+  `okular --unique -p 62 PATH` opened that name at the page. So
+  `OvaViewer.FileUrl` encodes those only. okular's `currentDocument`
+  gives the plain path, but a `file:` URL is decoded in full anyway.
+- **gdbus quotes a string as GLib prints a `GVariant`**: in `'...'`, or
+  in `"..."` if it holds a `'`, with `\` escapes (checked with
+  `GLib.Variant.print_`); `OvaViewer` reads both.
 - **xdg-open** treats sway as a generic desktop with or without
   `XDG_CURRENT_DESKTOP` (`DE=generic`), and opens the default
   (`okularApplication_pdf.desktop`) with no page. A `#page=N` suffix on
@@ -806,11 +824,59 @@ committed in their own repos, with the user's go-ahead.
    program's `ENOENT`, arguments arriving exactly (a recording script,
    `test/fake-viewer.sh`, with a path holding a space and a `'`), the
    started program in its own session, no zombie, `Capture`'s output
-   and status. `TestViewer`, under `make test-sway` with
-   `dbus-run-session`: okular found and turned over D-Bus (one tab, the
+   and status. The real viewers on a headless sway inside
+   `dbus-run-session` (`make test-viewers`, below; `TestViewer` runs on
+   fakes, with no display): okular found and turned over D-Bus (one tab, the
    right page, read back with `currentPage`), evince reused (one
    window), mupdf replaced, each viewer's page checked as in the
-   experiments (scratchpad scripts to become `test/viewer.sh`).
+   experiments (scratchpad scripts to become `test/viewer.sh`). [done]
+   - `OvaSpawn` (with `OvaSpawn.c`): `Args` (`Add`, `AddRope`, `Arg`;
+     too long is `E2BIG`), `Detached` (fork, `setsid`, fork, `execvp`;
+     standard files on `/dev/null`; the pid and the `exec`'s `errno`
+     back through close-on-exec pipes), `Capture` (standard output
+     read in chunks into a rope; the exit status, -1 for a signal),
+     `Process` with `Alive` and `Terminate` (pid and start time),
+     `OnPath`, `ErrorText` (`strerror`), `Session`. `TestSpawn` (28
+     checks): the above, and the started program's parent not us, its
+     session its own, no terminal, its standard files `/dev/null`, a
+     `Capture` of 108,894 bytes whole.
+   - `OvaViewer`: `Choose`/`FindRulebook` (the PDF's search order, made
+     absolute), `Default`, `Parse` and `Name` (a viewer's name or a
+     template with `%f`), `Command` (each viewer's start; a template's
+     `%f`, `%p`, `%l`, `%%`, each within its word), `FileUrl`, `Open`
+     (okular over gdbus, else started; mupdf's last ended first;
+     xdg-open's message giving the page; a failed start's `FALSE` and
+     message), `EndMupdf`. The programs' names are exported variables,
+     so `TestViewer` (28 checks, no display) runs it on
+     `test/fake-viewer.sh` and `test/fake-gdbus.sh`: the D-Bus calls
+     made, in order, for two okulars with a decoy name and alias, a
+     document given as a URL, none showing the PDF, and no gdbus.
+   - The real viewers: `make test-viewers` (`test/viewer.sh`, driving
+     `test/OpenPage.Mod`), on its own headless sway with Xwayland, on a
+     private bus, with a scratch `HOME`, over a generated 100-page PDF
+     whose page n is filled with a colour encoding n, so a pixel at a
+     window's centre (grim) says which page it shows; okular's is read
+     over D-Bus too. 28 checks: okular started `--unique` and reused
+     (one window, one tab, pages 62 then 72); okular as the user runs it
+     (another file in front, the PDF in a tab behind) turned with no
+     tab added and its tab brought forward, the other tab left alone;
+     evince reused (one window); mupdf's first window replaced; nothing
+     started left running. It found okular's URL matching (Findings).
+     Not in `make test`: it needs the viewers and takes about 30 s.
+   - Shown to fail with bugs planted: in `OvaSpawn.c` (no `setsid`,
+     the middle child not waited for, the `errno` pipe not
+     close-on-exec, standard output kept, the last argument dropped,
+     `Terminate` not killing), each failing 1 to 9 checks; in
+     `OvaViewer` (any `org.kde.okular*` name taken, no URL decoding,
+     `goToPage` on the first tab, mupdf not replaced, `'` encoded,
+     the search order swapped, `%f` its own word, two tabs at most),
+     each failing `TestViewer`; and against the real viewers (mupdf not
+     replaced, the start commands or `goToPage` a page off, a mupdf left
+     running), each failing `viewer.sh`. Valgrind clean
+     (`--child-silent-after-fork`: a forked child only execs or exits).
+   - Not yet: the window's use of it, the Rulebook menu, the **?**
+     buttons, `--rulebook` and `--viewer`, and the path and viewer saved
+     in `FlPreferences`, which come with the window in Phases 5 and 8.
 5. **The first tab**: names, Abilities and Weaknesses, totals, the
    combat box and the attack dialog, and the override box beside every
    computed number; `TestWindow` driving
@@ -826,7 +892,10 @@ committed in their own repos, with the user's go-ahead.
 ## Testing
 
 - `make test` (no display): `TestRules`, `TestCalc`, `TestFiles`,
-  `TestViewer`, and a command-line check (`test/cli.sh`).
+  `TestSpawn`, `TestViewer` (on fake viewers and a fake gdbus),
+  `test/files.sh`, and a command-line check (`test/cli.sh`).
+- `make test-viewers`: `OvaViewer` with the real okular, evince and
+  mupdf, on `test/viewer.sh`'s own headless sway and private bus.
 - `make test-headless` / `test-sway`: the window tests, never on the
   desktop (AGENTS.md).
 - `make valgrind`: the unit tests and window tests under valgrind, with

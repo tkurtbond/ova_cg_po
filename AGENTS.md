@@ -58,10 +58,13 @@ make                 # obj/ (poc output) and ./po_ova_cg
 make test            # what needs no display: unit tests (TESTS), test/files.sh
                      #   (needs po_ova_fmt built: PO_OVA_FMT), test/cli.sh
 make check-pages     # OvaRules' pages against the rulebook PDF's headings (needs mutool)
+make test-viewers    # OvaViewer with real okular, evince, mupdf (test/viewer.sh;
+                     #   its own headless sway and private bus; ~30 s)
 make test-headless   # make test-gui on Xvfb: window tests (GUITESTS), the
                      #   program running RUNTIME seconds, test/quit.sh (Ctrl+Q)
 make test-sway       # make test-gui on a headless sway (quit.sh skips: X11 only)
 make valgrind-headless   # every test under valgrind, on Xvfb; also valgrind-sway
+                     #   (forked children silent: --child-silent-after-fork)
 make install         # to $(PREFIX)/bin, default ~/local/bin (DESTDIR for staging)
 make uninstall
 make clean           # rm -rf obj po_ova_cg
@@ -111,9 +114,13 @@ make print-VAR       # show a makefile variable
   the desktop too. Use `make test-headless` (Xvfb, `WAYLAND_DISPLAY`
   unset) or `make test-sway` (pofltk's `tools/with-sway.sh`), and for a
   single run `env -u WAYLAND_DISPLAY xvfb-run -a ./po_ova_cg ...`.
-- **Never start the user's PDF viewer either.** Tests of the viewer set
-  the command template to a script in `test/` that records its
-  arguments (PLAN.md, "Testing").
+- **Never start the user's PDF viewer either.** `TestSpawn` and
+  `TestViewer` put fakes in the programs' places (`OvaViewer.okular`,
+  `.evince`, `.mupdf`, `.xdgOpen`, `.gdbus`): `test/fake-viewer.sh`
+  records its arguments, session and standard files in
+  `obj/fake-viewer.log` and runs until ended; `test/fake-gdbus.sh`
+  answers okular's calls from `obj/gdbus.scenario` and logs them in
+  `obj/gdbus.log`. Only `make test-viewers` runs the real viewers.
 - GUI tests drive themselves as pofltk's do: `DoCallback`, events sent
   to windows never shown, timers that answer dialogs, and deleting
   every window before the end. Look at a window by capturing it
@@ -141,6 +148,14 @@ callbacks are module-level procedures; no exceptions; no call chaining;
   input, so a number computed from an overridden one uses the override;
   a new computed number on the window gets its box, its `overrides:`
   key when saved, and a test.
+- **A C part (`OvaSpawn.c`) is declared with `SYSTEM` types**: C's
+  `int` is `SYSTEM.INT32`, a pointer `SYSTEM.ADDRESS`, `int64_t`
+  `SYSTEM.INT64`, which isn't assignment compatible with `LONGINT`
+  even under `-OC` (`SYSTEM.VAL(LONGINT, x)`). poc compiles and links
+  it with the module; nothing in the makefile names it.
+- **A string literal can't hold both quote marks**, and has no
+  escapes: quote with `'` one that holds `"` (`'printf "%s"'`), or
+  build it with `CHR(22H)`.
 - **Save through polibfyaml's emitter** (`Fyaml.NewDocument`, the
   `Create*` procedures, `ToFile`), never by writing YAML text by hand.
   **Text goes through `CreateStyledScalar`, never `CreateScalar`**: the
@@ -164,10 +179,17 @@ callbacks are module-level procedures; no exceptions; no call chaining;
 - **Reuse the user's running viewer** (okular over D-Bus, evince by
   itself); start one only when none shows the rulebook.
 - **Viewer experiments and tests run on a headless sway inside
-  `dbus-run-session`**: the agent's environment has the user's real
-  session bus, and okular or evince would answer on it, on the desktop.
-  Kill experiment processes by PID or exact name (`pkill -x`), never
-  `pkill -f` with a pattern your own command line contains.
+  `dbus-run-session`, with a scratch `HOME`** (`test/viewer.sh` does
+  all three): the agent's environment has the user's real session
+  bus, and okular or evince would answer on it, on the desktop; and the
+  viewers keep history and per-document state under `HOME`. A copy of
+  `test/viewer.sh` is the place to start an experiment.
+- **End only the processes you started, by PID.** Never `pkill -x
+  okular` (or evince, mupdf): that ends the user's own viewers too. A
+  test ends what it started (`OvaSpawn.Terminate`, the fake viewer's
+  recorded pid), and `test/viewer.sh` the windows of its own sway and
+  the connections of its own private bus (`GetConnectionUnixProcessID`).
+  Never `pkill -f` with a pattern your own command line contains.
 
 ## Testing policy
 

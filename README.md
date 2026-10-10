@@ -13,10 +13,12 @@ It is written in Oberon-2 for poc, the
 [Peaseblossom](https://github.com/tkurtbond/peaseblossom) Oberon
 compiler, with pofltk (FLTK 1.4) for the window and polibfyaml for YAML.
 
-**Status: Phase 3a of PLAN.md** -- the rules and their calculations,
+**Status: Phase 4 of PLAN.md** -- the rules and their calculations,
 tested against the book's sample characters; loading and saving
 characters in ova_fmt's YAML, with the keys added to both ova_fmts for
-the generator (overrides among them); and a window with a menu bar
+the generator (overrides among them); opening the rulebook at a page
+in okular, evince, mupdf or another viewer, reusing one already open
+(not yet reachable from the window); and a window with a menu bar
 that opens and quits. The window shows nothing else yet.
 
 ## Usage
@@ -45,6 +47,8 @@ You need:
   must format as the file it loaded.
 - polibfyaml with `CreateStyledScalar` (2026-10-09 or later).
 - For the window tests: Xvfb (`xvfb-run`) and `xdotool`, or sway.
+- For `make test-viewers`: sway (with Xwayland), okular, evince, mupdf,
+  `gdbus`, `dbus-run-session`, grim, jq and python3.
 - For `make valgrind`: valgrind, and a checkout of pofltk at `POFLTK`
   (default `~/Repos/Oberon/pofltk`), for its `test/vg-check.sh`.
 
@@ -53,6 +57,7 @@ make                 # ./po_ova_cg
 make test            # the tests that need no display
 make test-headless   # the window tests, on Xvfb
 make test-sway       # the window tests, on a headless sway (Wayland)
+make test-viewers    # the real PDF viewers, on a headless sway of its own
 make valgrind-headless   # the tests under valgrind, on Xvfb
 make valgrind-sway       # the same, on a headless sway
 make install         # to $(PREFIX)/bin, default ~/local/bin

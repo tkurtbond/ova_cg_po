@@ -47,7 +47,7 @@ PROGSRC := $(wildcard src/*.Mod src/*.c)
 # Test support modules, and test programs (test/<name>.Mod, main
 # modules): TESTS need no display, GUITESTS do.
 TESTSUPPORT := test/Check.Mod
-TESTS       := TestRules TestCalc TestFiles
+TESTS       := TestRules TestCalc TestFiles TestSpawn TestViewer
 GUITESTS    := TestWindow
 TESTBINS    := $(TESTS:%=$(OBJ)/%)
 GUITESTBINS := $(GUITESTS:%=$(OBJ)/%)
@@ -62,7 +62,7 @@ ifneq ($(if $(MAKECMDGOALS),$(filter-out clean uninstall print-%,$(MAKECMDGOALS)
 $(foreach l,$(SHAREDLIBS),$(if $(wildcard $(POC_OBERON_LIBRARIES)/$(l)/*/OC/$(l).library),,$(error the $(l) library is not in $(POC_OBERON_LIBRARIES)/$(l); install it from its repo (AGENTS.md))))
 endif
 
-.PHONY: all tests test check-pages test-gui test-headless test-sway valgrind valgrind-headless valgrind-sway \
+.PHONY: all tests test check-pages test-viewers test-gui test-headless test-sway valgrind valgrind-headless valgrind-sway \
   display install uninstall clean
 .NOTPARALLEL:
 
@@ -110,6 +110,15 @@ check-pages: $(OBJ)/ListRules
 	  echo "ok   - all $$(wc -l < $(OBJ)/rules.txt) pages match the rulebook's headings"; \
 	else echo "FAIL - OvaRules (>) differs from the rulebook's headings (<)"; exit 1; fi
 
+# OvaViewer with the real viewers, okular, evince and mupdf, on a
+# headless sway of test/viewer.sh's own, on a private D-Bus session bus,
+# with a scratch HOME.  Not part of make test: it needs the viewers, and
+# takes a minute or two.
+$(OBJ)/OpenPage: test/OpenPage.Mod $(PROGSRC) $(SHAREDLIBMANIFESTS) | $(OBJ)
+	$(POC) $(POCFLAGS) $(IMPORTS) -import-path test -output-dir $(OBJ) $(LINK) -o $@ $<
+test-viewers: $(OBJ)/OpenPage
+	test/viewer.sh $(OBJ)/OpenPage
+
 # FLTK needs a display even for windows never shown.  An agent never
 # runs these on the user's desktop (AGENTS.md): use test-headless or
 # test-sway.
@@ -148,10 +157,12 @@ test-sway: tests
 # decorations under Wayland) leaks by design.  pofltk's vg-check.sh fails
 # instead on any leak whose allocator is pofltk's (a widget never
 # deleted); test/poc-gc.supp holds the collector's stack-scan reports
-# (pofltk's AGENTS.md, "Valgrind").
+# (pofltk's AGENTS.md, "Valgrind").  A child OvaSpawn forks reports
+# nothing: it only execs or exits (_exit, leaving its copy of the
+# argument vector), and what it runs isn't ours to check.
 POFLTK ?= $(HOME)/Repos/Oberon/pofltk
 VALGRIND ?= valgrind --leak-check=full --show-leak-kinds=all --errors-for-leak-kinds=none \
-  --error-exitcode=99 --suppressions=$(CURDIR)/test/poc-gc.supp
+  --error-exitcode=99 --child-silent-after-fork=yes --suppressions=$(CURDIR)/test/poc-gc.supp
 valgrind: tests display | $(OBJ)/files
 	@status=0; for t in $(TESTS) $(GUITESTS); do \
 	  echo "== valgrind $$t"; \
