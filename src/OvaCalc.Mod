@@ -141,9 +141,9 @@ TYPE
     hasBarrier-, hasIncorporeal-, hasReserve-: BOOLEAN;
     (* The running totals: levels (Knowledge and Ineptitude halved if
        the options say so), the Character Total, and Scaled Cost's
-       points (abilities' less weaknesses'). *)
-    abilityLevels*, weaknessLevels*, total*, points*: Number;
-    abilityPoints-, weaknessPoints-: INTEGER;  (* both >= 0 *)
+       points: the Abilities', and the Abilities' less the Weaknesses'. *)
+    abilityLevels*, weaknessLevels*, total*, abilityPoints*, points*: Number;
+    weaknessPoints-: INTEGER;  (* >= 0 *)
     warnings-: Warning     (* from the last Compute, in the order found *)
   END;
 
@@ -263,8 +263,8 @@ BEGIN
   InitNumber(s.defense); InitNumber(s.barrier); InitNumber(s.incorporeal); InitNumber(s.health);
   InitNumber(s.endurance); InitNumber(s.reserve); InitNumber(s.tv);
   s.hasBarrier := FALSE; s.hasIncorporeal := FALSE; s.hasReserve := FALSE;
-  InitNumber(s.abilityLevels); InitNumber(s.weaknessLevels); InitNumber(s.total); InitNumber(s.points);
-  s.abilityPoints := 0; s.weaknessPoints := 0;
+  InitNumber(s.abilityLevels); InitNumber(s.weaknessLevels); InitNumber(s.total); InitNumber(s.abilityPoints);
+  InitNumber(s.points); s.weaknessPoints := 0;
   s.warnings := NIL
 END InitSheet;
 
@@ -662,23 +662,24 @@ END HalfUp;
 (* The totals of the character's own Traits (not a form's, which
    Transformation's level pays for, p. 63), then the limits on them. *)
 PROCEDURE ComputeTotals(s: Sheet);
-  VAR t: Trait; half: BOOLEAN; lv, pts, abilities, weaknesses, spent, measure: INTEGER;
+  VAR t: Trait; half: BOOLEAN; lv, pts, abilities, abilityPoints, weaknesses, spent, measure: INTEGER;
 BEGIN
   half := s.options.halfCostKnowledge & (s.options.baseZero OR s.options.powerCeiling OR s.options.scaledCost);
-  abilities := 0; weaknesses := 0; s.abilityPoints := 0; s.weaknessPoints := 0;
+  abilities := 0; abilityPoints := 0; weaknesses := 0; s.weaknessPoints := 0;
   t := s.traits;
   WHILE t # NIL DO
     lv := t.level; pts := Scaled(ABS(lv));
     IF half & Has(t, OvaRules.HalfCost) THEN lv := HalfUp(lv); pts := HalfUp(pts) END;
-    IF t.kind = OvaRules.Ability THEN INC(abilities, lv); INC(s.abilityPoints, pts)
+    IF t.kind = OvaRules.Ability THEN INC(abilities, lv); INC(abilityPoints, pts)
     ELSE INC(weaknesses, lv); INC(s.weaknessPoints, pts)
     END;
     t := t.next
   END;
   Set(s.abilityLevels, abilities); Set(s.weaknessLevels, weaknesses);
   Set(s.total, Value(s.abilityLevels) + Value(s.weaknessLevels));
-  Set(s.points, s.abilityPoints - s.weaknessPoints);
-  IF s.options.scaledCost THEN measure := Value(s.points); spent := s.abilityPoints
+  Set(s.abilityPoints, abilityPoints);
+  Set(s.points, Value(s.abilityPoints) - s.weaknessPoints);
+  IF s.options.scaledCost THEN measure := Value(s.points); spent := Value(s.abilityPoints)
   ELSE measure := Value(s.total); spent := Value(s.abilityLevels)
   END;
   IF s.options.baseZero & (ABS(measure) > s.options.baseZeroRange) THEN

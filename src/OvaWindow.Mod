@@ -49,7 +49,8 @@ CONST
   (* SheetNumber.which *)
   Defense = 0; Barrier = 1; Health = 2; Endurance = 3; Reserve = 4; TV = 5;
   AbilityLevels = 6; WeaknessLevels = 7; Total = 8; Points = 9; Incorporeal = 10;
-  NSheetNumbers = 11;
+  AbilityPoints = 11;
+  NSheetNumbers = 12;
   (* AttackNumber.which *)
   Roll = 0; DX = 1; End = 2;
 
@@ -415,22 +416,28 @@ END Red;
 
 (* Every number box shown again: Barrier's, Incorporeal Form's and the
    Reserve's only when
-   the character has them, Scaled Cost's points only under it. A total
-   a limit finds too high is red (p. 21): Base Zero's the Character
-   Total, or the points under Scaled Cost; a Power Ceiling's or the
-   starting levels' the Abilities'. *)
+   the character has them, Scaled Cost's points (the Abilities' and the
+   net) only under it. A total a limit finds too high is red (p. 21):
+   Base Zero's the Character Total, or the net points under Scaled
+   Cost; a Power Ceiling's or the starting levels' the Abilities'
+   levels, or their points under Scaled Cost. *)
 PROCEDURE ShowNumbers;
-  VAR i: INTEGER; r: AttackRow; baseZero: BOOLEAN;
+  VAR i: INTEGER; r: AttackRow; baseZero, spent, scaled: BOOLEAN;
 BEGIN
   FOR i := 0 TO NSheetNumbers - 1 DO numbers[i].Display END;
   baseZero := Warned(OvaCalc.BaseZeroBroken);
-  Red(numbers[Total], baseZero & ~character.options.scaledCost);
-  Red(numbers[Points], baseZero & character.options.scaledCost);
-  Red(numbers[AbilityLevels], Warned(OvaCalc.CeilingBroken) OR Warned(OvaCalc.StartingBroken));
+  spent := Warned(OvaCalc.CeilingBroken) OR Warned(OvaCalc.StartingBroken);
+  scaled := character.options.scaledCost;
+  Red(numbers[Total], baseZero & ~scaled);
+  Red(numbers[Points], baseZero & scaled);
+  Red(numbers[AbilityLevels], spent & ~scaled);
+  Red(numbers[AbilityPoints], spent & scaled);
   IF character.hasBarrier THEN numbers[Barrier].Show ELSE numbers[Barrier].Hide END;
   IF character.hasIncorporeal THEN numbers[Incorporeal].Show ELSE numbers[Incorporeal].Hide END;
   IF character.hasReserve THEN numbers[Reserve].Show ELSE numbers[Reserve].Hide END;
-  IF character.options.scaledCost THEN numbers[Points].Show ELSE numbers[Points].Hide END;
+  IF scaled THEN numbers[AbilityPoints].Show; numbers[Points].Show
+  ELSE numbers[AbilityPoints].Hide; numbers[Points].Hide
+  END;
   r := rows;
   WHILE r # NIL DO r.roll.Display; r.dx.Display; r.end.Display; r := r.nextRow END;
   abilityEnd.Display;
@@ -462,7 +469,7 @@ BEGIN
   | Health: n := c.health
   | Endurance: n := c.endurance | Reserve: n := c.reserve | TV: n := c.tv
   | AbilityLevels: n := c.abilityLevels | WeaknessLevels: n := c.weaknessLevels
-  | Total: n := c.total | Points: n := c.points
+  | Total: n := c.total | AbilityPoints: n := c.abilityPoints | Points: n := c.points
   END
 END Get;
 
@@ -475,7 +482,7 @@ BEGIN
   | Health: c.health := n
   | Endurance: c.endurance := n | Reserve: c.reserve := n | TV: c.tv := n
   | AbilityLevels: c.abilityLevels := n | WeaknessLevels: c.weaknessLevels := n
-  | Total: c.total := n | Points: c.points := n
+  | Total: c.total := n | AbilityPoints: c.abilityPoints := n | Points: c.points := n
   END
 END Put;
 
@@ -1068,9 +1075,10 @@ BEGIN
   abilityEnd.SetAlign(Fl.AlignLeft); abilityEnd.allowPlus := FALSE; abilityEnd.changed := NumberChanged;
   y := y + Row + 25;
   SheetBox(AbilityLevels, LeftX, y, "Abilities");
-  SheetBox(WeaknessLevels, LeftX + 150, y, "Weaknesses");
-  SheetBox(Total, LeftX + 300, y, "Character Total");
-  SheetBox(Points, LeftX + 450, y, "Scaled Cost points");
+  SheetBox(WeaknessLevels, LeftX + 120, y, "Weaknesses");
+  SheetBox(Total, LeftX + 240, y, "Character Total");
+  SheetBox(AbilityPoints, LeftX + 375, y, "Ability points");
+  SheetBox(Points, LeftX + 500, y, "Scaled Cost points");
   y := y + Row + 25;
   NEW(warnings); FlBrowsers.OpenBrowser(warnings, LeftX, y, ColumnW, 85, "Warnings");
   warnings.SetAlign(Fl.AlignTopLeft); warnings.SetFormatChar(0X);

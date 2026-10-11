@@ -2,8 +2,9 @@ MODULE TestLimits; (* Character > Limits..., the totals in red, and the preferen
 
 (* Needs a display: run by make test-gui, as TestWindow is. The limits
    dialog driven as the user drives it, on a new character with an
-   Attack +3 (a total of 3; 4 points under Scaled Cost), checked in the
-   model, in what is saved, and in which total is red; then the
+   Attack +3 (a total of 3; 4 points under Scaled Cost, the Abilities'
+   and the net), checked in the model, in what is saved, and in which
+   total is red; then the
    Rulebook menu's choices, kept in a preferences file in obj/ and read
    back. *)
 
@@ -57,18 +58,20 @@ PROCEDURE Red(b: OvaWidgets.NumberBox): BOOLEAN;
 BEGIN RETURN b.shown.TextColor() = Fl.Red
 END Red;
 
-(* Which of the Abilities', the Total and the points are red: "ATP" for
-   all three, "-T-" for the Total alone. *)
+(* Which of the Abilities' levels, the Total, the points and the
+   Abilities' points are red: "ATPa" for all four, "-T--" for the Total
+   alone. *)
 PROCEDURE Reds(VAR s: ARRAY OF CHAR);
 BEGIN
-  COPY("---", s);
+  COPY("----", s);
   IF Red(OvaWindow.numbers[6]) THEN s[0] := "A" END;
   IF Red(OvaWindow.numbers[8]) THEN s[1] := "T" END;
-  IF Red(OvaWindow.numbers[9]) THEN s[2] := "P" END
+  IF Red(OvaWindow.numbers[9]) THEN s[2] := "P" END;
+  IF Red(OvaWindow.numbers[11]) THEN s[3] := "a" END
 END Reds;
 
 PROCEDURE RedsAre(want: ARRAY OF CHAR): BOOLEAN;
-  VAR s: ARRAY 4 OF CHAR;
+  VAR s: ARRAY 5 OF CHAR;
 BEGIN Reds(s); RETURN s = want
 END RedsAre;
 
@@ -160,36 +163,41 @@ BEGIN
     & (Value(OvaSettings.ceiling) = 15) & ~OvaSettings.baseZeroRange.Active() & ~OvaSettings.ceiling.Active()
     & ~OvaSettings.starting.Active() & ~OvaSettings.halfCost.Active(),
     "their numbers p. 21's example, inactive; half cost inactive with none of its rules");
-  Check.Check((c.total.value = 3) & RedsAre("---") & ~Modified(), "Attack +3: a total of 3, nothing red");
+  Check.Check((c.total.value = 3) & RedsAre("----") & ~Modified(), "Attack +3: a total of 3, nothing red");
 
   Turn(OvaSettings.baseZero, TRUE);
   Check.Check(c.options.baseZero & (c.options.baseZeroRange = 5) & c.hasOptions & OvaSettings.baseZeroRange.Active()
-    & OvaSettings.halfCost.Active() & Modified() & Has(Saved(), "base-zero: 5") & RedsAre("---"),
+    & OvaSettings.halfCost.Active() & Modified() & Has(Saved(), "base-zero: 5") & RedsAre("----"),
     "Base Zero on: its range 5, saved, the title marked; 3 within it");
   Spin(OvaSettings.baseZeroRange, 2);
-  Check.Check((c.options.baseZeroRange = 2) & RedsAre("-T-") & Warned("Base Zero") & Has(Saved(), "base-zero: 2"),
+  Check.Check((c.options.baseZeroRange = 2) & RedsAre("-T--") & Warned("Base Zero") & Has(Saved(), "base-zero: 2"),
     "range 2: the Total red, and the warning");
   Spin(OvaSettings.baseZeroRange, 3);
-  Check.Check(RedsAre("---") & ~Warned("Base Zero"), "range 3: not red");
+  Check.Check(RedsAre("----") & ~Warned("Base Zero"), "range 3: not red");
   Turn(OvaSettings.scaledCost, TRUE);
-  Check.Check(c.options.scaledCost & (c.points.value = 4) & OvaWindow.numbers[9].Visible() & RedsAre("--P")
+  Check.Check(c.options.scaledCost & (c.points.value = 4) & OvaWindow.numbers[9].Visible() & RedsAre("--P-")
     & Has(Saved(), "scaled-cost: true"), "Scaled Cost: 4 points, shown, beyond 3: the points red, not the Total");
+  Check.Check((c.abilityPoints.value = 4) & OvaWindow.numbers[11].Visible(), "and the Abilities' 4 points shown");
+  Turn(OvaSettings.powerCeiling, TRUE); Spin(OvaSettings.ceiling, 3);
+  Check.Check(RedsAre("--Pa") & Warned("Power Ceiling"),
+    "Power Ceiling 3 on Scaled Cost: the Abilities' points red, not their levels");
+  Spin(OvaSettings.ceiling, 15); Turn(OvaSettings.powerCeiling, FALSE);
   Turn(OvaSettings.scaledCost, FALSE); Turn(OvaSettings.baseZero, FALSE);
   Check.Check(~c.options.baseZero & ~OvaSettings.baseZeroRange.Active() & ~OvaSettings.halfCost.Active()
-    & (Value(OvaSettings.baseZeroRange) = 3) & RedsAre("---") & ~Has(Saved(), "base-zero"),
+    & (Value(OvaSettings.baseZeroRange) = 3) & RedsAre("----") & ~Has(Saved(), "base-zero"),
     "Base Zero off: its number kept, inactive, not saved");
 
   Turn(OvaSettings.powerCeiling, TRUE);
-  Check.Check(c.options.powerCeiling & (c.options.ceiling = 15) & RedsAre("---") & Has(Saved(), "power-ceiling: 15"),
+  Check.Check(c.options.powerCeiling & (c.options.ceiling = 15) & RedsAre("----") & Has(Saved(), "power-ceiling: 15"),
     "Power Ceiling 15: 3 under it");
   Spin(OvaSettings.ceiling, 2);
-  Check.Check(RedsAre("A--") & Warned("Power Ceiling"), "Power Ceiling 2: the Abilities red, and the warning");
+  Check.Check(RedsAre("A---") & Warned("Power Ceiling"), "Power Ceiling 2: the Abilities red, and the warning");
   Turn(OvaSettings.powerCeiling, FALSE);
   Turn(OvaSettings.startingLevels, TRUE);
-  Check.Check(c.options.startingLevels & (c.options.starting = 5) & RedsAre("---") & Has(Saved(), "starting-levels: 5"),
+  Check.Check(c.options.startingLevels & (c.options.starting = 5) & RedsAre("----") & Has(Saved(), "starting-levels: 5"),
     "5 starting levels: 3 within them");
   Spin(OvaSettings.starting, 2);
-  Check.Check(RedsAre("A--") & Warned("starting levels"), "2 starting levels: the Abilities red");
+  Check.Check(RedsAre("A---") & Warned("starting levels"), "2 starting levels: the Abilities red");
   Turn(OvaSettings.startingLevels, FALSE);
 
   AddAbility("Knowledge", 3);
@@ -205,20 +213,20 @@ BEGIN
 
   OvaSettings.cancel.DoCallback;
   Check.Check((OvaSettings.dialog = NIL) & ~c.hasOptions & ~c.options.halfCostKnowledge
-    & ~c.options.combinedEffectiveness & ~c.options.powerCeiling & ~Has(Saved(), "options:") & RedsAre("---")
+    & ~c.options.combinedEffectiveness & ~c.options.powerCeiling & ~Has(Saved(), "options:") & RedsAre("----")
     & (c.abilityLevels.value = 6) & ~Modified(), "Cancel: no limits again, nothing saved, the title unmarked");
 
   Fresh;
   Turn(OvaSettings.baseZero, TRUE); Spin(OvaSettings.baseZeroRange, 1);
   OvaSettings.ok.DoCallback;
   Check.Check((OvaSettings.dialog = NIL) & c.options.baseZero & Has(Saved(), "base-zero: 1") & Modified()
-    & RedsAre("-T-"), "OK: kept, saved, the title marked, the Total red");
+    & RedsAre("-T--"), "OK: kept, saved, the title marked, the Total red");
   OvaWindow.bar.Pick(OvaWindow.limitsItem);
   Check.Check(OvaSettings.baseZero.Value() & (Value(OvaSettings.baseZeroRange) = 1) & OvaSettings.baseZeroRange.Active(),
     "opened again: as left");
   Turn(OvaSettings.baseZero, FALSE);
   OvaSettings.dialog.DoCallback;  (* the window's close button *)
-  Check.Check((OvaSettings.dialog = NIL) & c.options.baseZero & RedsAre("-T-") & Modified(),
+  Check.Check((OvaSettings.dialog = NIL) & c.options.baseZero & RedsAre("-T--") & Modified(),
     "closed by its close button: as Cancel, the title still marked from before");
 
   OvaWindow.bar.Pick(OvaWindow.newItem); c := OvaWindow.character;

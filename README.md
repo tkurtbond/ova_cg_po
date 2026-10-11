@@ -116,8 +116,9 @@ These dialogs change the character as you work, and **Close** closes
 them.
 
 **Totals and warnings.** Under the lists are the Abilities' and
-Weaknesses' levels and the Character Total (and the Scaled Cost points
-when Scaled Cost is on). Warnings say what the rules find wrong, with
+Weaknesses' levels and the Character Total (and, when Scaled Cost is
+on, the Abilities' points and the Scaled Cost points, the Abilities'
+less the Weaknesses'). Warnings say what the rules find wrong, with
 the pages of the rules: a name the rulebook doesn't have (shown with
 `p. ?`), a level out of range, a Perk taken too often, a Perk or Flaw
 the rules don't allow with the others, a limit broken. A total a limit

@@ -623,9 +623,14 @@ BEGIN
   L("Knowledge 3 at half cost, rounded up"); CheckInt(s.abilityLevels, 17);
   L("Ineptitude -3 at half cost, rounded up"); CheckInt(s.weaknessLevels, -12);
   s.options.scaledCost := TRUE; know.level := 5; OvaCalc.Compute(s);
-  L("Scaled Cost: Knowledge 5 at half cost, 8"); Is(s.abilityPoints, 53);
+  L("Scaled Cost: Knowledge 5 at half cost, 8"); CheckInt(s.abilityPoints, 53);
   L("Scaled Cost: Ineptitude -3 at half cost, 2"); Is(s.weaknessPoints, 15);
   L("Power Ceiling on Scaled Cost's points"); Check.Check(WarnedAny(s, OvaCalc.CeilingBroken), label);
+  OvaCalc.Override(s.abilityPoints, 15, FALSE, FALSE); OvaCalc.Compute(s);
+  L("Ability points overridden to 15: the points 15 - 15"); CheckInt(s.points, 0);
+  L("Power Ceiling 15 on the overridden Ability points");
+  Check.Check(~WarnedAny(s, OvaCalc.CeilingBroken), label);
+  OvaCalc.Clear(s.abilityPoints);
   s.options.powerCeiling := FALSE; s.options.startingLevels := FALSE; s.options.scaledCost := FALSE;
   OvaCalc.Compute(s);
   L("no limit, no half cost"); CheckInt(s.abilityLevels, 20);

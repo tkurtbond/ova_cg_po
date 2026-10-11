@@ -257,7 +257,8 @@ the three is on (p. 57). A Transformation's form is in no total: its
 level pays for it (p. 63).
 
 The running totals (levels of Abilities, of Weaknesses, the Character
-Total, points under Scaled Cost) are always shown; a broken limit turns
+Total; under Scaled Cost the Abilities' points and the net points) are
+shown; a broken limit turns
 its total red and says why, but never stops the user: the GM decides.
 
 ## Data tables
@@ -446,8 +447,8 @@ the box's tooltip says "empty: use the computed value".
   END; DEFENSE and Barrier's second Defense; HEALTH, ENDURANCE,
   Endurance Reserve and TV; the same for each linked character
   (Companion, Vehicle, the transformed form); and the running totals
-  (Ability levels, Weakness levels, Character Total, Scaled Cost
-  points).
+  (Ability levels, Weakness levels, Character Total, Ability points,
+  Scaled Cost points).
 - **The box** is an `FlInputs.Input`, not an `IntInput`, since some
   numbers on the sheet aren't plain integers (Auren's spell's `10+`,
   Fukiko's `4/5` is two numbers, each with its own box). The text is
@@ -980,7 +981,7 @@ committed in their own repos, with the user's go-ahead.
      with their shortcuts; Rulebook > Open), the tabs, and the first
      tab: the names and tagline, the two panels, the chosen Ability's
      END and its Perks and Flaws button, the totals (Scaled Cost's
-     points only under it), the warnings in words with each item's
+     points, the Abilities' and the net, only under it), the warnings in words with each item's
      page, the Combat Notes, and the combat box with DEFENSE, Barrier's
      (only with Barrier), HEALTH, ENDURANCE, the Reserve (only with
      one) and TV under it. The title has the file's name and `*` for
@@ -1155,8 +1156,9 @@ committed in their own repos, with the user's go-ahead.
    - **Red totals** (p. 21's "says why" is the warning beside them):
      Base Zero's the Character Total, or the points under Scaled Cost,
      which it measures; a Power Ceiling's and the starting levels' the
-     Abilities' levels, even under Scaled Cost, where they count the
-     Abilities' points, which no box shows.
+     Abilities' levels, or under Scaled Cost the Abilities' points,
+     which they count there (shown since 2026-10-11, in a box of their
+     own beside the net points, with its override as every total has).
    - **Preferences**: `FlPreferences`, `$XDG_CONFIG_HOME/ova_cg_po/
      ova_cg_po.prefs` (FLTK's vendor and application both
      `ova_cg_po`), holding `rulebook` and `viewer`, written as each is
@@ -1175,7 +1177,7 @@ committed in their own repos, with the user's go-ahead.
      isn't one, else kept). A rulebook not found is asked for once,
      with the same chooser; cancelled, the message says where it
      looked and how to give it.
-   - `TestLimits` (35 checks, on Xvfb and sway): a new character with
+   - `TestLimits` (37 checks, on Xvfb and sway): a new character with
      Attack +3 through each rule, its number, what is saved, and which
      total is red; half cost's activity and count; Cancel, OK, the
      close button; an empty `options:` block kept; Sheet's limits
@@ -1190,7 +1192,9 @@ committed in their own repos, with the user's go-ahead.
      (3), a ceiling of 20 to start (2), the kept viewer beating
      `--viewer` (1), the chosen PDF kept relative (3), a missing
      rulebook not asked for (3), the range's spinner ignored (4), and
-     a file's empty block dropped (1).
+     a file's empty block dropped (1); the Abilities' points not
+     shown and their levels red under Scaled Cost (2), the net points
+     ignoring the Abilities' points' override (2, `TestCalc`).
 9. **Finish**: valgrind clean, `make install`, README's user guide.
    [done]
    - **README's user guide**, "Using the window": the menus and their

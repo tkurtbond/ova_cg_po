@@ -105,7 +105,7 @@ BEGIN
     & Shows(OvaWindow.numbers[4], c.reserve) & Shows(OvaWindow.numbers[5], c.tv)
     & Shows(OvaWindow.numbers[6], c.abilityLevels) & Shows(OvaWindow.numbers[7], c.weaknessLevels)
     & Shows(OvaWindow.numbers[8], c.total) & Shows(OvaWindow.numbers[9], c.points)
-    & Shows(OvaWindow.numbers[10], c.incorporeal);
+    & Shows(OvaWindow.numbers[10], c.incorporeal) & Shows(OvaWindow.numbers[11], c.abilityPoints);
   r := OvaWindow.rows;
   WHILE ok & (r # NIL) DO
     ok := Shows(r.roll, r.attack.roll) & Shows(r.dx, r.attack.dx) & Shows(r.end, r.attack.end);
@@ -299,7 +299,7 @@ BEGIN
     "every Ability and Weakness is listed with its page");
   Check.Check(AllShown(), "every number shown is the model's");
   Check.Check(OvaWindow.numbers[1].Visible() & ~OvaWindow.numbers[4].Visible() & ~OvaWindow.numbers[9].Visible()
-    & ~OvaWindow.numbers[10].Visible(),
+    & ~OvaWindow.numbers[10].Visible() & ~OvaWindow.numbers[11].Visible(),
     "Barrier DEFENSE shown, for Barrier; the Reserve, the Scaled Cost points and Incorporeal DEFENSE not");
   Check.Check(RowCount() = 2, "a row in the combat box for each attack");
   r := OvaWindow.rows; r.name.Value(s);
