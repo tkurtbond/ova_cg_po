@@ -346,16 +346,20 @@ limit, and doesn't forbid them.
 
 ## The window
 
-One window, `Fl.DoubleWindow`, sized for a laptop (about 1280 x 800),
-resizable: a menu bar, and under it an `FlLayout.Tabs` of two tabs, the
-sheet's two halves in swapped order (decided by the user, 2026-10-09).
-The first tab is the one shown when the window opens.
+One window, `Fl.DoubleWindow`, 640 x 800, narrow enough to sit beside
+the PDF viewer: a menu bar, and under it an `FlLayout.Tabs` of four
+tabs, each one column, the sheet's two halves in swapped order (decided
+by the user, 2026-10-09; the window was 1280 wide, two tabs of two
+columns, until Phase 12). The first tab is the one shown when the
+window opens.
 
 The menu bar, above the tabs: File (New, Open, Save, Save As, Quit),
 Character (Limits..., Transformed form), Rulebook (Open, Choose PDF...,
 Viewer...).
 
-1. **First tab, "Character" (the sheet's right half)**:
+1. **First and second tabs, "Character" and "Attacks" (the sheet's
+   right half)**; Attacks has the combat box and the numbers below it,
+   Character the rest:
    - Character Name and Player Name inputs, a tagline, and the NPC
      Type (none, Heroic, Secondary, Extra), which sets the sheet's
      starting Health and Endurance and its TV;
@@ -381,7 +385,9 @@ Viewer...).
      and its ROLL, DX and END updated as Perks and Flaws change. Below,
      DEFENSE, HEALTH, ENDURANCE and TV, computed; Endurance Reserve
      beside Endurance when there is one.
-2. **Second tab, "Background" (the sheet's left half)**: Background, the Character
+2. **Third and fourth tabs, "Background" and "Fluff" (the sheet's
+   left half)**; Fluff has the portrait, the fluff grid and the notes,
+   Background the Summary and the prose: Background, the Character
    Portrait (an image file chosen with `FlDialogs.NativeFileChooser`,
    shown scaled with `FlImages`; its path is saved), Appearance,
    Personality, Character Hooks and Other Notes, each a
@@ -681,8 +687,8 @@ committed in their own repos, with the user's go-ahead.
 | `OvaViewer` | the rulebook's path, the viewer chosen, reusing a running one (okular over D-Bus, evince, mupdf) |
 | `OvaSpawn` (with `OvaSpawn.c`) | starting a program detached; running one and capturing its output |
 | `OvaWidgets` | what the window and its dialogs share: `NumberBox` (a computed number and its override box), the **?** `HelpButton`, and `Panel` (a list and its editor) |
-| `OvaWindow` | the main window, its menu bar, the first tab, and the file |
-| `OvaBackground` | the second tab: the summary, the prose, the portrait, the fluff and the notes |
+| `OvaWindow` | the main window, its menu bar, the Character and Attacks tabs, and the file |
+| `OvaBackground` | the Background and Fluff tabs: the summary, the prose, the portrait, the fluff and the notes |
 | `OvaPaths` | paths made absolute, a file's directory, a path relative to a directory, rebasing the portrait's |
 | `OvaAttackDialog` | the attack dialog, and the Perks/Flaws editor an Ability with Perks uses |
 | `OvaTraitPanel` | a list of Abilities or Weaknesses and its editor: the character's, a form's, a partner's |
@@ -1254,6 +1260,23 @@ committed in their own repos, with the user's go-ahead.
      not advanced, the wrong slot saved, the window's and the dialog's
      boxes): each failed between 1 and 27 checks. Valgrind clean on
      Xvfb.
+12. **A narrower window** (asked for by the user, 2026-10-10, to sit
+   beside the PDF viewer): 640 wide, not 1280, and four tabs of one
+   column each, not two of two. The Character tab's right column, the
+   combat box and the numbers, is the new Attacks tab after it
+   (`OvaWindow.attacksTab`); the Background tab's right column, the
+   portrait, the fluff and the notes, is the new Fluff tab after
+   Background (`OvaWindow.fluffTab`, built by `OvaBackground.Build`
+   with the Background tab). Every widget kept its place in its column,
+   so each `RightX` became `LeftX`, but the combat box, which now has
+   the tab's height, shows 17 attacks before it scrolls, not 10. The
+   notes' Text label is beside its box, at its top (`AlignLeftTop`); it
+   was above it (`AlignLeft + AlignTop` is `AlignTopLeft`), over the
+   Header field. Screenshots of each tab under Xvfb
+   (Fukiko) showed nothing clipped. `TestWindow` checks the width, the
+   tabs' order, and which holds the attacks and the portrait; two bugs
+   planted (the attacks, or the fluff, left inside the tab before)
+   failed it. Valgrind clean on Xvfb. [done]
 
 ## Testing
 

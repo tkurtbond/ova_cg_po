@@ -10,7 +10,7 @@ MODULE TestWindow; (* OvaWindow: the first tab, driven as a user would, and its 
    every name shown; an override changes what is shown, saved, and
    computed from it, and clearing it undoes that. *)
 
-IMPORT Check, Fl, FlBrowsers, OvaAttackDialog, OvaCalc, OvaCharacter, OvaEntities, OvaRules, OvaSave, OvaText,
+IMPORT Check, Fl, FlBrowsers, OvaAttackDialog, OvaBackground, OvaCalc, OvaCharacter, OvaEntities, OvaRules, OvaSave, OvaText,
   OvaTraitPanel,
   OvaWidgets, OvaWindow,
   Out, Ropes;
@@ -239,6 +239,13 @@ BEGIN
     & (OvaWindow.bar.FindIndex("&Rulebook/&Open") = OvaWindow.rulebookItem),
     "and New, Open, Save, Save As, and Rulebook > Open");
   Check.Check(OvaWindow.tabs.Value() = OvaWindow.sheetTab, "the Character tab is shown first");
+  Check.Check((OvaWindow.window.W() = 640) & (OvaWindow.tabs.Children() = 4)
+    & (OvaWindow.tabs.Find(OvaWindow.sheetTab) = 0) & (OvaWindow.tabs.Find(OvaWindow.attacksTab) = 1)
+    & (OvaWindow.tabs.Find(OvaWindow.backgroundTab) = 2) & (OvaWindow.tabs.Find(OvaWindow.fluffTab) = 3),
+    "640 wide, beside the viewer: Character, Attacks, Background and Fluff, in that order");
+  Check.Check((OvaWindow.attacksTab.Find(OvaWindow.addAttack) >= 0) & (OvaWindow.sheetTab.Find(OvaWindow.addAttack) < 0)
+    & (OvaWindow.fluffTab.Find(OvaBackground.portrait) >= 0) & (OvaWindow.backgroundTab.Find(OvaBackground.portrait) < 0),
+    "the attacks on the Attacks tab, the portrait on the Fluff tab");
   Check.Check(ChoiceLabelled(OvaWindow.abilities) & ChoiceLabelled(OvaWindow.weaknesses),
     "every name in the Choices has its page: Attack (p. 50)");
   OvaWindow.bar.Pick(OvaWindow.rulebookItem);

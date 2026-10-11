@@ -1,9 +1,8 @@
-MODULE OvaBackground; (* The window's second tab: the sheet's left half, the fluff, and the notes *)
+MODULE OvaBackground; (* The window's last two tabs: the sheet's left half, the fluff, and the notes *)
 
-(* PLAN.md, "The window", the second tab: the Summary; Background,
-   Appearance, Personality, Character Hooks and Other Notes, each an
-   FlText editor; the
-   Character Portrait, an image file whose path is saved relative to
+(* PLAN.md, "The window", the third and fourth tabs. "Background": the
+   Summary; Background, Appearance, Personality, Character Hooks and
+   Other Notes, each an FlText editor. "Fluff": the Character Portrait, an image file whose path is saved relative to
    the YAML file; the fluff fields (p. 20) in a grid; and the headed
    notes ova_fmt prints as callouts (`notes:`), so everything a file
    holds can be edited.
@@ -20,7 +19,7 @@ IMPORT Fl, FlBrowsers, FlButtons, FlDialogs, FlImages, FlInputs, FlLayout, FlTex
 
 CONST
   Row = 25;
-  LeftX = 10; RightX = 650; ColumnW = 620;
+  LeftX = 10; ColumnW = 620;
   (* The prose sections, ProseBuffer.which. *)
   Background* = 0; Appearance* = 1; Personality* = 2; CharacterHooks* = 3; OtherNotes* = 4;
   NProse = 5;
@@ -328,14 +327,14 @@ BEGIN
   fluffIn[i] := in
 END FluffField;
 
-(* Opens the tab as a child of the group being built, at x, y, w by h,
-   labelled "Background". *)
-PROCEDURE Build*(tab: Fl.Group; x, y, w, h: INTEGER);
+(* Opens the two tabs, tab ("Background") and fluff ("Fluff"), as
+   children of the group being built, each at x, y, w by h. *)
+PROCEDURE Build*(tab, fluff: Fl.Group; x, y, w, h: INTEGER);
   CONST Top = 10;
   VAR yy, ph, i: INTEGER; b: FlButtons.Button;
 BEGIN
   Fl.OpenGroup(tab, x, y, w, h, "Background");
-  (* The left column: the summary and the five prose sections. *)
+  (* The summary and the five prose sections. *)
   yy := y + Top;
   NEW(summaryIn); FlInputs.OpenInput(summaryIn, LeftX + 80, yy, ColumnW - 80, Row, "Summary");
   summaryIn.SetWhen(Fl.WhenChanged); summaryIn.action := TextAction;
@@ -346,22 +345,24 @@ BEGIN
   ProseEditor(Personality, yy, ph, "Personality"); yy := yy + ph + 25;
   ProseEditor(CharacterHooks, yy, ph, "Character Hooks"); yy := yy + ph + 25;
   ProseEditor(OtherNotes, yy, ph, "Other Notes");
+  tab.End;
 
-  (* The right column: the portrait, the fluff, the notes. *)
+  (* The portrait, the fluff, the notes. *)
+  Fl.OpenGroup(fluff, x, y, w, h, "Fluff");
   yy := y + Top;
-  Heading(RightX, yy, PortraitW, "Character Portrait");
-  NEW(portrait); Fl.OpenBox(portrait, RightX, yy + 20, PortraitW, PortraitH, "");
+  Heading(LeftX, yy, PortraitW, "Character Portrait");
+  NEW(portrait); Fl.OpenBox(portrait, LeftX, yy + 20, PortraitW, PortraitH, "");
   portrait.SetBoxType(Fl.DownFrame); portrait.SetAlign(Fl.AlignInside + Fl.AlignWrap);
-  NEW(portraitPath); FlInputs.OpenOutput(portraitPath, RightX + PortraitW + 10, yy + 40, ColumnW - PortraitW - 10, Row,
+  NEW(portraitPath); FlInputs.OpenOutput(portraitPath, LeftX + PortraitW + 10, yy + 40, ColumnW - PortraitW - 10, Row,
     "Image file, relative to the character's");
   portraitPath.SetAlign(Fl.AlignTopLeft);
-  NEW(b); FlButtons.OpenButton(b, RightX + PortraitW + 10, yy + 75, 100, Row, "Choose...");
+  NEW(b); FlButtons.OpenButton(b, LeftX + PortraitW + 10, yy + 75, 100, Row, "Choose...");
   b.action := ChoosePortraitAction; choosePortrait := b;
-  NEW(b); FlButtons.OpenButton(b, RightX + PortraitW + 115, yy + 75, 80, Row, "Remove");
+  NEW(b); FlButtons.OpenButton(b, LeftX + PortraitW + 115, yy + 75, 80, Row, "Remove");
   b.action := RemovePortraitAction; removePortrait := b;
 
   yy := yy + 20 + PortraitH + 10;
-  NEW(fluffGrid); FlLayout.OpenGrid(fluffGrid, RightX, yy, ColumnW, FluffRows * (Row + 5), "");
+  NEW(fluffGrid); FlLayout.OpenGrid(fluffGrid, LeftX, yy, ColumnW, FluffRows * (Row + 5), "");
   fluffGrid.SetLayout(FluffRows, 4); fluffGrid.SetGap(5, 5);
   fluffGrid.SetColWeight(0, 0); fluffGrid.SetColWidth(0, 100);
   fluffGrid.SetColWeight(2, 0); fluffGrid.SetColWidth(2, 100);
@@ -376,18 +377,18 @@ BEGIN
   FOR i := 0 TO NFluff - 1 DO ASSERT(fluffIn[i] # NIL) END;
 
   yy := yy + FluffRows * (Row + 5) + 10;
-  Heading(RightX, yy, ColumnW, "Notes");
-  NEW(notes); FlBrowsers.OpenHoldBrowser(notes, RightX, yy + 20, 200, y + h - 10 - Row - 5 - yy - 20, "");
+  Heading(LeftX, yy, ColumnW, "Notes");
+  NEW(notes); FlBrowsers.OpenHoldBrowser(notes, LeftX, yy + 20, 200, y + h - 10 - Row - 5 - yy - 20, "");
   notes.SetFormatChar(0X); notes.action := NotesAction;
-  NEW(noteHeader); FlInputs.OpenInput(noteHeader, RightX + 270, yy + 20, ColumnW - 270, Row, "Header");
-  NEW(noteText); FlInputs.OpenMultilineInput(noteText, RightX + 270, yy + 50, ColumnW - 270,
+  NEW(noteHeader); FlInputs.OpenInput(noteHeader, LeftX + 270, yy + 20, ColumnW - 270, Row, "Header");
+  NEW(noteText); FlInputs.OpenMultilineInput(noteText, LeftX + 270, yy + 50, ColumnW - 270,
     y + h - 10 - (yy + 50), "Text");
-  noteText.SetWrap(TRUE); noteText.SetAlign(Fl.AlignLeft + Fl.AlignTop);
+  noteText.SetWrap(TRUE); noteText.SetAlign(Fl.AlignLeftTop);
   yy := y + h - 10 - Row;
-  NEW(b); FlButtons.OpenButton(b, RightX, yy, 65, Row, "Add"); b.action := NoteButtonAction; addNote := b;
-  NEW(b); FlButtons.OpenButton(b, RightX + 68, yy, 65, Row, "Change"); b.action := NoteButtonAction; changeNote := b;
-  NEW(b); FlButtons.OpenButton(b, RightX + 136, yy, 65, Row, "Remove"); b.action := NoteButtonAction; removeNote := b;
-  tab.End
+  NEW(b); FlButtons.OpenButton(b, LeftX, yy, 65, Row, "Add"); b.action := NoteButtonAction; addNote := b;
+  NEW(b); FlButtons.OpenButton(b, LeftX + 68, yy, 65, Row, "Change"); b.action := NoteButtonAction; changeNote := b;
+  NEW(b); FlButtons.OpenButton(b, LeftX + 136, yy, 65, Row, "Remove"); b.action := NoteButtonAction; removeNote := b;
+  fluff.End
 END Build;
 
 (* Gives up the buffers and the image, after the window is deleted. *)

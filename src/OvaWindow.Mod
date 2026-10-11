@@ -1,11 +1,12 @@
-MODULE OvaWindow; (* The main window: its menu bar, the sheet's first tab, and the file *)
+MODULE OvaWindow; (* The main window: its menu bar, the sheet's first two tabs, and the file *)
 
-(* PLAN.md, "The window". One window, a menu bar, and two tabs: the
-   first, "Character", is the sheet's right half: the names, the
-   Abilities and Weaknesses, the totals and warnings, the Combat Notes,
-   and the combat box, with a box beside every computed number for its
-   override; the second, "Background", the sheet's left half, is
-   OvaBackground's.
+(* PLAN.md, "The window". One window, narrow enough to sit beside the
+   rulebook's viewer, a menu bar, and four tabs, each a column: the
+   first two the sheet's right half, "Character" (the names, the
+   Abilities and Weaknesses, the totals and warnings, the Combat Notes)
+   and "Attacks" (the combat box and the sheet's numbers), with a box
+   beside every computed number for its override; the other two the
+   sheet's left half, "Background" and "Fluff", OvaBackground's.
 
    The character is OvaCharacter's, in a module variable: every change
    a widget makes goes into it, then OvaCharacter.Recompute, then the
@@ -27,15 +28,15 @@ IMPORT Fl, FlButtons, FlBrowsers, FlDialogs, FlInputs, FlLayout, FlMenus, FlPref
   OvaSave, OvaText, OvaViewer, OvaWidgets, Ropes;
 
 CONST
-  Width = 1280; Height = 800; BarHeight = 25; TabHeight = 25;
+  Width = 640; Height = 800; BarHeight = 25; TabHeight = 25;
   Title = "OVA Character Generator";
   Row = 25;
-  (* The first tab's two columns. *)
-  LeftX = 10; RightX = 650; ColumnW = 620;
+  (* Each tab's one column. *)
+  LeftX = 10; ColumnW = 620;
   Top = BarHeight + TabHeight + 10;
   (* The combat box: rows shown before it scrolls, each Row + 5 high;
      an attack's name's width. *)
-  AttackRows = 10; RowH = 30; NameW = 180;
+  AttackRows = 17; RowH = 30; NameW = 180;
 
   (* SheetNumber.which *)
   Defense = 0; Barrier = 1; Health = 2; Endurance = 3; Reserve = 4; TV = 5;
@@ -71,7 +72,7 @@ VAR
   window-: Fl.DoubleWindow;
   bar-: FlMenus.MenuBar;
   tabs-: FlLayout.Tabs;
-  sheetTab-, backgroundTab-: Fl.Group;
+  sheetTab-, attacksTab-, backgroundTab-, fluffTab-: Fl.Group;
   newItem-, openItem-, saveItem-, saveAsItem-, quitItem-: INTEGER;
   limitsItem-, rulebookItem-, choosePdfItem-, viewerItem-: INTEGER;
 
@@ -886,29 +887,32 @@ BEGIN
   combatNotes.SetAlign(Fl.AlignTopLeft); combatNotes.SetWhen(Fl.WhenChanged); combatNotes.action := TextAction;
   combatNotes.SetWrap(TRUE);
 
-  (* The right column: the combat box. *)
-  Label(RightX, Top, 200, "Attacks");
-  x := RightX + 2 + NameW + 8; y := Top + 25;
-  NEW(b); Fl.OpenBox(b, RightX + 2, y, NameW, Row, "Name"); b.SetAlign(Fl.AlignLeft + Fl.AlignInside);
+  sheetTab.End;
+
+  (* The second tab: the combat box and the sheet's numbers. *)
+  NEW(attacksTab); Fl.OpenGroup(attacksTab, 0, BarHeight + TabHeight, Width, Height - BarHeight - TabHeight, "Attacks");
+  Label(LeftX, Top, 200, "Attacks");
+  x := LeftX + 2 + NameW + 8; y := Top + 25;
+  NEW(b); Fl.OpenBox(b, LeftX + 2, y, NameW, Row, "Name"); b.SetAlign(Fl.AlignLeft + Fl.AlignInside);
   NEW(b); Fl.OpenBox(b, x, y, OvaWidgets.Width, Row, "ROLL");
   NEW(b); Fl.OpenBox(b, x + OvaWidgets.Width + 8, y, OvaWidgets.Width, Row, "DX");
   NEW(b); Fl.OpenBox(b, x + 2 * (OvaWidgets.Width + 8), y, OvaWidgets.Width, Row, "END");
   y := y + Row;
-  NEW(attackBox); FlLayout.OpenScroll(attackBox, RightX, y, ColumnW, AttackRows * RowH + 4, "");
+  NEW(attackBox); FlLayout.OpenScroll(attackBox, LeftX, y, ColumnW, AttackRows * RowH + 4, "");
   attackBox.SetKind(FlLayout.ScrollVertical); attackBox.SetBoxType(Fl.DownBox);
   attackBox.End;
   y := y + AttackRows * RowH + 10;
-  NEW(addAttack); FlButtons.OpenButton(addAttack, RightX, y, 120, Row, "Add attack...");
+  NEW(addAttack); FlButtons.OpenButton(addAttack, LeftX, y, 120, Row, "Add attack...");
   addAttack.action := AddAttackAction;
   y := y + Row + 30;
-  SheetBox(Defense, RightX, y, "DEFENSE");
-  SheetBox(Barrier, RightX + 100, y, "Barrier DEFENSE");
-  SheetBox(Incorporeal, RightX + 100, y + 50, "Incorporeal DEFENSE");
-  SheetBox(Health, RightX + 220, y, "HEALTH");
-  SheetBox(Endurance, RightX + 320, y, "ENDURANCE");
-  SheetBox(Reserve, RightX + 420, y, "Reserve");
-  SheetBox(TV, RightX + 520, y, "TV");
-  sheetTab.End
+  SheetBox(Defense, LeftX, y, "DEFENSE");
+  SheetBox(Barrier, LeftX + 100, y, "Barrier DEFENSE");
+  SheetBox(Incorporeal, LeftX + 100, y + 50, "Incorporeal DEFENSE");
+  SheetBox(Health, LeftX + 220, y, "HEALTH");
+  SheetBox(Endurance, LeftX + 320, y, "ENDURANCE");
+  SheetBox(Reserve, LeftX + 420, y, "Reserve");
+  SheetBox(TV, LeftX + 520, y, "TV");
+  attacksTab.End
 END BuildSheetTab;
 
 (* Opens the window, not yet shown, with a new character. *)
@@ -929,8 +933,8 @@ BEGIN
   viewerItem := bar.Add("&Rulebook/&Viewer...", 0, {}, ViewerAction, {});
   NEW(tabs); FlLayout.OpenTabs(tabs, 0, BarHeight, Width, Height - BarHeight, "");
   BuildSheetTab;
-  NEW(backgroundTab);
-  OvaBackground.Build(backgroundTab, 0, BarHeight + TabHeight, Width, Height - BarHeight - TabHeight);
+  NEW(backgroundTab); NEW(fluffTab);
+  OvaBackground.Build(backgroundTab, fluffTab, 0, BarHeight + TabHeight, Width, Height - BarHeight - TabHeight);
   tabs.End;
   window.End;
   window.action := Quit;
@@ -948,7 +952,7 @@ BEGIN
   OvaWidgets.ClosePanel(abilities); OvaWidgets.ClosePanel(weaknesses);
   window.Delete;
   OvaBackground.Close;
-  window := NIL; bar := NIL; tabs := NIL; sheetTab := NIL; backgroundTab := NIL;
+  window := NIL; bar := NIL; tabs := NIL; sheetTab := NIL; attacksTab := NIL; backgroundTab := NIL; fluffTab := NIL;
   abilities := NIL; weaknesses := NIL; rows := NIL; attackBox := NIL; warnings := NIL;
   nameIn := NIL; playerIn := NIL; taglineIn := NIL; npcTypeIn := NIL; combatNotes := NIL; abilityEnd := NIL; abilityMods := NIL;
   addAttack := NIL
