@@ -54,6 +54,8 @@ CONST
   OwnCost* = 18;         (* spends Endurance of its own as it is used, so a spell of it
                             costs more than the table's, "10+": Barrier (p. 51, 58) *)
   CastsWeaknesses* = 19; (* its spells cast Weaknesses, -1 to -3, at Arcane's costs: Witchcraft (p. 58) *)
+  ThirdDefense* = 20;    (* another alternate Defense Roll, 2 + its level, written after
+                            Barrier's: Incorporeal Form, its dice as the Defense Roll (p. 55) *)
 
   (* What linked content an Ability has (Item.linked) *)
   NoLink* = 0; Spells* = 1; Form* = 2; Partner* = 3; Machine* = 4;
@@ -213,7 +215,7 @@ BEGIN
   A("Healer", 54, {HalfTV});
   A("Heightened Sense", 54, {});
   A("Illusionist", 54, {});
-  A("Incorporeal Form", 55, {});
+  A("Incorporeal Form", 55, {ThirdDefense});
   A("Intimidating", 55, {});
   A("Intuitive", 56, {});
   A("Inventor", 56, {});

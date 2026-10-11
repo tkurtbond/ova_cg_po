@@ -35,8 +35,9 @@ transformed form (PLAN.md, Phase 3a).
 
 ## Sample NPCs (p. 134-141)
 
-Ancel (p. 138), Saspar (p. 135), Zurkrieg (p. 137) and his Men in Black,
-and Acacia's two demons (p. 134) match the rules everywhere.
+Ancel (p. 138), Saspar (p. 135), Shadowman (p. 136), Zurkrieg (p. 137)
+and his Men in Black, and Acacia's two demons (p. 134) match the rules
+everywhere.
 
 Dr. Tomori (p. 140) and Jiro (p. 141) are Secondary NPCs. They match
 once `npc-type` sets the sheet: 20 Health and Endurance, not 40, and TV
@@ -47,17 +48,22 @@ The rest:
 | NPC | Number | Book | Rules | Why |
 |---|---|---|---|---|
 | Acacia (p. 134) | Lock Heaven's Door's END | 10 | 0 | Its Perks are Fatiguing, which costs nothing, and a Unique Perk, whose cost the book doesn't print; 10 would be that Unique Perk's. The fixture leaves its cost out, since ova_fmt would print it and the book doesn't. |
-| Acacia | DEFENSE | 4 | 2 | An alternate Defense printed as the only one: 2 + Barrier 2 (p. 51), or 2 + Incorporeal Form 2 (p. 55), which both give 4. |
-| Nazo (p. 139) | DEFENSE | 5 | 2 | 2 + Incorporeal Form 3: its dice may be the Defense Roll (p. 55). The generator computes only Barrier's alternate Defense. |
-| Nazo | TV | 16 | 15 | Which other Abilities count half toward TV is the GM's choice (p. 124). The generator counts Magic, Witchcraft 3's 2, as it marks Healer and Magic to start with; the book counts one point more. |
-| Shadowman (p. 136) | DEFENSE | 6 | 2 | 2 + Barrier 4 (p. 51), printed as the only Defense. The rules give "2/6", which ova_fmt prints as a pair; the generator saves the single value, as the book has it (`OvaCharacter.omitBarrier`). |
+| Nazo (p. 139) | TV | 16 | 15 | Which other Abilities count half toward TV is the GM's choice (p. 124). The generator counts Magic, Witchcraft 3's 2, as it marks Healer and Magic to start with; the book counts one point more. |
 
 Nazo's Fox Fire is made with Telekinesis 2, which adds to its DX (p.
 62): its fixture says so (`telekinesis: true`, as Ai's attacks have
 it), and its DX of 3 is the rules'.
 
 The Sample NPCs print a single DEFENSE, the best of the character's.
-The Sample Characters print Barrier's as a second one (Fukiko's "4/5").
+The Sample Characters print Barrier's as a second one (Fukiko's
+"4/5"). The generator reads a file's single DEFENSE, where Barrier
+(p. 51) or Incorporeal Form (p. 55) gives an alternate, as the best of
+them, and saves it so (`OvaCharacter.SingleDefense`). Acacia's 4 is
+2 + Barrier 2 and 2 + Incorporeal Form 2 (the rules' "2/4/4"), Nazo's
+5 is 2 + Incorporeal Form 3 ("2/5"), and Shadowman's 6 is 2 + Barrier
+4 ("2/6"), so none gives a notice. Until ova_fmt's `defense` held
+three values, the generator computed only Barrier's alternate, and
+these were three notices.
 
 Acacia's file holds three entities, herself and her demons, and so
 does Zurkrieg's (two). The generator edits one character at a time

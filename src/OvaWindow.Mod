@@ -39,8 +39,8 @@ CONST
 
   (* SheetNumber.which *)
   Defense = 0; Barrier = 1; Health = 2; Endurance = 3; Reserve = 4; TV = 5;
-  AbilityLevels = 6; WeaknessLevels = 7; Total = 8; Points = 9;
-  NSheetNumbers = 10;
+  AbilityLevels = 6; WeaknessLevels = 7; Total = 8; Points = 9; Incorporeal = 10;
+  NSheetNumbers = 11;
   (* AttackNumber.which *)
   Roll = 0; DX = 1; End = 2;
 
@@ -373,7 +373,8 @@ BEGIN
   b.shown.Redraw
 END Red;
 
-(* Every number box shown again: Barrier's and the Reserve's only when
+(* Every number box shown again: Barrier's, Incorporeal Form's and the
+   Reserve's only when
    the character has them, Scaled Cost's points only under it. A total
    a limit finds too high is red (p. 21): Base Zero's the Character
    Total, or the points under Scaled Cost; a Power Ceiling's or the
@@ -387,6 +388,7 @@ BEGIN
   Red(numbers[Points], baseZero & character.options.scaledCost);
   Red(numbers[AbilityLevels], Warned(OvaCalc.CeilingBroken) OR Warned(OvaCalc.StartingBroken));
   IF character.hasBarrier THEN numbers[Barrier].Show ELSE numbers[Barrier].Hide END;
+  IF character.hasIncorporeal THEN numbers[Incorporeal].Show ELSE numbers[Incorporeal].Hide END;
   IF character.hasReserve THEN numbers[Reserve].Show ELSE numbers[Reserve].Hide END;
   IF character.options.scaledCost THEN numbers[Points].Show ELSE numbers[Points].Hide END;
   r := rows;
@@ -416,7 +418,8 @@ PROCEDURE (t: SheetNumber) Get*(VAR n: OvaCalc.Number);
 BEGIN
   c := character;
   CASE t.which OF
-    Defense: n := c.defense | Barrier: n := c.barrier | Health: n := c.health
+    Defense: n := c.defense | Barrier: n := c.barrier | Incorporeal: n := c.incorporeal
+  | Health: n := c.health
   | Endurance: n := c.endurance | Reserve: n := c.reserve | TV: n := c.tv
   | AbilityLevels: n := c.abilityLevels | WeaknessLevels: n := c.weaknessLevels
   | Total: n := c.total | Points: n := c.points
@@ -428,7 +431,8 @@ PROCEDURE (t: SheetNumber) Put*(VAR n: OvaCalc.Number);
 BEGIN
   c := character;
   CASE t.which OF
-    Defense: c.defense := n | Barrier: c.barrier := n | Health: c.health := n
+    Defense: c.defense := n | Barrier: c.barrier := n | Incorporeal: c.incorporeal := n
+  | Health: c.health := n
   | Endurance: c.endurance := n | Reserve: c.reserve := n | TV: c.tv := n
   | AbilityLevels: c.abilityLevels := n | WeaknessLevels: c.weaknessLevels := n
   | Total: c.total := n | Points: c.points := n
@@ -899,6 +903,7 @@ BEGIN
   y := y + Row + 30;
   SheetBox(Defense, RightX, y, "DEFENSE");
   SheetBox(Barrier, RightX + 100, y, "Barrier DEFENSE");
+  SheetBox(Incorporeal, RightX + 100, y + 50, "Incorporeal DEFENSE");
   SheetBox(Health, RightX + 220, y, "HEALTH");
   SheetBox(Endurance, RightX + 320, y, "ENDURANCE");
   SheetBox(Reserve, RightX + 420, y, "Reserve");

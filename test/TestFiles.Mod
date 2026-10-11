@@ -67,21 +67,23 @@ BEGIN
      sheet shown transformed, Miho's Mode SP made transformed), but the
      book's two rulings, Braun's ROLL and Natsuki's Stiletto Kick's DX,
      which their overrides: list. Without those keys there were 15
-     notices (Phase 3). Sheet uses every key. *)
+     notices (Phase 3). Sheet uses every key; Defenses and Wisp, the
+     three Defense values, and Incorporeal Form's alone. *)
   RoundTrip("Ai", 0); RoundTrip("Auren", 0); RoundTrip("Braun", 0); RoundTrip("Cora", 0);
   RoundTrip("Daisuke", 0); RoundTrip("Fukiko", 0); RoundTrip("Karis", 0); RoundTrip("Miho", 0);
   RoundTrip("Natsuki", 0); RoundTrip("Raine", 0); RoundTrip("Shou", 0); RoundTrip("Yuu", 0);
-  RoundTrip("Sheet", 0);
+  RoundTrip("Sheet", 0); RoundTrip("Defenses", 0); RoundTrip("Wisp", 0);
   (* po_ova_fmt's own, for its formats: their numbers were never the
      rules', so they come back as overrides. *)
   RoundTrip("Escaping", 5); RoundTrip("Unsorted", 8); RoundTrip("Vehicle", 5);
   (* The Sample NPCs: a Secondary NPC's sheet is a Companion's
      (npc-type:), so Dr. Tomori's and Jiro's numbers are the rules';
-     Nazo's and Shadowman's Defense, and Nazo's TV, are the book's own
+     Nazo's and Shadowman's single Defense is their best, as the book
+     prints it, but Nazo's TV is the book's own
      (CHARACTER-DIFFERENCES.md). Acacia and Zurkrieg hold more than one
      entity (Errors). *)
-  RoundTrip("Ancel", 0); RoundTrip("Dr-Tomori", 0); RoundTrip("Jiro", 0); RoundTrip("Nazo", 2);
-  RoundTrip("Saspar", 0); RoundTrip("Shadowman", 1);
+  RoundTrip("Ancel", 0); RoundTrip("Dr-Tomori", 0); RoundTrip("Jiro", 0); RoundTrip("Nazo", 1);
+  RoundTrip("Saspar", 0); RoundTrip("Shadowman", 0);
   (* The NPC Fragments: no combat: block, so nothing to compare. *)
   RoundTrip("Beat-Cop", 0); RoundTrip("Cat-Burglar", 0); RoundTrip("Dragon", 0);
   RoundTrip("Ebullient-Club-President", 0); RoundTrip("Ghosts", 0); RoundTrip("Goblin", 0);
@@ -122,6 +124,74 @@ BEGIN
   ok := OvaSave.Save(c, "../obj/no-such-dir/x.yaml", msg);
   Check.Check(~ok & (msg # NIL), "a save to a missing directory fails, with a message")
 END Errors;
+
+(* Whether r holds s. *)
+PROCEDURE Holds(r: Ropes.Rope; s: ARRAY OF CHAR): BOOLEAN;
+  VAR w: Ropes.Rope; i: LONGINT;
+BEGIN
+  w := Ropes.FromString(s); i := 0;
+  WHILE i + Ropes.Length(w) <= Ropes.Length(r) DO
+    IF Ropes.Equal(Ropes.Substring(r, i, Ropes.Length(w)), w) THEN RETURN TRUE END;
+    INC(i)
+  END;
+  RETURN FALSE
+END Holds;
+
+(* Whether r holds the line s, ending in a line feed. *)
+PROCEDURE HoldsLine(r: Ropes.Rope; s: ARRAY OF CHAR): BOOLEAN;
+  VAR line: ARRAY 128 OF CHAR; n: INTEGER;
+BEGIN
+  COPY(s, line); n := Strings.Length(line); line[n] := 0AX; line[n + 1] := 0X;
+  RETURN Holds(r, line)
+END HoldsLine;
+
+(* name, loaded, saved: its text holds the line want. *)
+PROCEDURE SavesAs(name, want: ARRAY OF CHAR);
+  VAR path: ARRAY 128 OF CHAR; c: OvaCharacter.Character; msg, text: Ropes.Rope; s: OvaText.String;
+BEGIN
+  Path(DataDir, name, path);
+  IF OvaCharacter.Load(path, c, msg) THEN text := OvaSave.ToText(c) ELSE text := NIL END;
+  L(name, "saved with "); Strings.Append(want, label);
+  Check.Check((text # NIL) & HoldsLine(text, want), label);
+  IF (text # NIL) & ~HoldsLine(text, want) THEN s := OvaText.Chars(text); Out.String(s^) END
+END SavesAs;
+
+(* Up to three Defense values (PLAN.md, Phase 11): one where the rules
+   give more is the best; two, the Defense and the first alternate; an
+   overridden alternate the character doesn't have is saved where it is
+   read back. *)
+PROCEDURE Defenses;
+  VAR c, c2: OvaCharacter.Character; msg, text: Ropes.Rope; ok: BOOLEAN; slot: INTEGER;
+BEGIN
+  RoundTrip("defense-best", 0);
+  SavesAs("defense-best", "defense: 4");
+  RoundTrip("defense-best-differs", 1);
+  SavesAs("defense-best-differs", "defense: 3");
+  ok := OvaCharacter.Load("data/defense-best-differs.yaml", c, msg);
+  Check.Check(ok & c.incorporeal.overridden & ~c.barrier.overridden & ~c.defense.overridden
+    & OvaCharacter.SingleDefense(c, slot) & (slot = OvaCharacter.IncorporealSlot),
+    "defense-best-differs: read as Incorporeal Form's, the best by the rules, and saved as one");
+  RoundTrip("defense-two", 0);
+  SavesAs("defense-two", "defense: 2/3/4");
+
+  (* One value, but another overridden since: all of them saved. *)
+  ok := OvaCharacter.Load("data/defense-best.yaml", c, msg);
+  OvaCalc.Override(c.defense, 3, FALSE, FALSE); OvaCharacter.Recompute(c);
+  text := OvaSave.ToText(c);
+  Check.Check(ok & ~OvaCharacter.SingleDefense(c, slot) & HoldsLine(text, "defense: 3/4/4")
+    & HoldsLine(text, "    - defense"), "defense-best, its DEFENSE overridden: saved with all three");
+
+  (* An overridden Incorporeal Form's Defense the character doesn't have:
+     Barrier's is saved before it, so it is read back as the third. *)
+  c := OvaCharacter.New(); c.name := Ropes.FromString("Ghostless");
+  OvaCalc.Override(c.incorporeal, 7, FALSE, FALSE); OvaCharacter.Recompute(c);
+  text := OvaSave.ToText(c);
+  Check.Check(HoldsLine(text, "defense: 2/0/7") & HoldsLine(text, "    - defense-3"),
+    "an overridden Incorporeal Form's DEFENSE without it: saved third, after Barrier's 0");
+  ok := OvaSave.Save(c, "../obj/ghostless.yaml", msg) & OvaCharacter.Load("../obj/ghostless.yaml", c2, msg);
+  Check.Check(ok & (OvaCharacter.notices.n = 0) & c2.incorporeal.overridden & (OvaCalc.Value(c2.incorporeal) = 7)
+    & ~c2.barrier.overridden, "and read back as Incorporeal Form's, with no notice")
+END Defenses;
 
 (* Text plain YAML can't hold, saved and loaded back. *)
 PROCEDURE AwkwardText;
@@ -166,6 +236,7 @@ END AwkwardText;
 BEGIN
   Fixtures;
   Errors;
+  Defenses;
   AwkwardText;
   Check.Summary
 END TestFiles.

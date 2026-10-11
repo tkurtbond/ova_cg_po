@@ -2,9 +2,9 @@ MODULE OvaCalc; (* The numbers on the sheet, computed from the character *)
 
 (* PLAN.md, "The rules the program computes" and "Limiting the
    character": each attack's ROLL, DX and END; the END of an Ability
-   with Perks and Flaws or Endurance Use, and of each spell; DEFENSE and
-   Barrier's second Defense; HEALTH, ENDURANCE, Endurance Reserve and
-   TV; the running totals; and the warnings of broken limits.
+   with Perks and Flaws or Endurance Use, and of each spell; DEFENSE,
+   Barrier's and Incorporeal Form's alternate Defenses; HEALTH,
+   ENDURANCE, Endurance Reserve and TV; the running totals; and the warnings of broken limits.
 
    A character is given as a Sheet of Traits (its Abilities and
    Weaknesses) and Attacks, each Attack and Trait with its Perks and
@@ -137,8 +137,8 @@ TYPE
     attacks*: Attack;
     transformed*: BOOLEAN; (* shown in the transformed form, as Fukiko's sheet is *)
     options*: Options;
-    defense*, barrier*, health*, endurance*, reserve*, tv*: Number;
-    hasBarrier-, hasReserve-: BOOLEAN;
+    defense*, barrier*, incorporeal*, health*, endurance*, reserve*, tv*: Number;
+    hasBarrier-, hasIncorporeal-, hasReserve-: BOOLEAN;
     (* The running totals: levels (Knowledge and Ineptitude halved if
        the options say so), the Character Total, and Scaled Cost's
        points (abilities' less weaknesses'). *)
@@ -260,9 +260,9 @@ BEGIN
   s.options.startingLevels := FALSE; s.options.starting := 0;
   s.options.scaledCost := FALSE; s.options.halfCostKnowledge := FALSE;
   s.options.combinedEffectiveness := FALSE;
-  InitNumber(s.defense); InitNumber(s.barrier); InitNumber(s.health);
+  InitNumber(s.defense); InitNumber(s.barrier); InitNumber(s.incorporeal); InitNumber(s.health);
   InitNumber(s.endurance); InitNumber(s.reserve); InitNumber(s.tv);
-  s.hasBarrier := FALSE; s.hasReserve := FALSE;
+  s.hasBarrier := FALSE; s.hasIncorporeal := FALSE; s.hasReserve := FALSE;
   InitNumber(s.abilityLevels); InitNumber(s.weaknessLevels); InitNumber(s.total); InitNumber(s.points);
   s.abilityPoints := 0; s.weaknessPoints := 0;
   s.warnings := NIL
@@ -540,21 +540,31 @@ BEGIN
   END
 END ComputeTrait;
 
-(* Defense (p. 105), and Barrier's (p. 51). *)
-PROCEDURE ComputeDefense(s: Sheet);
+(* An alternate Defense Roll, 2 + the levels of what has flag (p. 51,
+   55), into n; has, whether the character has one. *)
+PROCEDURE ComputeAlternate(s: Sheet; flag: INTEGER; VAR n: Number; VAR has: BOOLEAN);
   VAR form: BOOLEAN; d: INTEGER;
 BEGIN
   form := s.transformed;
-  d := 2 + Sum(s, OvaRules.DefenseRoll, form);
+  has := Present(s, flag, form);
+  IF has THEN
+    d := 2 + Sum(s, flag, form);
+    Set(n, d);
+    IF s.options.combinedEffectiveness & (d - 2 > CombinedLimit) THEN Warn(s, OverFive, NIL, NIL, NIL, NIL) END
+  ELSE Set(n, 0)
+  END
+END ComputeAlternate;
+
+(* Defense (p. 105), and Barrier's (p. 51) and Incorporeal Form's (p.
+   55). *)
+PROCEDURE ComputeDefense(s: Sheet);
+  VAR d: INTEGER;
+BEGIN
+  d := 2 + Sum(s, OvaRules.DefenseRoll, s.transformed);
   Set(s.defense, d);
   IF s.options.combinedEffectiveness & (d - 2 > CombinedLimit) THEN Warn(s, OverFive, NIL, NIL, NIL, NIL) END;
-  s.hasBarrier := Present(s, OvaRules.SecondDefense, form);
-  IF s.hasBarrier THEN
-    d := 2 + Sum(s, OvaRules.SecondDefense, form);
-    Set(s.barrier, d);
-    IF s.options.combinedEffectiveness & (d - 2 > CombinedLimit) THEN Warn(s, OverFive, NIL, NIL, NIL, NIL) END
-  ELSE Set(s.barrier, 0)
-  END
+  ComputeAlternate(s, OvaRules.SecondDefense, s.barrier, s.hasBarrier);
+  ComputeAlternate(s, OvaRules.ThirdDefense, s.incorporeal, s.hasIncorporeal)
 END ComputeDefense;
 
 (* Health and Endurance (p. 107): from the sheet's base, + the Tough and
@@ -614,6 +624,7 @@ BEGIN
   END;
   def := Value(s.defense);
   IF s.hasBarrier & (Value(s.barrier) > def) THEN def := Value(s.barrier) END;
+  IF s.hasIncorporeal & (Value(s.incorporeal) > def) THEN def := Value(s.incorporeal) END;
   tv := roll + def + dx + Sum(s, OvaRules.Armor, form)
     + Sum(s, OvaRules.HealthTable, form) + Sum(s, OvaRules.HealthTens, form)
     + Sum(s, OvaRules.EnduranceTable, form) + Sum(s, OvaRules.EnduranceTens, form);

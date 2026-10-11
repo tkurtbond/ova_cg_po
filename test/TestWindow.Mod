@@ -97,7 +97,8 @@ BEGIN
     & Shows(OvaWindow.numbers[2], c.health) & Shows(OvaWindow.numbers[3], c.endurance)
     & Shows(OvaWindow.numbers[4], c.reserve) & Shows(OvaWindow.numbers[5], c.tv)
     & Shows(OvaWindow.numbers[6], c.abilityLevels) & Shows(OvaWindow.numbers[7], c.weaknessLevels)
-    & Shows(OvaWindow.numbers[8], c.total) & Shows(OvaWindow.numbers[9], c.points);
+    & Shows(OvaWindow.numbers[8], c.total) & Shows(OvaWindow.numbers[9], c.points)
+    & Shows(OvaWindow.numbers[10], c.incorporeal);
   r := OvaWindow.rows;
   WHILE ok & (r # NIL) DO
     ok := Shows(r.roll, r.attack.roll) & Shows(r.dx, r.attack.dx) & Shows(r.end, r.attack.end);
@@ -254,8 +255,9 @@ BEGIN
   Check.Check(ListShown(OvaWindow.abilities) & ListShown(OvaWindow.weaknesses),
     "every Ability and Weakness is listed with its page");
   Check.Check(AllShown(), "every number shown is the model's");
-  Check.Check(OvaWindow.numbers[1].Visible() & ~OvaWindow.numbers[4].Visible() & ~OvaWindow.numbers[9].Visible(),
-    "Barrier DEFENSE shown, for Barrier; the Reserve and the Scaled Cost points not");
+  Check.Check(OvaWindow.numbers[1].Visible() & ~OvaWindow.numbers[4].Visible() & ~OvaWindow.numbers[9].Visible()
+    & ~OvaWindow.numbers[10].Visible(),
+    "Barrier DEFENSE shown, for Barrier; the Reserve, the Scaled Cost points and Incorporeal DEFENSE not");
   Check.Check(RowCount() = 2, "a row in the combat box for each attack");
   r := OvaWindow.rows; r.name.Value(s);
   Check.Check(s = "Telekinetic Push", "the first is Telekinetic Push");
@@ -311,6 +313,10 @@ BEGIN
   i := LineWith(OvaWindow.warnings, "Magic, Testing");
   IF i > 0 THEN OvaWindow.warnings.GetText(i, s) ELSE s[0] := 0X END;
   Check.Check(s = "Magic, Testing (p. ?) isn't in the rulebook's lists", "and a warning, with p. ?");
+
+  tells := 0; ok := Load("Wisp.yaml");
+  Check.Check(ok & (tells = 0) & OvaWindow.numbers[10].Visible() & ~OvaWindow.numbers[1].Visible() & AllShown(),
+    "Wisp.yaml: Incorporeal DEFENSE shown, its 6, and Barrier DEFENSE not");
 
   (* ---- Abilities and Weaknesses ---- *)
   ok := Load("Ai.yaml"); c := OvaWindow.character;

@@ -28,8 +28,8 @@ CONST
   (* The dialog's height in each shape. *)
   FormH = 450; SpellsH = 500; PartnerH = 640;
   (* SheetNum.which: a partner's numbers *)
-  Defense = 0; Barrier = 1; Health = 2; Endurance = 3; Reserve = 4; TV = 5;
-  NNumbers = 6;
+  Defense = 0; Barrier = 1; Health = 2; Endurance = 3; Reserve = 4; TV = 5; Incorporeal = 6;
+  NNumbers = 7;
 
 TYPE
   Rope = Ropes.Rope;
@@ -106,7 +106,8 @@ END Changed;
 PROCEDURE (t: SheetNum) Get*(VAR n: OvaCalc.Number);
 BEGIN
   CASE t.which OF
-    Defense: n := partner.defense | Barrier: n := partner.barrier | Health: n := partner.health
+    Defense: n := partner.defense | Barrier: n := partner.barrier | Incorporeal: n := partner.incorporeal
+  | Health: n := partner.health
   | Endurance: n := partner.endurance | Reserve: n := partner.reserve | TV: n := partner.tv
   END
 END Get;
@@ -114,7 +115,8 @@ END Get;
 PROCEDURE (t: SheetNum) Put*(VAR n: OvaCalc.Number);
 BEGIN
   CASE t.which OF
-    Defense: partner.defense := n | Barrier: partner.barrier := n | Health: partner.health := n
+    Defense: partner.defense := n | Barrier: partner.barrier := n | Incorporeal: partner.incorporeal := n
+  | Health: partner.health := n
   | Endurance: partner.endurance := n | Reserve: partner.reserve := n | TV: partner.tv := n
   END
 END Put;
@@ -411,11 +413,13 @@ BEGIN
       line := attacks.Value(); ShowAttacks(line);
       FOR i := 0 TO NNumbers - 1 DO numbers[i].Display END;
       (* With no combat stats, nothing of combat is saved: all of it
-         inactive. Barrier's Defense and the Reserve only with them. *)
+         inactive. Barrier's and Incorporeal Form's Defense and the
+         Reserve only with them. *)
       IF partner.hasCombat THEN
         attacks.Activate; addAttack.Activate; editAttack.Activate; removeAttack.Activate;
         FOR i := 0 TO NNumbers - 1 DO numbers[i].Activate END;
         IF ~partner.hasBarrier THEN numbers[Barrier].Deactivate END;
+        IF ~partner.hasIncorporeal THEN numbers[Incorporeal].Deactivate END;
         IF ~partner.hasReserve THEN numbers[Reserve].Deactivate END
       ELSE
         attacks.Deactivate; addAttack.Deactivate; editAttack.Deactivate; removeAttack.Deactivate;
@@ -511,6 +515,7 @@ BEGIN
   y := y + Row + 25;
   NEW(t); t.which := Defense; NumberBox(numbers[Defense], t, 10, y, "DEFENSE");
   NEW(t); t.which := Barrier; NumberBox(numbers[Barrier], t, 130, y, "Barrier DEFENSE");
+  NEW(t); t.which := Incorporeal; NumberBox(numbers[Incorporeal], t, 130, y + 50, "Incorporeal DEFENSE");
   NEW(t); t.which := Health; NumberBox(numbers[Health], t, 250, y, "HEALTH");
   NEW(t); t.which := Endurance; NumberBox(numbers[Endurance], t, 370, y, "ENDURANCE");
   NEW(t); t.which := Reserve; NumberBox(numbers[Reserve], t, 490, y, "Reserve");

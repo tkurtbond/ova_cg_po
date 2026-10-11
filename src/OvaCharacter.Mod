@@ -21,6 +21,9 @@ IMPORT Fyaml, FyamlStreams, OvaCalc, OvaEntities, OvaRules, OvaText, Ropes;
 
 CONST
   NFluff* = OvaEntities.NFluff;
+  (* The Defense values, in the order a combat: block's defense holds
+     them (BestDefense) *)
+  DefenseSlot* = 0; BarrierSlot* = 1; IncorporealSlot* = 2;
 
 TYPE
   Rope = Ropes.Rope;
@@ -51,9 +54,11 @@ TYPE
     isFragment*: BOOLEAN;  (* an NPC Fragment, or a simple Companion *)
     hasCombat*: BOOLEAN;   (* a combat: block: a Fragment or Companion may have none *)
     hasThreatValue*: BOOLEAN;
-    (* The file gave one Defense though Barrier gives a second, as the
-       book's Shadowman has it: saved so, Barrier's left out. *)
-    omitBarrier*: BOOLEAN;
+    (* The file gave one Defense though Barrier or Incorporeal Form gives
+       another, as the book's Sample NPCs have it: the best, saved so,
+       the others left out (SingleDefense). singleSlot, the slot it was
+       read into, BestDefense's then. *)
+    omitAlternates*: BOOLEAN; singleSlot: INTEGER;
     hasCombatNotes*: BOOLEAN; combatNotes*: Rope
   END;
 
@@ -185,7 +190,7 @@ BEGIN
   c.hasFluff := FALSE;
   FOR i := 0 TO NFluff - 1 DO c.hasFluffField[i] := FALSE; c.fluff[i] := NIL END;
   c.hasOptions := FALSE; c.isFragment := FALSE;
-  c.hasCombat := TRUE; c.hasThreatValue := TRUE; c.omitBarrier := FALSE;
+  c.hasCombat := TRUE; c.hasThreatValue := TRUE; c.omitAlternates := FALSE; c.singleSlot := DefenseSlot;
   c.hasCombatNotes := FALSE; c.combatNotes := NIL
 END InitCharacter;
 
@@ -363,6 +368,32 @@ END Notice;
    overrides: names it), or if it differs from the computed number,
    with a notice. Text that isn't a number for n is noted and dropped,
    the computed number kept. *)
+(* c's best Defense value, its slot: the Defense, or an alternate c has
+   that is higher than those before it. *)
+PROCEDURE BestDefense*(c: Character): INTEGER;
+  VAR best, value: INTEGER;
+BEGIN
+  best := DefenseSlot; value := OvaCalc.Value(c.defense);
+  IF c.hasBarrier & (OvaCalc.Value(c.barrier) > value) THEN
+    best := BarrierSlot; value := OvaCalc.Value(c.barrier)
+  END;
+  IF c.hasIncorporeal & (OvaCalc.Value(c.incorporeal) > value) THEN best := IncorporealSlot END;
+  RETURN best
+END BestDefense;
+
+(* Whether c's defense is saved as one value, and which, slot: the file
+   gave one (omitAlternates), and the only value overridden, if any, is
+   the one it was read into. It is saved, or else the best. *)
+PROCEDURE SingleDefense*(c: Character; VAR slot: INTEGER): BOOLEAN;
+  VAR n: INTEGER;
+BEGIN
+  n := 0; slot := BestDefense(c);
+  IF c.defense.overridden THEN INC(n); slot := DefenseSlot END;
+  IF c.barrier.overridden THEN INC(n); slot := BarrierSlot END;
+  IF c.incorporeal.overridden THEN INC(n); slot := IncorporealSlot END;
+  RETURN c.omitAlternates & ((n = 0) OR (n = 1) & (slot = c.singleSlot))
+END SingleDefense;
+
 PROCEDURE Adopt(VAR n: OvaCalc.Number; file: Rope; allowHalf, allowPlus, listed: BOOLEAN; where: Rope;
                 what: ARRAY OF CHAR);
   VAR f: OvaText.String; computed, got: ARRAY 32 OF CHAR; t: OvaCalc.Number; r: Rope;
@@ -393,9 +424,47 @@ PROCEDURE Within(where, name: Rope): Rope;
 BEGIN r := where; OvaText.Add(r, ": "); RETURN Ropes.Cat(r, name)
 END Within;
 
+(* The file's value v for Defense slot slot of c. *)
+PROCEDURE AdoptDefense(c: Character; slot: INTEGER; v: Rope; listed: BOOLEAN; where: Rope);
+BEGIN
+  CASE slot OF
+    DefenseSlot: Adopt(c.defense, v, FALSE, FALSE, listed, where, "DEFENSE")
+  | BarrierSlot: Adopt(c.barrier, v, FALSE, FALSE, listed, where, "Barrier's DEFENSE")
+  | IncorporealSlot: Adopt(c.incorporeal, v, FALSE, FALSE, listed, where, "Incorporeal Form's DEFENSE")
+  END
+END AdoptDefense;
+
+(* The Defense values of x's defense: one is the best of c's, two its
+   Defense and its first alternate, three its Defense, Barrier's and
+   Incorporeal Form's (ova_fmt allows no more). *)
+PROCEDURE AdoptDefenses(x: OvaEntities.Combat; c: Character; where: Rope);
+  VAR v: ARRAY 3 OF Rope; n: INTEGER; from, slash: LONGINT; second: INTEGER;
+BEGIN
+  n := 0; from := 0; slash := Ropes.IndexChar(x.defense, "/", 0);
+  WHILE (slash >= 0) & (n < 2) DO
+    v[n] := Ropes.Substring(x.defense, from, slash - from); INC(n);
+    from := slash + 1; slash := Ropes.IndexChar(x.defense, "/", from)
+  END;
+  v[n] := Ropes.Substring(x.defense, from, Ropes.Length(x.defense) - from); INC(n);
+  IF n = 1 THEN
+    c.omitAlternates := c.hasBarrier OR c.hasIncorporeal;
+    c.singleSlot := BestDefense(c);
+    AdoptDefense(c, c.singleSlot, v[0], OvaEntities.OvDefense IN x.overrides, where)
+  ELSE
+    AdoptDefense(c, DefenseSlot, v[0], OvaEntities.OvDefense IN x.overrides, where);
+    IF n = 3 THEN
+      AdoptDefense(c, BarrierSlot, v[1], OvaEntities.OvDefense2 IN x.overrides, where);
+      AdoptDefense(c, IncorporealSlot, v[2], OvaEntities.OvDefense3 IN x.overrides, where)
+    ELSE
+      IF ~c.hasBarrier & c.hasIncorporeal THEN second := IncorporealSlot ELSE second := BarrierSlot END;
+      AdoptDefense(c, second, v[1], OvaEntities.OvDefense2 IN x.overrides, where)
+    END
+  END
+END AdoptDefenses;
+
 (* The numbers of a combat: block but TV. *)
 PROCEDURE AdoptCombat(x: OvaEntities.Combat; c: Character; where: Rope);
-  VAR i: INTEGER; y: OvaEntities.Attack; a: OvaCalc.Attack; at: Rope; slash: LONGINT;
+  VAR i: INTEGER; y: OvaEntities.Attack; a: OvaCalc.Attack; at: Rope;
 BEGIN
   IF ~x.hasCombat THEN RETURN END;
   a := c.attacks;
@@ -407,16 +476,7 @@ BEGIN
     AdoptInt(a.end, y.endurance, OvaEntities.OvEndurance IN y.overrides, at, "END");
     a := a.next
   END;
-  slash := Ropes.IndexChar(x.defense, "/", 0);
-  IF slash < 0 THEN
-    Adopt(c.defense, x.defense, FALSE, FALSE, OvaEntities.OvDefense IN x.overrides, where, "DEFENSE");
-    c.omitBarrier := c.hasBarrier
-  ELSE
-    Adopt(c.defense, Ropes.Substring(x.defense, 0, slash), FALSE, FALSE,
-      OvaEntities.OvDefense IN x.overrides, where, "DEFENSE");
-    Adopt(c.barrier, Ropes.Substring(x.defense, slash + 1, Ropes.Length(x.defense) - slash - 1),
-      FALSE, FALSE, OvaEntities.OvBarrier IN x.overrides, where, "Barrier's DEFENSE")
-  END;
+  AdoptDefenses(x, c, where);
   AdoptInt(c.health, x.health, OvaEntities.OvHealth IN x.overrides, where, "HEALTH");
   AdoptInt(c.endurance, x.endurance, OvaEntities.OvEndurance IN x.overrides, where, "ENDURANCE")
 END AdoptCombat;

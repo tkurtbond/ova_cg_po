@@ -32,7 +32,10 @@ for saved in obj/files/*.yaml; do
   orig=test/data/$name.yaml
   [ -f "$orig" ] || continue
   case $name in
-    Escaping|Unsorted|Vehicle|Nazo|Shadowman) filter=unmark; but=", but for its overrides' marks" ;;
+    # Its copy gains Incorporeal Form's Defense, which the file left out
+    # (TestFiles checks it).
+    defense-two) continue ;;
+    Escaping|Unsorted|Vehicle|Nazo|defense-best-differs) filter=unmark; but=", but for its overrides' marks" ;;
     *) filter=cat; but= ;;
   esac
   for opt in "" -H -G -M -g -m -O; do

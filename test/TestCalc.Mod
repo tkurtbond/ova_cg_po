@@ -136,6 +136,7 @@ BEGIN
   END;
   OvaCalc.Text(s.defense, def);
   IF s.hasBarrier THEN OvaCalc.Text(s.barrier, got); Strings.Append("/", def); Strings.Append(got, def) END;
+  IF s.hasIncorporeal THEN OvaCalc.Text(s.incorporeal, got); Strings.Append("/", def); Strings.Append(got, def) END;
   L("DEFENSE "); cs := OvaText.Chars(c.defense); Strings.Append(cs^, label);
   IF ~Ropes.EqualString(c.defense, def) THEN
     Strings.Append(" (got ", label); Strings.Append(def, label); Strings.Append(")", label)
@@ -455,6 +456,20 @@ BEGIN
   L("ENDURANCE 40 + Vigorous 3's 30 - Languid 1's 10"); CheckInt(s.endurance, 60);
   L("Reserve"); Check.Check(s.hasReserve, label);
   L("Endurance Reserve 2"); CheckInt(s.reserve, 40);
+  L("no Incorporeal Form"); Check.Check(~s.hasIncorporeal, label);
+
+  s := NewSheet(OvaCalc.Character); Add(s.traits, "Incorporeal Form", 3); OvaCalc.Compute(s);
+  L("Incorporeal Form"); Check.Check(s.hasIncorporeal & ~s.hasBarrier, label);
+  L("Incorporeal Form's Defense 2 + 3"); CheckInt(s.incorporeal, 5);
+  L("TV: 2 + Incorporeal Form's Defense 5, the best, + 1"); CheckInt(s.tv, 8);
+  Add(s.traits, "Barrier", 4); OvaCalc.Compute(s);
+  L("and Barrier's 2 + 4"); CheckInt(s.barrier, 6);
+  L("TV: Barrier's Defense 6 the best"); CheckInt(s.tv, 9);
+  OvaCalc.Override(s.incorporeal, 8, FALSE, FALSE); OvaCalc.Compute(s);
+  L("TV: Incorporeal Form's Defense overridden 8"); CheckInt(s.tv, 11);
+  OvaCalc.Clear(s.incorporeal); Add(s.traits, "Incorporeal Form", 3);
+  s.options.combinedEffectiveness := TRUE; OvaCalc.Compute(s);
+  L("Combined Effectiveness: Incorporeal Form 6 past 5"); Check.Check(WarnedAny(s, OvaCalc.OverFive), label);
 
   s := NewSheet(OvaCalc.CompanionSheet); Add(s.traits, "Tough", 1); OvaCalc.Compute(s);
   L("a Companion's HEALTH 20 + Tough 1"); CheckInt(s.health, 30);

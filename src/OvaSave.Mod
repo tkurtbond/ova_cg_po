@@ -206,22 +206,54 @@ END Traits;
 
 (* ---- Combat ---- *)
 
+(* Adds n's text to def, after a slash if after, and k to set if n is
+   overridden. *)
+PROCEDURE AddDefense(VAR def: ARRAY OF CHAR; after: BOOLEAN; VAR set: SET; k: INTEGER;
+                     VAR n: OvaCalc.Number);
+  VAR t: ARRAY 32 OF CHAR;
+BEGIN
+  OvaCalc.Text(n, t);
+  IF after THEN AppendTo(def, "/") END;
+  AppendTo(def, t); Over(set, k, n)
+END AddDefense;
+
+(* c's defense and its overrides: the best value alone (SingleDefense),
+   or the Defense, then Barrier's, then Incorporeal Form's, each that c
+   has or that is overridden. Barrier's is written before an overridden
+   Incorporeal Form's that c doesn't have, which a second value alone
+   would be read as (OvaCharacter.AdoptDefenses). *)
+PROCEDURE Defenses(c: OvaCharacter.Character; VAR def: ARRAY OF CHAR; VAR set: SET);
+  VAR k, slot: INTEGER;
+BEGIN
+  def[0] := 0X;
+  IF OvaCharacter.SingleDefense(c, slot) THEN
+    CASE slot OF
+      OvaCharacter.DefenseSlot: AddDefense(def, FALSE, set, OvaEntities.OvDefense, c.defense)
+    | OvaCharacter.BarrierSlot: AddDefense(def, FALSE, set, OvaEntities.OvDefense, c.barrier)
+    | OvaCharacter.IncorporealSlot: AddDefense(def, FALSE, set, OvaEntities.OvDefense, c.incorporeal)
+    END
+  ELSE
+    AddDefense(def, FALSE, set, OvaEntities.OvDefense, c.defense);
+    k := OvaEntities.OvDefense2;
+    IF c.hasBarrier OR c.barrier.overridden OR c.incorporeal.overridden & ~c.hasIncorporeal THEN
+      AddDefense(def, TRUE, set, k, c.barrier); INC(k)
+    END;
+    IF c.hasIncorporeal OR c.incorporeal.overridden THEN AddDefense(def, TRUE, set, k, c.incorporeal) END
+  END
+END Defenses;
+
 PROCEDURE Combat(m: Node; c: OvaCharacter.Character);
-  VAR n, seq, an: Node; x: OvaCalc.Attack; a: OvaCharacter.Attack; def, b: ARRAY 32 OF CHAR; set: SET;
+  VAR n, seq, an: Node; x: OvaCalc.Attack; a: OvaCharacter.Attack; def: ARRAY 100 OF CHAR; set: SET;
 BEGIN
   IF ~c.hasCombat THEN RETURN END;
   n := d.CreateMapping();
-  OvaCalc.Text(c.defense, def);
-  IF c.hasBarrier & ~c.omitBarrier OR c.barrier.overridden THEN
-    OvaCalc.Text(c.barrier, b); AppendTo(def, "/"); AppendTo(def, b)
-  END;
+  set := {};
+  Defenses(c, def, set);
   Pair(n, "defense", d.CreateStyledScalar(def, Fyaml.StylePlain));
   Pair(n, "health", Num(c.health));
   Pair(n, "endurance", Num(c.endurance));
   IF c.hasThreatValue THEN Pair(n, "threat-value", Num(c.tv)) END;
   IF c.transformed THEN Pair(n, "transformed", Bool(TRUE)) END;
-  set := {};
-  Over(set, OvaEntities.OvDefense, c.defense); Over(set, OvaEntities.OvBarrier, c.barrier);
   Over(set, OvaEntities.OvHealth, c.health); Over(set, OvaEntities.OvEndurance, c.endurance);
   IF c.hasThreatValue THEN Over(set, OvaEntities.OvThreatValue, c.tv) END;
   Overrides(n, set);

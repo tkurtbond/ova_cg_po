@@ -174,9 +174,13 @@ Weaknesses -1 to -3 (p. 18).
   an attack made with it (Ai: 1 + Attack 1 + Telekinesis 3 = 5); the
   attack dialog has a "made with Telekinesis" check. **No Damage** (p. 88) makes it 0. A DX
   that would be 0 or less without No Damage is 1/2 (Ineffective, p. 88).
-- **DEFENSE** (p. 105) = 2 + Evasive + Quick - Slow. Barrier gives a
-  second Defense Roll, 2 + Barrier (p. 51), written as ova_fmt's
-  `defense: 4/5` (Fukiko).
+- **DEFENSE** (p. 105) = 2 + Evasive + Quick - Slow. Barrier gives an
+  alternate Defense Roll, 2 + Barrier (p. 51), written as ova_fmt's
+  `defense: 4/5` (Fukiko); Incorporeal Form another, 2 + its level,
+  its dice as the Defense Roll (p. 55), written after Barrier's
+  (`2/4/6`), or second without Barrier. A file's single value where
+  the rules give more is the best of them, as the Sample NPCs print
+  it (Phase 11).
 - **HEALTH** = 40 (p. 19) + Tough (p. 63: 10, 20, 30, 40, 60 at +1 to
   +5) - 10 per level of Frail (p. 71). **ENDURANCE** = 40 + Vigorous
   (p. 65: the same table) - 10 per level of Languid (p. 73). A
@@ -192,7 +196,7 @@ Weaknesses -1 to -3 (p. 18).
   per level) is a separate store, shown
   beside Endurance, not added to it.
 - **TV**, the Threat Value (p. 124) = the best Attack Roll + the best
-  Defense Roll (Barrier's, if higher) + the best DX, all without Perks
+  Defense Roll (Barrier's or Incorporeal Form's, if higher) + the best DX, all without Perks
   and Flaws, + Armored + the signed levels of the Abilities and
   Weaknesses that change Health and Endurance (Tough and Vigorous add,
   Frail and Languid subtract), + half (rounded up) of the level of any
@@ -1212,6 +1216,44 @@ committed in their own repos, with the user's go-ahead.
      read, END 0 written, `omitBarrier` ignored, the Choice's items
      off by one): each failed between 2 and 50 checks. Valgrind clean
      on Xvfb.
+11. **Up to three Defense values**: Incorporeal Form's alternate
+   Defense, beside Barrier's, after ova_fmt's `defense` came to hold
+   three values (2026-10-10; designed with the user: positional
+   values, `defense-2` and `defense-3`, a single value the best). [done]
+   - `OvaEntities` copied again from po_ova_fmt: `OvDefense2` (was
+     `OvBarrier`, and `barrier` still read as it) and `OvDefense3`.
+   - `OvaRules.ThirdDefense` on Incorporeal Form (p. 55); `OvaCalc`'s
+     `incorporeal` and `hasIncorporeal`, 2 + its level, warned past +5
+     under Combined Effectiveness like Barrier's (`ComputeAlternate`);
+     TV takes the best of the three.
+   - `OvaCharacter.AdoptDefenses`: one value, where the character has
+     an alternate, is read into the best slot (`BestDefense`, the
+     earliest on a tie), with a notice only if it isn't that number,
+     and `omitAlternates` (was `omitBarrier`) set; two, the Defense and
+     the first alternate the character has (Barrier's, or Incorporeal
+     Form's without Barrier); three, positional. `OvaSave.Defenses`
+     writes one value while `SingleDefense` holds (no override but on
+     the slot the value was read into, `singleSlot`), else each the
+     character has or that is overridden, in order. An overridden
+     Incorporeal Form's the character doesn't have gets Barrier's
+     before it, so that it reads back as the third.
+   - `OvaWindow` and `OvaLinkedDialog`: an Incorporeal DEFENSE box under
+     Barrier's, shown (active) only with Incorporeal Form; it is the
+     last number box (10, and 6), so the others keep their indexes.
+     The dialog's box ends at 620 of its 640.
+   - Fixtures: the Ada repo's `Defenses.yaml` and `Wisp.yaml` (and
+     `Sheet.yaml`, now `defense-2`); the generator's own
+     `defense-best.yaml` (Acacia's 2/4/4 printed 4), `defense-best-differs`
+     (a notice, saved single) and `defense-two` (two of three values,
+     saved with all three, so `files.sh` skips it). Nazo now has one
+     notice (TV), Shadowman none; Acacia alone, only its END.
+   - Shown to fail with eleven bugs planted (no flag, TV or the best
+     ignoring Incorporeal Form, `omitAlternates` for Barrier only, the
+     second value always Barrier's, the single slot ignored, no
+     Barrier's before an absent Incorporeal Form's, the override key
+     not advanced, the wrong slot saved, the window's and the dialog's
+     boxes): each failed between 1 and 27 checks. Valgrind clean on
+     Xvfb.
 
 ## Testing
 

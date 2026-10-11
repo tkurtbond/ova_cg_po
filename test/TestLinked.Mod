@@ -165,6 +165,7 @@ BEGIN
   RETURN Shows(OvaLinkedDialog.numbers[0], p.defense) & Shows(OvaLinkedDialog.numbers[1], p.barrier)
     & Shows(OvaLinkedDialog.numbers[2], p.health) & Shows(OvaLinkedDialog.numbers[3], p.endurance)
     & Shows(OvaLinkedDialog.numbers[4], p.reserve) & Shows(OvaLinkedDialog.numbers[5], p.tv)
+    & Shows(OvaLinkedDialog.numbers[6], p.incorporeal)
 END PartnerShown;
 
 PROCEDURE Columns(a, b, c: ARRAY OF CHAR; VAR s: ARRAY OF CHAR);
@@ -261,8 +262,9 @@ BEGIN
   Check.Check(Ropes.EqualString(p.name, "Companion"), "a blank name: Companion, since the file needs one");
   OvaLinkedDialog.combat.SetValue(TRUE); OvaLinkedDialog.combat.DoCallback;
   Check.Check(p.hasCombat & OvaLinkedDialog.addAttack.Active() & OvaLinkedDialog.numbers[2].Active()
-    & ~OvaLinkedDialog.numbers[1].Active() & ~OvaLinkedDialog.numbers[4].Active(),
-    "combat stats on: its attacks and numbers, Barrier's and Reserve's not, having none");
+    & ~OvaLinkedDialog.numbers[1].Active() & ~OvaLinkedDialog.numbers[4].Active()
+    & ~OvaLinkedDialog.numbers[6].Active(),
+    "combat stats on: its attacks and numbers, Barrier's, Incorporeal Form's and Reserve's not, having none");
   before := p.health.value;
   Pick(OvaLinkedDialog.abilities, "Tough");
   OvaLinkedDialog.abilities.add.DoCallback;

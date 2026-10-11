@@ -109,8 +109,8 @@ Unique). Its ROLL, DX and END follow each change. **OK** keeps it;
 **Remove** deletes the row's attack.
 
 Below the attacks are DEFENSE, HEALTH, ENDURANCE and TV, with
-Barrier's second DEFENSE and an Endurance Reserve when the character
-has them.
+Barrier's and Incorporeal Form's alternate DEFENSE and an Endurance
+Reserve when the character has them.
 
 **Overrides.** Beside every computed number is an empty box. Type a
 number there to override it, for a GM's ruling, a house rule, or a
