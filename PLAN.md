@@ -361,6 +361,18 @@ Previous Character), Rulebook (Open, Choose PDF..., Viewer...). At its
 right, a `Choice` of the file's characters (Phase 13, "Several
 characters in a file", below).
 
+The window can be resized (Phase 15), no smaller than 640 x 800, and
+everything in it stretches in proportion: the menu bar and the tabs'
+bar only across, keeping their height (`window.SetResizable(tabs)`,
+`tabs.SetResizable(sheetTab)`), each page in both directions. Fonts
+keep their size. What FLTK doesn't stretch is fitted after a resize,
+from an `Fl.Timer` (`fit`) the window's `Resize` starts: the combat
+box's rows (a `Scroll` moves its children but doesn't stretch them),
+made again at the first size and resized, so FLTK stretches what is in
+them; the traits' columns (`OvaTraitPanel.Fit`), whose widths the
+browser keeps in pixels; and the portrait (`OvaBackground.Fit`), whose
+drawing size is set when it's shown.
+
 1. **First and second tabs, "Character" and "Attacks" (the sheet's
    right half)**; Attacks has the combat box and the numbers below it,
    Character the rest:
@@ -1422,6 +1434,29 @@ tested with no display.
      old file. Both now delete the file first and `files.sh` fails a
      missing sheet; the plant then failed 55 checks.
    - Screenshot under Xvfb (Ai): the tab, its buttons and the sheet.
+15. **A resizable window** (asked for by the user, 2026-10-11: stretch
+   proportionately when resized, not stay a static size; "The window").
+   [done]
+   - `OvaWindow`: the window an extension of `DoubleWindow` whose
+     `Resize` starts `fit` when the size changes; `SizeRange(640, 800,
+     0, 0)`, the first size the smallest, since the fonts don't shrink.
+     `ShowRows` stretches each row by the combat box's size over its
+     first. `OvaTraitPanel.Fit` (from `Fill`, which set the widths
+     itself before) and `nameW`; `OvaBackground.Fit`, and
+     `ShowPortrait` scaling to the box's size, not the constants.
+   - `TestResize` (17 checks): the window resized to 960 x 1200 and back
+     with `Size` (FLTK calls `Resize`), never shown; the bars' heights,
+     the pages, the rows (size, spacing, ROLL box), both names' columns,
+     the portrait, a row made again after Remove.
+   - Shown to fail with bugs planted: rows not resized (2), no
+     `abilities.Fit`/`weaknesses.Fit` (2), no `OvaBackground.Fit` (1),
+     the tabs stretching their own bar (1), the window stretching the
+     menu bar (2), `fit` never started (5). As in Phase 13, a restored
+     file older than the planted build left a planted binary for the
+     next run; touched and run again. Valgrind clean on Xvfb.
+   - Screenshots under Xvfb (Ai with a portrait), resized with
+     `xdotool windowsize` to 960 x 1200, 640 x 800 and 1100 x 1000: the
+     Character, Attacks, Fluff and Markdown tabs.
 
 ## Testing
 

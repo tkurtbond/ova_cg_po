@@ -43,6 +43,9 @@ The window is the character sheet in four tabs, narrow enough to sit
 beside the rulebook in your PDF viewer: **Character** and **Attacks**,
 the sheet's right half, and **Background** and **Fluff**, its left;
 and a fifth, **Markdown**, the sheet as text.
+It opens at 640 x 800, its smallest size; make it larger and
+everything in it stretches in proportion, though the text stays the
+same size.
 Every change goes into the character at once and every number is
 recomputed as you work; the title shows the file's name, and ` *`
 after it while there are unsaved changes.

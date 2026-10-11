@@ -67,6 +67,8 @@ TYPE
   AttackNumber = POINTER TO RECORD (OvaWidgets.TargetDesc) attack: OvaCalc.Attack; which: INTEGER END;
   (* An Ability's END. *)
   TraitEnd = POINTER TO RECORD (OvaWidgets.TargetDesc) trait: OvaCalc.Trait END;
+  (* The window, which fits what FLTK doesn't stretch to its new size. *)
+  MainWindow = POINTER TO RECORD (Fl.DoubleWindowDesc) END;
 
   (* One attack's row in the combat box. *)
   AttackRow* = POINTER TO AttackRowDesc;
@@ -114,6 +116,7 @@ VAR
   rows-: AttackRow;                    (* the combat box's, in order *)
   addAttack-: FlButtons.Button;
   rebuild: Fl.Timer;                   (* rebuilds the rows, after a row's Remove *)
+  fit: Fl.Timer;                       (* fits what doesn't stretch, after the window is resized *)
 
   (* What would wait for the user; a test sets its own. tell shows a
      message; ask asks whether to save first (SaveFirst, Discard,
@@ -662,15 +665,21 @@ BEGIN
   b.changed := NumberChanged
 END AttackBox;
 
-(* The combat box's rows made again, one for each attack. *)
+(* The combat box's rows made again, one for each attack, stretched as
+   the box is: FLTK's Scroll moves its children when it is resized, but
+   doesn't stretch them. Each row is made at the window's first size,
+   then resized, and FLTK stretches what is in it. *)
 PROCEDURE ShowRows;
-  VAR a: OvaCalc.Attack; r, last: AttackRow; x, y: INTEGER; b: FlButtons.Button; s: OvaText.String;
+  VAR a: OvaCalc.Attack; r, last: AttackRow; i, x, y, top: INTEGER; b: FlButtons.Button; s: OvaText.String;
+    sx, sy: REAL;
 BEGIN
   attackBox.Clear;
   rows := NIL; last := NIL;
+  sx := attackBox.W() / ColumnW; sy := attackBox.H() / (AttackRows * RowH + 4);
   attackBox.Begin;
-  a := character.attacks; y := attackBox.Y() + 2;
+  a := character.attacks; top := attackBox.Y() + SHORT(ENTIER(2 * sy + 0.5)); i := 0;
   WHILE a # NIL DO
+    y := top + SHORT(ENTIER(i * RowH * sy + 0.5));
     NEW(r); Fl.OpenGroup(r, attackBox.X() + 2, y, ColumnW - 20, Row, "");
     r.attack := a(OvaCharacter.Attack);
     x := attackBox.X() + 2;
@@ -683,15 +692,34 @@ BEGIN
     NEW(b); FlButtons.OpenButton(b, x, y, 50, Row, "Edit"); b.action := EditAction; r.edit := b;
     NEW(b); FlButtons.OpenButton(b, x + 55, y, 65, Row, "Remove"); b.action := RemoveAction; r.remove := b;
     r.End;
+    r.Resize(attackBox.X() + SHORT(ENTIER(2 * sx + 0.5)), y, SHORT(ENTIER((ColumnW - 20) * sx + 0.5)),
+      SHORT(ENTIER(Row * sy + 0.5)));
     r.nextRow := NIL;
     IF last = NIL THEN rows := r ELSE last.nextRow := r END;
     last := r;
-    y := y + RowH; a := a.next
+    INC(i); a := a.next
   END;
   attackBox.End;
   ShowNumbers;
   attackBox.Redraw
 END ShowRows;
+
+(* What FLTK doesn't stretch, fitted to the window's size: the combat
+   box's rows, the traits' columns, and the portrait. *)
+PROCEDURE FitAction(t: Fl.Timer);
+BEGIN
+  ShowRows; abilities.Fit; weaknesses.Fit; OvaBackground.Fit
+END FitAction;
+
+(* FLTK stretches the window's widgets; the rest is fitted later, by fit,
+   when the window has its new size. *)
+PROCEDURE (w: MainWindow) Resize*(x, y, width, height: INTEGER);
+  VAR sized: BOOLEAN;
+BEGIN
+  sized := (width # w.W()) OR (height # w.H());
+  w.Resize^(x, y, width, height);
+  IF sized & (fit # NIL) & ~fit.Pending() THEN Fl.AddTimeout(fit, 0.0D0) END
+END Resize;
 
 (* ---- The names and the Combat Notes ---- *)
 
@@ -1127,8 +1155,9 @@ END BuildSheetTab;
 
 (* Opens the window, not yet shown, with a new character. *)
 PROCEDURE Build*;
+  VAR main: MainWindow;
 BEGIN
-  NEW(window); Fl.OpenDoubleWindow(window, Width, Height, Title);
+  NEW(main); window := main; Fl.OpenDoubleWindow(window, Width, Height, Title);
   NEW(bar); FlMenus.OpenMenuBar(bar, 0, 0, Width - ChoiceW, BarHeight, "");
   newItem := bar.Add("&File/&New", ORD("n"), Fl.Command, NewAction, {});
   openItem := bar.Add("&File/&Open...", ORD("o"), Fl.Command, OpenAction, {});
@@ -1157,10 +1186,17 @@ BEGIN
   NEW(backgroundTab); NEW(fluffTab);
   OvaBackground.Build(backgroundTab, fluffTab, 0, BarHeight + TabHeight, Width, Height - BarHeight - TabHeight);
   NEW(markdownTab); OvaMarkdownTab.Build(markdownTab, 0, BarHeight + TabHeight, Width, Height - BarHeight - TabHeight);
+  (* The tabs stretch with the window, the menu bar only across it; in
+     the tabs, the pages do, not the tabs' own bar. Each page stretches
+     everything in it. *)
+  tabs.SetResizable(sheetTab);
   tabs.End;
+  window.SetResizable(tabs);
+  window.SizeRange(Width, Height, 0, 0);
   window.End;
   window.action := Quit;
   NEW(rebuild); rebuild.action := RebuildAction;
+  NEW(fit); fit.action := FitAction;
   Take(OvaCharacter.One(OvaCharacter.New()), NIL)
 END Build;
 
@@ -1171,6 +1207,7 @@ BEGIN
   IF OvaLinkedDialog.dialog # NIL THEN OvaLinkedDialog.Close END;
   IF OvaSettings.dialog # NIL THEN OvaSettings.Cancel END;
   IF rebuild.Pending() THEN Fl.RemoveTimeout(rebuild) END;
+  IF fit.Pending() THEN Fl.RemoveTimeout(fit) END;
   OvaWidgets.ClosePanel(abilities); OvaWidgets.ClosePanel(weaknesses);
   window.Delete;
   OvaBackground.Close; OvaMarkdownTab.Close;

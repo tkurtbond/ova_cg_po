@@ -129,7 +129,7 @@ BEGIN
     s := OvaText.Chars(abs);
     NEW(img);
     IF FlImages.Load(img, s^) THEN
-      img.Scale(PortraitW - 6, PortraitH - 6, TRUE, FALSE);
+      img.Scale(portrait.W() - 6, portrait.H() - 6, TRUE, FALSE);
       portrait.SetLabel("")
     ELSE
       img := NIL; portrait.SetLabel("The image can't be read.")
@@ -143,6 +143,13 @@ BEGIN
   IF character.hasPortrait THEN removePortrait.Activate ELSE removePortrait.Deactivate END;
   portrait.Redraw
 END ShowPortrait;
+
+(* Fits the portrait shown to its box, as the box is now: after the
+   window is resized. *)
+PROCEDURE Fit*;
+BEGIN
+  IF image # NIL THEN image.Scale(portrait.W() - 6, portrait.H() - 6, TRUE, FALSE); portrait.Redraw END
+END Fit;
 
 PROCEDURE ChoosePortraitAction(w: Fl.Widget);
   VAR p: Rope; c: OvaCharacter.Character;
