@@ -1198,7 +1198,7 @@ committed in their own repos, with the user's go-ahead.
      The spell dialog still offers Abilities at +1 to +5 only.
    - `CHARACTER-DIFFERENCES.md`: every number of the book's samples the
      rules don't give, and why. `TestFiles` loads 28 new fixtures with
-     the notices it lists (Nazo 3, Shadowman 1, the rest none) and
+     the notices it lists (Nazo 2, Shadowman 1, the rest none) and
      refuses Acacia and Zurkrieg (several entities); `files.sh` takes
      the marks out of Nazo's and Shadowman's copies.
    - Shown to fail with eight bugs planted (Secondary as a character,

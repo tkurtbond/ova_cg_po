@@ -77,10 +77,10 @@ BEGIN
   RoundTrip("Escaping", 5); RoundTrip("Unsorted", 8); RoundTrip("Vehicle", 5);
   (* The Sample NPCs: a Secondary NPC's sheet is a Companion's
      (npc-type:), so Dr. Tomori's and Jiro's numbers are the rules';
-     Nazo's and Shadowman's Defense are the book's own
+     Nazo's and Shadowman's Defense, and Nazo's TV, are the book's own
      (CHARACTER-DIFFERENCES.md). Acacia and Zurkrieg hold more than one
      entity (Errors). *)
-  RoundTrip("Ancel", 0); RoundTrip("Dr-Tomori", 0); RoundTrip("Jiro", 0); RoundTrip("Nazo", 3);
+  RoundTrip("Ancel", 0); RoundTrip("Dr-Tomori", 0); RoundTrip("Jiro", 0); RoundTrip("Nazo", 2);
   RoundTrip("Saspar", 0); RoundTrip("Shadowman", 1);
   (* The NPC Fragments: no combat: block, so nothing to compare. *)
   RoundTrip("Beat-Cop", 0); RoundTrip("Cat-Burglar", 0); RoundTrip("Dragon", 0);

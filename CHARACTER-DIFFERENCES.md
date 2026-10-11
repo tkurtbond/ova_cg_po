@@ -46,12 +46,15 @@ The rest:
 
 | NPC | Number | Book | Rules | Why |
 |---|---|---|---|---|
-| Acacia (p. 134) | Lock Heaven's Door's END | 10 | 0 | Its Perks are Fatiguing, which costs nothing, and a Unique Perk, whose cost the book doesn't print; 10 would be that Unique Perk's cost (`cost: 10` in the fixture). |
+| Acacia (p. 134) | Lock Heaven's Door's END | 10 | 0 | Its Perks are Fatiguing, which costs nothing, and a Unique Perk, whose cost the book doesn't print; 10 would be that Unique Perk's. The fixture leaves its cost out, since ova_fmt would print it and the book doesn't. |
 | Acacia | DEFENSE | 4 | 2 | An alternate Defense printed as the only one: 2 + Barrier 2 (p. 51), or 2 + Incorporeal Form 2 (p. 55), which both give 4. |
-| Nazo (p. 139) | Fox Fire's DX | 3 | 1 | Made with Telekinesis 2, which adds to DX (p. 62). With `telekinesis: true` in the fixture, as Ai's attacks have it, the rules give 3. |
-| Nazo | DEFENSE | 5 | 2 | 2 + Incorporeal Form 3: its dice may be the Defense Roll (p. 55). The generator computes only Barrier's alternate Defense. |
+| Nazo (p. 139) | DEFENSE | 5 | 2 | 2 + Incorporeal Form 3: its dice may be the Defense Roll (p. 55). The generator computes only Barrier's alternate Defense. |
 | Nazo | TV | 16 | 15 | Which other Abilities count half toward TV is the GM's choice (p. 124). The generator counts Magic, Witchcraft 3's 2, as it marks Healer and Magic to start with; the book counts one point more. |
 | Shadowman (p. 136) | DEFENSE | 6 | 2 | 2 + Barrier 4 (p. 51), printed as the only Defense. The rules give "2/6", which ova_fmt prints as a pair; the generator saves the single value, as the book has it (`OvaCharacter.omitBarrier`). |
+
+Nazo's Fox Fire is made with Telekinesis 2, which adds to its DX (p.
+62): its fixture says so (`telekinesis: true`, as Ai's attacks have
+it), and its DX of 3 is the rules'.
 
 The Sample NPCs print a single DEFENSE, the best of the character's.
 The Sample Characters print Barrier's as a second one (Fukiko's "4/5").
