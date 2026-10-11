@@ -31,7 +31,8 @@ MODULE OvaWindow; (* The main window: its menu bar, the sheet's first two tabs, 
    preferences (UsePreferences), between runs. *)
 
 IMPORT Fl, FlButtons, FlBrowsers, FlDialogs, FlInputs, FlLayout, FlMenus, FlPreferences, OvaAttackDialog,
-  OvaBackground, OvaCalc, OvaCharacter, OvaEntities, OvaLinkedDialog, OvaPaths, OvaRules, OvaSettings, OvaTraitPanel,
+  OvaBackground, OvaCalc, OvaCharacter, OvaEntities, OvaLinkedDialog, OvaMarkdownTab, OvaPaths, OvaRules, OvaSettings,
+  OvaTraitPanel,
   OvaSave, OvaText, OvaViewer, OvaWidgets, Ropes;
 
 CONST
@@ -81,7 +82,7 @@ VAR
   window-: Fl.DoubleWindow;
   bar-: FlMenus.MenuBar;
   tabs-: FlLayout.Tabs;
-  sheetTab-, attacksTab-, backgroundTab-, fluffTab-: Fl.Group;
+  sheetTab-, attacksTab-, backgroundTab-, fluffTab-, markdownTab-: Fl.Group;
   newItem-, openItem-, saveItem-, saveAsItem-, quitItem-: INTEGER;
   limitsItem-, rulebookItem-, choosePdfItem-, viewerItem-: INTEGER;
   addCharacterItem-, duplicateItem-, removeCharacterItem-, moveUpItem-, moveDownItem-,
@@ -450,12 +451,13 @@ BEGIN
   OvaCharacter.Recompute(character);
   modified := TRUE;
   ShowTitle;
-  ShowNumbers
+  ShowNumbers;
+  OvaMarkdownTab.Show(character)
 END Changed;
 
 (* After a change on the Background tab: text alone, nothing to compute. *)
 PROCEDURE BackgroundChanged;
-BEGIN modified := TRUE; ShowTitle
+BEGIN modified := TRUE; ShowTitle; OvaMarkdownTab.Show(character)
 END BackgroundChanged;
 
 (* ---- Numbers ---- *)
@@ -702,7 +704,7 @@ BEGIN
   ELSIF w = taglineIn THEN OvaCharacter.SetText(c.hasTagline, c.tagline, OvaText.Trim(InputText(taglineIn)))
   ELSIF w = combatNotes THEN OvaCharacter.SetText(c.hasCombatNotes, c.combatNotes, InputText(combatNotes))
   END;
-  modified := TRUE; ShowTitle
+  modified := TRUE; ShowTitle; OvaMarkdownTab.Show(c)
 END TextAction;
 
 PROCEDURE TextInput(VAR i: FlInputs.Input; x, y, w: INTEGER; label: ARRAY OF CHAR);
@@ -923,7 +925,8 @@ BEGIN
   ShowRows;
   IF path # NIL THEN OvaBackground.Show(character, OvaPaths.Dir(path)) ELSE OvaBackground.Show(character, NIL) END;
   ShowCharacters;
-  ShowTitle
+  ShowTitle;
+  OvaMarkdownTab.Show(character)
 END ShowAll;
 
 (* ---- Files ---- *)
@@ -1153,6 +1156,7 @@ BEGIN
   BuildSheetTab;
   NEW(backgroundTab); NEW(fluffTab);
   OvaBackground.Build(backgroundTab, fluffTab, 0, BarHeight + TabHeight, Width, Height - BarHeight - TabHeight);
+  NEW(markdownTab); OvaMarkdownTab.Build(markdownTab, 0, BarHeight + TabHeight, Width, Height - BarHeight - TabHeight);
   tabs.End;
   window.End;
   window.action := Quit;
@@ -1169,8 +1173,9 @@ BEGIN
   IF rebuild.Pending() THEN Fl.RemoveTimeout(rebuild) END;
   OvaWidgets.ClosePanel(abilities); OvaWidgets.ClosePanel(weaknesses);
   window.Delete;
-  OvaBackground.Close;
+  OvaBackground.Close; OvaMarkdownTab.Close;
   window := NIL; bar := NIL; characterChoice := NIL; tabs := NIL; sheetTab := NIL; attacksTab := NIL; backgroundTab := NIL; fluffTab := NIL;
+  markdownTab := NIL;
   abilities := NIL; weaknesses := NIL; rows := NIL; attackBox := NIL; warnings := NIL;
   nameIn := NIL; playerIn := NIL; taglineIn := NIL; npcTypeIn := NIL; combatNotes := NIL; abilityEnd := NIL; abilityMods := NIL;
   addAttack := NIL
@@ -1179,7 +1184,7 @@ END Close;
 BEGIN
   tell := DialogTell; ask := DialogAsk; confirm := DialogConfirm; choosePath := DialogPath; choosePdf := DialogPdf; askText := DialogText;
   OvaWidgets.openPage := OpenPage; OvaAttackDialog.tell := Tell;
-  OvaBackground.tell := Tell; OvaBackground.changed := BackgroundChanged;
+  OvaBackground.tell := Tell; OvaBackground.changed := BackgroundChanged; OvaMarkdownTab.tell := Tell;
   OvaTraitPanel.tell := Tell; OvaLinkedDialog.tell := Tell; OvaLinkedDialog.changed := LinkedChanged;
   OvaSettings.changed := LimitsChanged;
   rulebookOption := NIL; savedRulebook := NIL; preferences := NIL;

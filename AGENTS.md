@@ -101,8 +101,10 @@ make print-VAR       # show a makefile variable
   needs nothing in the makefile; a new unit test only its name in
   `TESTS`.
 - **Don't run `make install` with the default `PREFIX` unless asked.**
-- **`src/OvaEntities.Mod` and `src/OvaText.Mod` are ova_fmt_po's,
-  copied**, so the generator reads exactly what ova_fmt_po reads.
+- **`src/OvaEntities.Mod`, `OvaText.Mod`, `OvaOut.Mod`,
+  `OvaConfig.Mod` and `OvaCommon.Mod` are ova_fmt_po's, copied**, so
+  the generator reads exactly what ova_fmt_po reads, and its Markdown
+  sheet is exactly what `ova_fmt_po -M` writes.
   Change them there (and in the Ada ova_fmt first, for a new key), then
   copy them again; never edit the copies.
 

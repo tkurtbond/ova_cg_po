@@ -8,9 +8,11 @@ MODULE TestFiles; (* OvaCharacter and OvaSave: loading, saving, and loading agai
    the first load kept as overrides, those the file differs from the
    rules on without listing them. Then the files that can't be loaded,
    a failed save, and a character with text plain YAML can't hold.
-   Needs no display. *)
+   Each fixture's Markdown sheet (OvaMarkdown), one character's after
+   another, is saved beside its copy, as NAME.md, which test/files.sh
+   compares with ova_fmt_po -M's of the copy. Needs no display. *)
 
-IMPORT Check, Fyaml, OvaCalc, OvaCharacter, OvaEntities, OvaSave, OvaText, Out, Ropes, Strings;
+IMPORT Check, Fyaml, OvaCalc, OvaCharacter, OvaEntities, OvaMarkdown, OvaSave, OvaText, Out, Platform, Ropes, Strings;
 
 CONST
   DataDir = "data/";
@@ -38,8 +40,8 @@ END ShowNotices;
 (* Loads name, every character in it, saves them, loads the copy;
    want: the notices expected. *)
 PROCEDURE RoundTrip(name: ARRAY OF CHAR; want: INTEGER);
-  VAR path, saved: ARRAY 128 OF CHAR; c, c2: OvaCharacter.Characters; msg, text, text2: Ropes.Rope;
-    loaded, n: INTEGER; ok: BOOLEAN; m: OvaText.String;
+  VAR path, saved, md: ARRAY 128 OF CHAR; c, c2: OvaCharacter.Characters; msg, text, text2, sheet: Ropes.Rope;
+    loaded, n, i: INTEGER; ok: BOOLEAN; m: OvaText.String;
 BEGIN
   Path(DataDir, name, path); Path(SavedDir, name, saved);
   ok := OvaCharacter.LoadAll(path, c, msg);
@@ -51,6 +53,13 @@ BEGIN
   IF (n # want) OR (n > 0) THEN ShowNotices END;
   text := OvaSave.AllToText(c);
   L(name, "saved"); Check.Check(OvaSave.SaveAll(c, saved, msg), label);
+  sheet := NIL; ok := TRUE;
+  FOR i := 0 TO SHORT(LEN(c^)) - 1 DO
+    text2 := OvaMarkdown.Sheet(c[i]); ok := ok & (text2 # NIL); sheet := Ropes.Cat(sheet, text2)
+  END;
+  COPY(SavedDir, md); Strings.Append(name, md); Strings.Append(".md", md);
+  IF Platform.Unlink(md) = 0 THEN END;  (* so files.sh never compares a file from before *)
+  L(name, "its Markdown sheet saved"); Check.Check(ok & OvaMarkdown.Save(sheet, md, msg), label);
   ok := OvaCharacter.LoadAll(saved, c2, msg);
   L(name, "the copy loaded"); Check.Check(ok, label);
   IF ok THEN
@@ -275,8 +284,22 @@ BEGIN
   Check.Check(OvaCharacter.notices.n = 0, "awkward text: no notices")
 END AwkwardText;
 
+(* OvaMarkdown.Save: a file that can't be written is said so, and the
+   next save, to a file that can, works. *)
+PROCEDURE MarkdownSave;
+  VAR msg, back: Ropes.Rope; ok: BOOLEAN; path: ARRAY 32 OF CHAR;
+BEGIN
+  ok := OvaMarkdown.Save(Ropes.FromString("# A"), "../obj/no/such/dir/sheet.md", msg);
+  Check.Check(~ok & Holds(msg, "couldn't write ../obj/no/such/dir/sheet.md"), "a Markdown sheet that can't be written: said so");
+  path := "../obj/sheet.md"; IF Platform.Unlink(path) = 0 THEN END;
+  ok := OvaMarkdown.Save(Ropes.FromString("# B"), "../obj/sheet.md", msg);
+  Check.Check(ok & (msg = NIL) & Ropes.ReadFile("../obj/sheet.md", back) & Ropes.EqualString(back, "# B"),
+    "then one that can: written, all of it")
+END MarkdownSave;
+
 BEGIN
   Fixtures;
+  MarkdownSave;
   Errors;
   Defenses;
   Several;

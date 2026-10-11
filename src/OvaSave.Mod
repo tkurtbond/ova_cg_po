@@ -417,25 +417,32 @@ PROCEDURE Save*(c: OvaCharacter.Character; path: ARRAY OF CHAR; VAR msg: Rope): 
 BEGIN RETURN SaveAll(OvaCharacter.One(c), path, msg)
 END Save;
 
-(* A copy of c, sharing nothing with it: c as it would be saved, read
-   back as a file's character is. A saved character reads back with no
-   notices, so the copy's numbers are c's. NIL if c's YAML couldn't be
-   built or read (a programmer's error). *)
-PROCEDURE Copy*(c: OvaCharacter.Character): OvaCharacter.Character;
+(* c as it would be saved, read back as ova_fmt_po reads a file's
+   entity. NIL if c's YAML couldn't be built or read (a programmer's
+   error). *)
+PROCEDURE ToEntity*(c: OvaCharacter.Character): OvaEntities.Entity;
   VAR doc: Fyaml.Document; e: OvaEntities.Entity; msg: Rope; it: Fyaml.ItemIter; root, item: Node;
-    copy: OvaCharacter.Character;
 BEGIN
-  copy := NIL;
+  e := NIL;
   doc := Document(OvaCharacter.One(c)); d := NIL;
   IF doc # NIL THEN
     OvaEntities.ResetErrors;
     root := doc.Root(); root.Items(it);
-    IF it.Next(item) & OvaEntities.Load(item, e, msg) & (OvaEntities.errors.n = 0) THEN
-      copy := OvaCharacter.FromEntity(e)
-    END;
+    IF ~it.Next(item) OR ~OvaEntities.Load(item, e, msg) OR (OvaEntities.errors.n # 0) THEN e := NIL END;
     doc.Close
   END;
-  RETURN copy
+  RETURN e
+END ToEntity;
+
+(* A copy of c, sharing nothing with it: ToEntity's, made a character
+   as a file's is. A saved character reads back with no notices, so
+   the copy's numbers are c's. NIL as ToEntity. *)
+PROCEDURE Copy*(c: OvaCharacter.Character): OvaCharacter.Character;
+  VAR e: OvaEntities.Entity;
+BEGIN
+  e := ToEntity(c);
+  IF e = NIL THEN RETURN NIL END;
+  RETURN OvaCharacter.FromEntity(e)
 END Copy;
 
 BEGIN

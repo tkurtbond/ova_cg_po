@@ -348,10 +348,10 @@ limit, and doesn't forbid them.
 ## The window
 
 One window, `Fl.DoubleWindow`, 640 x 800, narrow enough to sit beside
-the PDF viewer: a menu bar, and under it an `FlLayout.Tabs` of four
-tabs, each one column, the sheet's two halves in swapped order (decided
+the PDF viewer: a menu bar, and under it an `FlLayout.Tabs` of five
+tabs, each one column: the sheet's two halves in swapped order (decided
 by the user, 2026-10-09; the window was 1280 wide, two tabs of two
-columns, until Phase 12). The first tab is the one shown when the
+columns, until Phase 12), then the Markdown sheet (Phase 14). The first tab is the one shown when the
 window opens.
 
 The menu bar, above the tabs: File (New, Open, Save, Save As, Quit),
@@ -404,6 +404,40 @@ characters in a file", below).
    fluff's Birthday, which ova_fmt has, and the headed notes ova_fmt
    prints as callouts (`notes:`, a list of headers with Add, Change and
    Remove; a new note goes last).
+3. **Fifth tab, "Markdown"** (Phase 14, "The Markdown sheet" below):
+   the character's sheet as `ova_fmt_po -M` makes it, in an
+   `FlText.TextDisplay`, with **Copy** and **Save Markdown...**.
+
+### The Markdown sheet
+
+Asked for by the user, 2026-10-11: show the character's Markdown sheet,
+made with ova_fmt_po's code, to copy or save. `OvaMarkdown.Sheet`
+writes the character as it would be saved, reads it back as ova_fmt_po
+reads a file's entity (`OvaSave.ToEntity`), and formats it with
+ova_fmt_po's `OvaCommon.ProcessEntity` in its Markdown format, copied
+with `OvaConfig` and `OvaOut`: so the sheet is the text `ova_fmt_po -M`
+makes of the saved file, override marks (`\*`) included, and
+`test/files.sh` checks it is, byte for byte, for every fixture.
+
+- **Output into a rope**: ova_fmt_po's `OvaOut` writes to standard
+  output or a file; it gained `ToRope` and `TakeRope` (in ova_fmt_po,
+  with its own `TestOut`), which keep what is written in a rope.
+- **The character shown**, not the whole file: the tab is the
+  character's sheet. A file's characters, one sheet after another, are
+  `ova_fmt_po -M`'s of the file (`TestFiles` writes them so for
+  `files.sh`).
+- **Kept current**: the sheet is made again after every change
+  (`Changed`, a name or text typed, the Background tab's text, a
+  character shown), not when the tab is chosen, so it doesn't depend on
+  how FLTK calls back a `Tabs`. A sheet takes about 0.4 ms (measured:
+  600 of Sheet, Fukiko and Acacia in 0.25 s).
+- **Copy** puts the whole sheet on the clipboard (`Fl.Copy`); the
+  display's text can be selected too. **Save Markdown...** asks for a
+  path (a procedure variable, as every dialog here), suggesting the
+  character's name with `.md`, and writes through `path.tmp`, renamed
+  once written, as `OvaSave.SaveAll` does; through `Platform`, not
+  `OvaOut`, whose first write error stays for the rest of a run. Saving
+  the sheet doesn't mark the character changed.
 
 ### Page numbers beside names
 
@@ -727,10 +761,13 @@ committed in their own repos, with the user's go-ahead.
 | `OvaTraitPanel` | a list of Abilities or Weaknesses and its editor: the character's, a form's, a partner's |
 | `OvaSettings` | Character > Limits...: the rules that limit a character, in its `options:` |
 | `OvaLinkedDialog` | an Ability's linked content: a Transformation's form, a Magic's spells, a Companion's or Vehicle's sheet |
-| `OvaText`, `OvaOut` | ova_fmt_po's, copied, as needed |
+| `OvaMarkdown` | the character's Markdown sheet, through ova_fmt_po's `OvaCommon`; saving it to a file |
+| `OvaMarkdownTab` | the Markdown tab: the sheet shown, Copy, Save Markdown... |
+| `OvaText`, `OvaOut`, `OvaConfig`, `OvaCommon` | ova_fmt_po's, copied |
 
-`OvaRules`, `OvaCalc`, `OvaCharacter`, `OvaSave`, `OvaSpawn`,
-`OvaViewer` and `OvaPaths` import no pofltk: they are tested with no display.
+`OvaRules`, `OvaCalc`, `OvaCharacter`, `OvaSave`, `OvaMarkdown`,
+`OvaSpawn`, `OvaViewer` and `OvaPaths` import no pofltk: they are
+tested with no display.
 
 ## Build order
 
@@ -1362,6 +1399,29 @@ committed in their own repos, with the user's go-ahead.
    - Screenshots under Xvfb (Acacia): the Choice beside the menus, the
      Character menu, the Choice open. FLTK names the keys by their X
      keysyms there: "Ctrl+Next", "Ctrl+Prior".
+14. **The Markdown sheet** (asked for by the user, 2026-10-11; "The
+   Markdown sheet"). [done]
+   - ova_fmt_po: `OvaOut.ToRope` and `TakeRope`, and `TestOut` (5
+     checks; shown to fail with `TakeRope` not flushing). Copied here
+     with `OvaConfig` and `OvaCommon`.
+   - `OvaSave.ToEntity` (what `Copy` did, now its first half);
+     `OvaMarkdown` (`Sheet`, `Save`); `OvaMarkdownTab`; the window's
+     fifth tab, shown again after every change.
+   - `TestFiles` saves each fixture's sheet as `obj/files/NAME.md`
+     (deleting the old one first) and checks `Save` failing and then
+     working; `files.sh` compares each with `ova_fmt_po -M` of the
+     saved copy, and fails for a missing one (54 checks).
+     `TestMarkdown` (13 checks): the sheet after a name typed, an
+     Ability added, Background text, a file opened; Copy, read back by
+     pasting; Save Markdown..., cancelled, failing, unnamed.
+     `TestWindow` counts five tabs.
+   - Shown to fail with bugs planted: ASCII minus (49 of files.sh's), no
+     refresh after typing (1) or Background text (1), Copy putting a
+     fragment (1), and no rename after writing, which at first passed:
+     `files.sh` skipped missing sheets and the read-back check read an
+     old file. Both now delete the file first and `files.sh` fails a
+     missing sheet; the plant then failed 55 checks.
+   - Screenshot under Xvfb (Ai): the tab, its buttons and the sheet.
 
 ## Testing
 

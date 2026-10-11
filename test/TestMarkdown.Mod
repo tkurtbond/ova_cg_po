@@ -1,0 +1,138 @@
+MODULE TestMarkdown; (* OvaMarkdownTab: the character's Markdown sheet, kept current, copied and saved *)
+
+(* Needs a display: run by make test-gui, as TestWindow is. The tab
+   shows OvaMarkdown's sheet of the character shown, after every kind of
+   change (a name typed, an Ability added, Background text typed, a
+   file opened); Copy puts it on the clipboard, read back by pasting it
+   into an input of this test's own; Save Markdown... writes it where
+   the chooser says, suggesting the character's name, and says why when
+   it can't. That the sheet is ova_fmt_po -M's is test/files.sh's. *)
+
+IMPORT Check, Fl, FlInputs, FlText, OvaBackground, OvaMarkdown, OvaMarkdownTab, OvaRules, OvaText, OvaWidgets,
+  OvaWindow, Out, Platform, Ropes;
+
+CONST
+  SavePath = "../obj/files/markdown-tab.md";
+  BadPath = "../obj/no/such/dir/markdown-tab.md";
+
+TYPE Rope = Ropes.Rope;
+
+VAR
+  tells, asks: INTEGER;
+  chosen, suggested, back: Rope;
+  win: Fl.Window;
+  in: FlInputs.MultilineInput;
+  buf: FlText.TextBuffer;
+  s: OvaText.String;
+  path: ARRAY 64 OF CHAR;
+  ok: BOOLEAN;
+
+(* ---- What would wait for the user ---- *)
+
+PROCEDURE Tell(text: Rope);
+  VAR s: OvaText.String;
+BEGIN INC(tells); s := OvaText.Chars(text); Out.String("    told: "); Out.String(s^); Out.Ln
+END Tell;
+
+PROCEDURE Ask(question: Rope): INTEGER;
+BEGIN RETURN OvaWindow.Discard
+END Ask;
+
+PROCEDURE ChoosePath(suggest: Rope; VAR p: Rope): BOOLEAN;
+BEGIN INC(asks); suggested := suggest; p := chosen; RETURN p # NIL
+END ChoosePath;
+
+(* ---- Looking ---- *)
+
+PROCEDURE R(s: ARRAY OF CHAR): Rope;
+BEGIN RETURN Ropes.FromString(s)
+END R;
+
+PROCEDURE Has(r: Rope; s: ARRAY OF CHAR): BOOLEAN;
+BEGIN RETURN Ropes.Find(r, s, 0) >= 0
+END Has;
+
+(* Whether the tab shows the sheet of the character shown, as
+   OvaMarkdown makes it, in its display. *)
+PROCEDURE Shown(): BOOLEAN;
+  VAR b: FlText.TextBuffer; t: OvaText.String; want: Rope;
+BEGIN
+  want := OvaMarkdown.Sheet(OvaWindow.character);
+  b := OvaMarkdownTab.display.Buffer(); NEW(t, b.Length() + 1); b.GetText(t^);
+  RETURN (want # NIL) & Ropes.Equal(OvaMarkdownTab.sheet, want) & Ropes.EqualString(want, t^)
+END Shown;
+
+(* ---- Doing ---- *)
+
+PROCEDURE Pick(p: OvaWidgets.Panel; name: ARRAY OF CHAR);
+  VAR it: OvaRules.Item; i: INTEGER;
+BEGIN
+  it := OvaRules.Find(name); ASSERT(it # NIL);
+  i := 0; WHILE OvaRules.Get(p.kind, i) # it DO INC(i) END;
+  IF p.choice.SetValue(i) THEN END;
+  p.choice.DoCallback
+END Pick;
+
+PROCEDURE AddAbility(name: ARRAY OF CHAR; level: INTEGER);
+BEGIN
+  Pick(OvaWindow.abilities, name); OvaWindow.abilities.spinner.SetValue(level);
+  OvaWindow.abilities.text.SetValue(""); OvaWindow.abilities.add.DoCallback
+END AddAbility;
+
+(* Deletes the file at p, if there is one. *)
+PROCEDURE Remove(p: ARRAY OF CHAR);
+BEGIN COPY(p, path); IF Platform.Unlink(path) = 0 THEN END
+END Remove;
+
+BEGIN
+  tells := 0; asks := 0; chosen := NIL; suggested := NIL;
+  OvaWindow.Build;
+  OvaWindow.tell := Tell; OvaWindow.ask := Ask;
+  OvaMarkdownTab.tell := Tell; OvaMarkdownTab.choosePath := ChoosePath;
+  OvaWindow.tabs.SetValue(OvaWindow.markdownTab);
+  OvaWindow.markdownTab.GetLabel(path);
+  Check.Check((path = "Markdown") & OvaMarkdownTab.display.Visible(), "the Markdown tab");
+  Check.Check(Shown(), "a new character's sheet");
+
+  (* ---- Kept current ---- *)
+  OvaWindow.nameIn.SetValue("Kiri"); OvaWindow.nameIn.DoCallback;
+  Check.Check(Shown() & Has(OvaMarkdownTab.sheet, "# Kiri"), "a name typed: the sheet's title");
+  AddAbility("Attack", 3);
+  Check.Check(Shown() & Has(OvaMarkdownTab.sheet, "Attack +3"), "an Ability added: listed");
+  buf := OvaBackground.prose[OvaBackground.Background].Buffer(); buf.Append("Kiri grew up by the sea.");
+  Check.Check(Shown() & Has(OvaMarkdownTab.sheet, "Kiri grew up by the sea."), "Background typed: in the sheet");
+  ok := OvaWindow.Load(R("data/Ai.yaml"));
+  Check.Check(ok & ~OvaWindow.modified & Shown() & Has(OvaMarkdownTab.sheet, "# Ai (Amnesiatic ESPer)"),
+    "a file opened: its character's sheet");
+
+  (* ---- Copy ---- *)
+  OvaMarkdownTab.copy.DoCallback;
+  NEW(win); Fl.OpenWindow(win, 100, 100, "TestMarkdown");
+  NEW(in); FlInputs.OpenMultilineInput(in, 0, 0, 100, 100, "");
+  win.End;
+  Fl.Paste(in, Fl.Clipboard);
+  NEW(s, in.Length() + 1); in.Value(s^);
+  Check.Check(Ropes.EqualString(OvaMarkdownTab.sheet, s^), "Copy: the whole sheet on the clipboard");
+  win.Delete; win := NIL; in := NIL;
+
+  (* ---- Save Markdown... ---- *)
+  Remove(SavePath); chosen := R(SavePath);
+  OvaMarkdownTab.save.DoCallback;
+  Check.Check((asks = 1) & Ropes.EqualString(suggested, "Ai.md"), "Save Markdown...: the character's name suggested");
+  Check.Check(Ropes.ReadFile(SavePath, back) & Ropes.Equal(back, OvaMarkdownTab.sheet) & (tells = 0)
+    & ~OvaWindow.modified, "the sheet written where chosen, the character not marked changed");
+  Remove(SavePath); chosen := NIL;
+  OvaMarkdownTab.save.DoCallback;
+  Check.Check((asks = 2) & ~Ropes.ReadFile(SavePath, back) & (tells = 0), "cancelled: nothing written, nothing said");
+  chosen := R(BadPath);
+  OvaMarkdownTab.save.DoCallback;
+  Check.Check(tells = 1, "a file that can't be written: said why");
+  OvaWindow.bar.Pick(OvaWindow.newItem); chosen := R(SavePath);
+  OvaMarkdownTab.save.DoCallback;
+  Check.Check((suggested = NIL) & Ropes.ReadFile(SavePath, back) & Ropes.Equal(back, OvaMarkdownTab.sheet),
+    "a character with no name: nothing suggested, the sheet saved");
+
+  OvaWindow.Close;
+  Check.Check(Fl.OpenWidgets() = 0, "every widget is deleted");
+  Check.Summary
+END TestMarkdown.

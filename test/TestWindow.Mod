@@ -280,10 +280,11 @@ BEGIN
     & (OvaWindow.bar.FindIndex("&Rulebook/&Open") = OvaWindow.rulebookItem),
     "and New, Open, Save, Save As, and Rulebook > Open");
   Check.Check(OvaWindow.tabs.Value() = OvaWindow.sheetTab, "the Character tab is shown first");
-  Check.Check((OvaWindow.window.W() = 640) & (OvaWindow.tabs.Children() = 4)
+  Check.Check((OvaWindow.window.W() = 640) & (OvaWindow.tabs.Children() = 5)
     & (OvaWindow.tabs.Find(OvaWindow.sheetTab) = 0) & (OvaWindow.tabs.Find(OvaWindow.attacksTab) = 1)
-    & (OvaWindow.tabs.Find(OvaWindow.backgroundTab) = 2) & (OvaWindow.tabs.Find(OvaWindow.fluffTab) = 3),
-    "640 wide, beside the viewer: Character, Attacks, Background and Fluff, in that order");
+    & (OvaWindow.tabs.Find(OvaWindow.backgroundTab) = 2) & (OvaWindow.tabs.Find(OvaWindow.fluffTab) = 3)
+    & (OvaWindow.tabs.Find(OvaWindow.markdownTab) = 4),
+    "640 wide, beside the viewer: Character, Attacks, Background, Fluff and Markdown, in that order");
   Check.Check((OvaWindow.attacksTab.Find(OvaWindow.addAttack) >= 0) & (OvaWindow.sheetTab.Find(OvaWindow.addAttack) < 0)
     & (OvaWindow.fluffTab.Find(OvaBackground.portrait) >= 0) & (OvaWindow.backgroundTab.Find(OvaBackground.portrait) < 0),
     "the attacks on the Attacks tab, the portrait on the Fluff tab");

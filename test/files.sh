@@ -14,6 +14,10 @@
 # number, since it reloads with no notices. Every other fixture's copy
 # must format exactly the same, so an override listed wrongly shows.
 #
+# Each fixture's Markdown sheet, as the generator's Markdown tab makes
+# it (obj/files/NAME.md, which TestFiles writes), must be exactly what
+# ova_fmt_po -M makes of its saved copy.
+#
 # usage: test/files.sh OVA_FMT_PO
 set -u
 fmt=${1:?usage: files.sh OVA_FMT_PO}
@@ -31,6 +35,16 @@ for saved in obj/files/*.yaml; do
   name=$(basename "$saved" .yaml)
   orig=test/data/$name.yaml
   [ -f "$orig" ] || continue
+  n=$((n + 1))
+  label="$name: the Markdown sheet is ova_fmt_po -M's of its copy"
+  if [ ! -f obj/files/$name.md ]; then
+    echo "FAIL - $label (no obj/files/$name.md)"; failed=$((failed + 1))
+  elif diff <("$fmt" -M "$saved" 2>&1; echo "status ${PIPESTATUS[0]}") \
+          <(cat obj/files/$name.md; echo "status 0") > obj/files/$name.md.diff; then
+    echo "ok   - $label"; rm -f obj/files/$name.md.diff
+  else
+    echo "FAIL - $label (obj/files/$name.md.diff)"; failed=$((failed + 1))
+  fi
   case $name in
     # Its copy gains Incorporeal Form's Defense, which the file left out
     # (TestFiles checks it).

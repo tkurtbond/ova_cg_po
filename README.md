@@ -41,7 +41,8 @@ with status 1. The program needs a display (`DISPLAY` or
 
 The window is the character sheet in four tabs, narrow enough to sit
 beside the rulebook in your PDF viewer: **Character** and **Attacks**,
-the sheet's right half, and **Background** and **Fluff**, its left.
+the sheet's right half, and **Background** and **Fluff**, its left;
+and a fifth, **Markdown**, the sheet as text.
 Every change goes into the character at once and every number is
 recomputed as you work; the title shows the file's name, and ` *`
 after it while there are unsaved changes.
@@ -174,6 +175,15 @@ is saved relative to the character's file, and **Remove** takes it
 off); the sheet's fluff (Concept, Age, Birthday and the rest); and the
 notes, each a header and text, added, changed and removed as the
 traits are.
+
+### The Markdown tab
+
+The character's sheet in Markdown, the same text `ova_fmt_po -M`
+makes of the saved file, kept up to date as you work. Select part of
+it, or press **Copy** to put all of it on the clipboard, to paste
+elsewhere; **Save Markdown...** writes it to a file (it suggests the
+character's name, with `.md`). Saving the sheet doesn't save the
+character.
 
 ### The rulebook
 
