@@ -8,7 +8,8 @@ MODULE OvaLinkedDialog; (* An Ability's linked content: a Transformation's form,
      with its page; the selected Ability's Perks and Flaws and END.
    - Spells, a Magic's (p. 57-58): each spell's name, the Ability it
      mimics, its level, and its END, computed from the Magic's level and
-     its own, with an override box.
+     its own, with an override box. Witchcraft's spells are curses: the
+     Weakness each casts, at -1 to -3 (p. 58; OvaRules.CastsWeaknesses).
    - A partner's sheet, a Companion's (p. 52) or a Vehicle's (p. 64):
      its name, whether it is a Fragment, whether it has combat stats,
      its Abilities and Weaknesses, its attacks (edited in the attack
@@ -55,6 +56,7 @@ VAR
   spellHelp-: OvaWidgets.HelpButton;
   addSpell-, changeSpell-, removeSpell-: FlButtons.Button;
   spellEnd-: OvaWidgets.NumberBox;
+  castKind-: INTEGER;        (* what the spells mimic: OvaRules.Ability, or Weakness for Witchcraft *)
 
   (* A partner's: *)
   partnerName-: FlInputs.Input;
@@ -244,12 +246,10 @@ BEGIN
   WHILE sp # NIL DO
     x := sp(OvaCharacter.Spell);
     r := x.name; r := Ropes.AppendChar(r, 9X);
-    IF x.item # NIL THEN
-      r := Ropes.Cat(r, x.ability); OvaText.Add(r, " +"); OvaText.AddInt(r, x.level);
-      OvaRules.PageText(x.item, label); OvaText.Add(r, " ("); OvaText.Add(r, label); OvaText.Add(r, ")")
-    ELSE
-      r := Ropes.Cat(r, x.ability); OvaText.Add(r, " +"); OvaText.AddInt(r, x.level); OvaText.Add(r, " (p. ?)")
-    END;
+    r := Ropes.Cat(r, x.ability); OvaText.Add(r, " ");
+    IF x.level > 0 THEN OvaText.Add(r, "+") END;
+    OvaText.AddInt(r, x.level);
+    OvaRules.PageText(x.item, label); OvaText.Add(r, " ("); OvaText.Add(r, label); OvaText.Add(r, ")");
     r := Ropes.AppendChar(r, 9X);
     OvaCalc.Text(x.end, e); OvaText.Add(r, "END "); OvaText.Add(r, e);
     s := OvaText.Chars(r); spells.Add(s^);
@@ -265,22 +265,24 @@ BEGIN
   spellEnd.Display
 END ShowSpells;
 
-(* The Ability chosen; NIL for none. *)
+(* The Ability (or Weakness) chosen; NIL for none. *)
 PROCEDURE SpellItem(): OvaRules.Item;
   VAR i: INTEGER;
 BEGIN
   i := spellAbility.Value();
-  IF (i >= 0) & (i < OvaRules.Count(OvaRules.Ability)) THEN RETURN OvaRules.Get(OvaRules.Ability, i)
+  IF (i >= 0) & (i < OvaRules.Count(castKind)) THEN RETURN OvaRules.Get(castKind, i)
   ELSE RETURN NIL
   END
 END SpellItem;
 
+(* Chooses it in the Choice; none for NIL, or an item of the other kind
+   (a spell the Magic can't cast, from a file). *)
 PROCEDURE ChooseSpellItem(it: OvaRules.Item);
   VAR i, n: INTEGER;
 BEGIN
   n := -1;
-  IF (it # NIL) & (it.kind = OvaRules.Ability) THEN
-    i := 0; WHILE OvaRules.Get(OvaRules.Ability, i) # it DO INC(i) END;
+  IF (it # NIL) & (it.kind = castKind) THEN
+    i := 0; WHILE OvaRules.Get(castKind, i) # it DO INC(i) END;
     n := i
   END;
   IF spellAbility.SetValue(n) THEN END;
@@ -302,8 +304,8 @@ BEGIN
 END SpellsAction;
 
 (* Add puts the spell last; Change and Remove need one selected. A spell
-   needs a name and an Ability; one changed keeps an Ability the tables
-   don't have if none is chosen. *)
+   needs a name and an Ability (a Weakness, Witchcraft's); one changed
+   keeps one the Choice doesn't have if none is chosen. *)
 PROCEDURE SpellButtonAction(w: Fl.Widget);
   VAR line: INTEGER; name: Rope; it: OvaRules.Item; x, sp: OvaCharacter.Spell; p: OvaCalc.Spell;
 BEGIN
@@ -313,7 +315,10 @@ BEGIN
     IF x = NIL THEN RETURN END;
     OvaCharacter.RemoveSpell(trait, x); line := 0
   ELSIF (name = NIL) OR (it = NIL) & ((w = addSpell) OR (x = NIL) OR (x.item # NIL)) THEN
-    tell(R("A spell needs a name and the Ability it mimics.")); RETURN
+    IF castKind = OvaRules.Weakness THEN tell(R("A curse needs a name and the Weakness it casts."))
+    ELSE tell(R("A spell needs a name and the Ability it mimics."))
+    END;
+    RETURN
   ELSIF w = addSpell THEN
     sp := OvaCharacter.NewSpell(name, R(it.name), it, SHORT(ENTIER(spellLevel.Value())));
     OvaCalc.AddSpell(trait, sp);
@@ -456,16 +461,24 @@ BEGIN
   widths[0] := 260; widths[1] := 320; widths[2] := 0; spells.SetColumnWidths(widths, 3);
   y := 370;
   NEW(spellName); FlInputs.OpenInput(spellName, 70, y, 250, Row, "Name");
-  NEW(spellAbility); FlMenus.OpenChoice(spellAbility, 400, y, 290, Row, "Ability");
-  FOR i := 0 TO OvaRules.Count(OvaRules.Ability) - 1 DO
-    OvaRules.Label(OvaRules.Get(OvaRules.Ability, i), label);
+  IF OvaRules.CastsWeaknesses IN trait.item.flags THEN castKind := OvaRules.Weakness
+  ELSE castKind := OvaRules.Ability
+  END;
+  NEW(spellAbility);
+  IF castKind = OvaRules.Weakness THEN FlMenus.OpenChoice(spellAbility, 400, y, 290, Row, "Weakness")
+  ELSE FlMenus.OpenChoice(spellAbility, 400, y, 290, Row, "Ability")
+  END;
+  FOR i := 0 TO OvaRules.Count(castKind) - 1 DO
+    OvaRules.Label(OvaRules.Get(castKind, i), label);
     IF spellAbility.Add(label, 0, {}, NIL, {}) >= 0 THEN END
   END;
   spellAbility.action := SpellAbilityAction;
   NEW(spellHelp); OvaWidgets.OpenHelpButton(spellHelp, 695, y, 0);
   y := y + Row + 5;
   NEW(spellLevel); FlValuators.OpenSpinner(spellLevel, 70, y, 60, Row, "level");
-  spellLevel.SetBounds(1, 5); spellLevel.SetValue(1);
+  IF castKind = OvaRules.Weakness THEN spellLevel.SetBounds(-3, -1); spellLevel.SetValue(-1)
+  ELSE spellLevel.SetBounds(1, 5); spellLevel.SetValue(1)
+  END;
   NEW(spellEnd); OvaWidgets.OpenNumberBox(spellEnd, 200, y, "END");
   spellEnd.SetAlign(Fl.AlignLeft); spellEnd.allowPlus := TRUE; spellEnd.changed := NumberChanged;
   y := y + Row + 5;
@@ -526,7 +539,11 @@ BEGIN
     OvaRules.Form: BuildForm
   | OvaRules.Spells:
       r := R("Magic +"); OvaText.AddInt(r, t.level);
-      OvaText.Add(r, ": a spell's END is by the Magic's level and its own (p. 58), more for Barrier.");
+      IF OvaRules.CastsWeaknesses IN t.item.flags THEN
+        OvaText.Add(r, ": a curse casts a Weakness; its END is by the Magic's level and the Weakness's size (p. 58).")
+      ELSE
+        OvaText.Add(r, ": a spell's END is by the Magic's level and its own (p. 58), more for Barrier.")
+      END;
       s := OvaText.Chars(r); info.SetLabel(s^);
       BuildSpells
   | OvaRules.Partner, OvaRules.Machine:
@@ -549,6 +566,6 @@ BEGIN Finish
 END Close;
 
 BEGIN
-  dialog := NIL; done := NIL; changed := NIL; tell := NIL;
+  dialog := NIL; done := NIL; changed := NIL; tell := NIL; castKind := OvaRules.Ability;
   abilities := NIL; weaknesses := NIL
 END OvaLinkedDialog.

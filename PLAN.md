@@ -1195,7 +1195,13 @@ committed in their own repos, with the user's go-ahead.
    - A file's single DEFENSE, where Barrier gives a second, is saved
      single (`omitBarrier`), as the Sample NPCs print it (Shadowman).
    - Witchcraft's Weakness spells cost by their size ("Spells", above).
-     The spell dialog still offers Abilities at +1 to +5 only.
+     The spell dialog follows: for Witchcraft (`OvaRules.CastsWeaknesses`)
+     its Choice lists the Weaknesses and its level runs -3 to -1, a
+     curse's line shows its level unsigned ("Frail -2"); for Arcane,
+     the Abilities at +1 to +5, as before. `TestLinked` adds a curse
+     to Cora's Witchcraft; three bugs planted there (Witchcraft not
+     flagged, the curse's bounds, a "+" before its level) each failed
+     it.
    - `CHARACTER-DIFFERENCES.md`: every number of the book's samples the
      rules don't give, and why. `TestFiles` loads 28 new fixtures with
      the notices it lists (Nazo 2, Shadowman 1, the rest none) and

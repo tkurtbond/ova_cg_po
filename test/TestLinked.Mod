@@ -80,11 +80,13 @@ BEGIN
 END Pick;
 
 (* Chooses Ability name in Choice ch, which lists them all. *)
+(* Chooses name, an Ability or a Weakness, in a Choice of its kind's
+   names. *)
 PROCEDURE PickAbility(ch: FlMenus.Choice; name: ARRAY OF CHAR);
   VAR it: OvaRules.Item; i: INTEGER;
 BEGIN
   it := OvaRules.Find(name); ASSERT(it # NIL);
-  i := 0; WHILE OvaRules.Get(OvaRules.Ability, i) # it DO INC(i) END;
+  i := 0; WHILE OvaRules.Get(it.kind, i) # it DO INC(i) END;
   IF ch.SetValue(i) THEN END;
   ch.DoCallback
 END PickAbility;
@@ -121,6 +123,14 @@ BEGIN
   END;
   RETURN ok & (n = p.browser.Count())
 END Listed;
+
+(* name's place among the items of its kind. *)
+PROCEDURE IndexOf(name: ARRAY OF CHAR): INTEGER;
+  VAR it: OvaRules.Item; i: INTEGER;
+BEGIN
+  it := OvaRules.Find(name); i := 0; WHILE OvaRules.Get(it.kind, i) # it DO INC(i) END;
+  RETURN i
+END IndexOf;
 
 (* The trait of list named name; NIL if none. *)
 PROCEDURE Named(list: OvaCalc.Trait; name: ARRAY OF CHAR): OvaCharacter.Trait;
@@ -285,6 +295,10 @@ BEGIN
     & (SpellCount(t) = 6), "Spells...: Auren's six spells");
   OvaLinkedDialog.spells.GetText(1, s); Columns("Mana Shield", "Barrier +2 (p. 51)", "END 10+", want);
   Check.Check(s = want, "each with its Ability's page and its END: Barrier's 10+");
+  OvaLinkedDialog.spellAbility.GetLabel(label);
+  Check.Check((OvaLinkedDialog.castKind = OvaRules.Ability) & (label = "Ability")
+    & (OvaLinkedDialog.spellLevel.Minimum() = 1) & (OvaLinkedDialog.spellLevel.Maximum() = 5),
+    "Arcane's spells: Abilities, +1 to +5");
   n := SpellCount(t);
   OvaLinkedDialog.spellName.SetValue("Glow"); PickAbility(OvaLinkedDialog.spellAbility, "Healer");
   Check.Check(OvaLinkedDialog.spellHelp.page = 54, "the Ability chosen: ? at its page");
@@ -321,6 +335,34 @@ BEGIN
   Check.Check(SpellCount(t) = n, "Magic, Arcane to Magic, Witchcraft: the spells kept");
   Pick(OvaWindow.abilities, "Flight"); OvaWindow.abilities.change.DoCallback;
   Check.Check((t.spells = NIL) & ~Has(Saved(), "spells:"), "to Flight: the spells dropped");
+
+  (* ---- Witchcraft's curses: Weaknesses (p. 58) ---- *)
+  ok := Load("Cora.yaml"); c := OvaWindow.character;
+  t := Named(c.traits, "Magic, Witchcraft");
+  OpenLinked("Magic, Witchcraft");
+  OvaLinkedDialog.spellAbility.GetLabel(label);
+  Check.Check(ok & (OvaLinkedDialog.castKind = OvaRules.Weakness) & (label = "Weakness")
+    & (OvaLinkedDialog.spellLevel.Minimum() = -3) & (OvaLinkedDialog.spellLevel.Maximum() = -1)
+    & (OvaLinkedDialog.spellLevel.Value() = -1) & (OvaLinkedDialog.spells.Count() = 0),
+    "Cora's Witchcraft: its spells are Weaknesses, -1 to -3, none yet");
+  OvaLinkedDialog.spellName.SetValue("Hex"); PickAbility(OvaLinkedDialog.spellAbility, "Frail");
+  Check.Check(OvaLinkedDialog.spellHelp.page = 71, "the Weakness chosen: ? at its page, Frail's 71");
+  OvaLinkedDialog.spellLevel.SetValue(-2);
+  OvaLinkedDialog.addSpell.DoCallback;
+  OvaLinkedDialog.spells.GetText(1, s); Columns("Hex", "Frail -2 (p. 71)", "END 20", want);
+  Check.Check((SpellCount(t) = 1) & (s = want), "Add: Frail -2, its END by Witchcraft +2 and its size 2: 20");
+  Check.Check(Has(Saved(), "ability: Frail") & Has(Saved(), "level: -2"), "saved");
+  tells := 0;
+  OvaLinkedDialog.spellName.SetValue(" ");
+  OvaLinkedDialog.addSpell.DoCallback;
+  Check.Check((tells = 1) & (SpellCount(t) = 1), "a curse with no name: said so, not added");
+  OvaLinkedDialog.close.DoCallback;
+  OpenLinked("Magic, Witchcraft");
+  IF OvaLinkedDialog.spells.Select(1, TRUE) THEN END; OvaLinkedDialog.spells.DoCallback;
+  OvaLinkedDialog.spellName.Value(s);
+  Check.Check((s = "Hex") & (OvaLinkedDialog.spellAbility.Value() = 0 + IndexOf("Frail"))
+    & (OvaLinkedDialog.spellLevel.Value() = -2), "opened again and selected: its name, Weakness and level");
+  OvaLinkedDialog.close.DoCallback;
 
   (* ---- A new Companion, and a Vehicle ---- *)
   OvaWindow.bar.Pick(OvaWindow.newItem); c := OvaWindow.character;

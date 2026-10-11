@@ -53,6 +53,7 @@ CONST
   CostUp* = 17;          (* raises one Ability's Endurance cost: Endurance Use (p. 70) *)
   OwnCost* = 18;         (* spends Endurance of its own as it is used, so a spell of it
                             costs more than the table's, "10+": Barrier (p. 51, 58) *)
+  CastsWeaknesses* = 19; (* its spells cast Weaknesses, -1 to -3, at Arcane's costs: Witchcraft (p. 58) *)
 
   (* What linked content an Ability has (Item.linked) *)
   NoLink* = 0; Spells* = 1; Form* = 2; Partner* = 3; Machine* = 4;
@@ -222,7 +223,7 @@ BEGIN
   A("Life Support", 57, {});
   A("Lucky", 57, {});
   L("Magic, Arcane", 57, {HalfTV}, Spells);
-  L("Magic, Witchcraft", 58, {HalfTV}, Spells);
+  L("Magic, Witchcraft", 58, {HalfTV, CastsWeaknesses}, Spells);
   A("Minions", 58, {NoTV});
   A("Passion", 59, {});
   A("Perceptive", 59, {});

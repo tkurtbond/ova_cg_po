@@ -81,7 +81,8 @@ content turns the button under the Weaknesses into one for it:
 - **Form...**, a Transformation's: the transformed form's Abilities
   and Weaknesses, two levels for each level of Transformation.
 - **Spells...**, a Magic's: each spell's name, the Ability it mimics,
-  its level, and its END.
+  its level, and its END. Witchcraft's spells are curses: each casts a
+  Weakness, at -1 to -3, and costs by the Weakness's size (p. 58).
 - **Companion...** or **Vehicle...**: the partner's own sheet: its
   name, whether it is a Fragment, whether it has combat stats, and its
   Abilities, Weaknesses, attacks and numbers.
