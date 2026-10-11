@@ -1228,7 +1228,11 @@ committed in their own repos, with the user's go-ahead.
    values, `defense-2` and `defense-3`, a single value the best). [done]
    - `OvaEntities` copied again from po_ova_fmt: `OvDefense2` (was
      `OvBarrier`, and `barrier` still read as it) and `OvDefense3`.
-   - `OvaRules.ThirdDefense` on Incorporeal Form (p. 55); `OvaCalc`'s
+   - `OvaRules.ThirdDefense` on Incorporeal Form (p. 55); it was 20,
+     which was also `RollEach`'s, the first Perk flag, so the Perk
+     flags (`RollEach` to `NoDamageDone`) now start at 24, past the
+     Abilities' and Weaknesses' with room for more. No item has both
+     kinds, so nothing showed it; found porting to Go. `OvaCalc`'s
      `incorporeal` and `hasIncorporeal`, 2 + its level, warned past +5
      under Combined Effectiveness like Barrier's (`ComputeAlternate`);
      TV takes the best of the three.

@@ -60,13 +60,14 @@ CONST
   (* What linked content an Ability has (Item.linked) *)
   NoLink* = 0; Spells* = 1; Form* = 2; Partner* = 3; Machine* = 4;
 
-  (* What a Perk or Flaw does to an attack's numbers (flags) *)
-  RollEach* = 20;        (* +1 die a time (Accurate), or -1 (Inaccurate) *)
-  DamageEach* = 21;      (* +1 DX a time (Effective), or -1 (Ineffective) *)
-  RangedAttack* = 22;    (* drops Strong and Weak (Ranged, p. 85) *)
-  StrengthRanged* = 23;  (* keeps them (Ranged, Strength-Powered, p. 86) *)
-  WillAttack* = 24;      (* Iron-Willed and Weak-Willed for Agile and Clumsy (p. 86) *)
-  NoDamageDone* = 25;    (* DX 0 (No Damage, p. 88) *)
+  (* What a Perk or Flaw does to an attack's numbers (flags), after the
+     Abilities' and Weaknesses', with room for more of those *)
+  RollEach* = 24;        (* +1 die a time (Accurate), or -1 (Inaccurate) *)
+  DamageEach* = 25;      (* +1 DX a time (Effective), or -1 (Ineffective) *)
+  RangedAttack* = 26;    (* drops Strong and Weak (Ranged, p. 85) *)
+  StrengthRanged* = 27;  (* keeps them (Ranged, Strength-Powered, p. 86) *)
+  WillAttack* = 28;      (* Iron-Willed and Weak-Willed for Agile and Clumsy (p. 86) *)
+  NoDamageDone* = 29;    (* DX 0 (No Damage, p. 88) *)
 
   (* How a Perk's or Flaw's cost is set (Item.costKind) *)
   FixedCost* = 0;  (* cost, each time it is taken *)

@@ -364,10 +364,6 @@ BEGIN
   OvaText.Append(notices, r)
 END Notice;
 
-(* The file's text for n: n's override if listed (the mapping's
-   overrides: names it), or if it differs from the computed number,
-   with a notice. Text that isn't a number for n is noted and dropped,
-   the computed number kept. *)
 (* c's best Defense value, its slot: the Defense, or an alternate c has
    that is higher than those before it. *)
 PROCEDURE BestDefense*(c: Character): INTEGER;
@@ -394,6 +390,10 @@ BEGIN
   RETURN c.omitAlternates & ((n = 0) OR (n = 1) & (slot = c.singleSlot))
 END SingleDefense;
 
+(* The file's text for n: n's override if listed (the mapping's
+   overrides: names it), or if it differs from the computed number,
+   with a notice. Text that isn't a number for n is noted and dropped,
+   the computed number kept. *)
 PROCEDURE Adopt(VAR n: OvaCalc.Number; file: Rope; allowHalf, allowPlus, listed: BOOLEAN; where: Rope;
                 what: ARRAY OF CHAR);
   VAR f: OvaText.String; computed, got: ARRAY 32 OF CHAR; t: OvaCalc.Number; r: Rope;
