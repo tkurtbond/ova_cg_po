@@ -130,6 +130,11 @@ BEGIN
         OvaText.AddInt(r, x.level); OvaText.Add(r, " "); r := Ropes.Cat(r, x.name);
         IF x.hasDetail THEN OvaText.Add(r, " ("); r := Ropes.Cat(r, x.detail); OvaText.Add(r, ")") END;
         r := Ropes.AppendChar(r, 9X);
+        IF p.ShowsPoints() THEN
+          OvaText.AddInt(r, x.points);
+          IF x.points = 1 THEN OvaText.Add(r, " pt") ELSE OvaText.Add(r, " pts") END;
+          r := Ropes.AppendChar(r, 9X)
+        END;
         OvaRules.PageText(x.item, pg); OvaText.Add(r, pg);
         ok := Ropes.EqualString(r, line);
         IF ~ok THEN Out.String("    line "); Out.Int(n, 0); Out.String(": "); Out.String(line); Out.Ln END

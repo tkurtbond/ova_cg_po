@@ -1,7 +1,8 @@
 MODULE OvaTraitPanel; (* A list of Abilities or Weaknesses and its editor: a character's, a form's, a partner's *)
 
 (* PLAN.md, "The window": the Abilities and the Weaknesses are each a
-   browser of lines ("+3 Attack (Kaze Satsujinsha)", a tab, "p. 50")
+   browser of lines ("+3 Attack (Kaze Satsujinsha)", a tab, "p. 50";
+   under Scaled Cost, its points between: "+3 Attack", "4 pts", "p. 50")
    with OvaWidgets.Panel's controls. The same panel edits the
    character's own (OvaWindow), a Transformation's form, and a
    Companion's or Vehicle's (OvaLinkedDialog): its list is a sheet's
@@ -13,6 +14,11 @@ MODULE OvaTraitPanel; (* A list of Abilities or Weaknesses and its editor: a cha
    chose (NIL after Remove), for the controls that act on one. *)
 
 IMPORT OvaCalc, OvaCharacter, OvaRules, OvaText, OvaWidgets, Ropes;
+
+CONST
+  (* Under Scaled Cost, the browser's columns: the points', and at
+     least this much for the page's. *)
+  PointsW = 45; PageW = 60;
 
 TYPE
   Rope = Ropes.Rope;
@@ -51,11 +57,26 @@ PROCEDURE (p: TraitPanel) Selected*(): OvaCharacter.Trait;
 BEGIN RETURN p.TraitAt(p.browser.Value())
 END Selected;
 
+(* Whether the lines show Scaled Cost's points: a sheet's own traits
+   under it, not a form's, which no total counts (p. 63). *)
+PROCEDURE (p: TraitPanel) ShowsPoints*(): BOOLEAN;
+BEGIN RETURN (p.sheet # NIL) & (p.owner = NIL) & p.sheet.options.scaledCost
+END ShowsPoints;
+
 PROCEDURE (p: TraitPanel) Fill*;
   VAR t: OvaCalc.Trait; x: OvaCharacter.Trait; line: Rope; s: OvaText.String; page: ARRAY 16 OF CHAR;
+    points: BOOLEAN; widths: ARRAY 3 OF INTEGER;
 BEGIN
   p.n := 0;
   IF p.sheet = NIL THEN RETURN END;
+  points := p.ShowsPoints();
+  IF points THEN
+    widths[0] := p.browser.W() - PointsW - PageW; widths[1] := PointsW; widths[2] := 0;
+    p.browser.SetColumnWidths(widths, 3)
+  ELSE
+    widths[0] := p.browser.W() - 70; widths[1] := 0;  (* as OvaWidgets.OpenPanel *)
+    p.browser.SetColumnWidths(widths, 2)
+  END;
   t := p.List();
   WHILE t # NIL DO IF t.kind = p.kind THEN INC(p.n) END; t := t.next END;
   NEW(p.shown, p.n + 1);
@@ -68,6 +89,11 @@ BEGIN
       line := Ropes.Cat(line, x.name);
       IF x.hasDetail THEN OvaText.Add(line, " ("); line := Ropes.Cat(line, x.detail); OvaText.Add(line, ")") END;
       line := Ropes.AppendChar(line, 9X);
+      IF points THEN
+        OvaText.AddInt(line, x.points);
+        IF x.points = 1 THEN OvaText.Add(line, " pt") ELSE OvaText.Add(line, " pts") END;
+        line := Ropes.AppendChar(line, 9X)
+      END;
       OvaRules.PageText(x.item, page); OvaText.Add(line, page);
       s := OvaText.Chars(line); p.browser.Add(s^)
     END;

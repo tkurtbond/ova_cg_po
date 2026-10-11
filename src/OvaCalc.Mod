@@ -97,7 +97,8 @@ TYPE
     spells*: Spell;        (* a Magic Ability's *)
     partner*: Sheet;       (* a Companion's or Vehicle's own sheet *)
     hasEnd-: BOOLEAN;      (* it has Perks, Flaws or Endurance Use: end is its cost *)
-    end*: Number
+    end*: Number;
+    points-: INTEGER       (* its Scaled Cost points (p. 21), as the totals count them; 0 in a form *)
   END;
 
   Attack* = POINTER TO AttackDesc;
@@ -275,7 +276,7 @@ BEGIN
   t.next := NIL; t.item := item; t.kind := kind; t.level := level;
   t.halfTV := (item # NIL) & (OvaRules.HalfTV IN item.flags);
   t.mods := NIL; t.use := 0; t.form := NIL; t.spells := NIL; t.partner := NIL;
-  t.hasEnd := FALSE; InitNumber(t.end)
+  t.hasEnd := FALSE; InitNumber(t.end); t.points := 0
 END InitTrait;
 
 (* cost is each time's, used where the user sets it (Mod). *)
@@ -670,6 +671,7 @@ BEGIN
   WHILE t # NIL DO
     lv := t.level; pts := Scaled(ABS(lv));
     IF half & Has(t, OvaRules.HalfCost) THEN lv := HalfUp(lv); pts := HalfUp(pts) END;
+    t.points := pts;
     IF t.kind = OvaRules.Ability THEN INC(abilities, lv); INC(abilityPoints, pts)
     ELSE INC(weaknesses, lv); INC(s.weaknessPoints, pts)
     END;

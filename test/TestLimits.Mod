@@ -9,7 +9,7 @@ MODULE TestLimits; (* Character > Limits..., the totals in red, and the preferen
    back. *)
 
 IMPORT Check, Fl, FlButtons, FlPreferences, FlValuators, OvaCharacter, OvaRules, OvaSave, OvaSettings, OvaText,
-  OvaViewer, OvaWidgets, OvaWindow, Out, Ropes;
+  OvaViewer, OvaWidgets, OvaWindow, Out, Ropes, Strings;
 
 CONST
   PrefsDir = "../obj";  (* the preferences file: obj/ova_cg_po.prefs *)
@@ -100,6 +100,26 @@ BEGIN
   Pick(OvaWindow.abilities, name); OvaWindow.abilities.spinner.SetValue(level);
   OvaWindow.abilities.text.SetValue(""); OvaWindow.abilities.add.DoCallback
 END AddAbility;
+
+PROCEDURE AddWeakness(name: ARRAY OF CHAR; level: INTEGER);
+BEGIN
+  Pick(OvaWindow.weaknesses, name); OvaWindow.weaknesses.spinner.SetValue(level);
+  OvaWindow.weaknesses.text.SetValue(""); OvaWindow.weaknesses.add.DoCallback
+END AddWeakness;
+
+(* Whether one of p's lines is head, a tab, points and a tab if any
+   are given, and name's page. *)
+PROCEDURE Listed(p: OvaWidgets.Panel; head, points, name: ARRAY OF CHAR): BOOLEAN;
+  VAR want, page: ARRAY 64 OF CHAR; line: ARRAY 256 OF CHAR; tab: ARRAY 2 OF CHAR; i: INTEGER; found: BOOLEAN;
+BEGIN
+  tab[0] := 9X; tab[1] := 0X;
+  COPY(head, want); Strings.Append(tab, want);
+  IF points # "" THEN Strings.Append(points, want); Strings.Append(tab, want) END;
+  OvaRules.PageText(OvaRules.Find(name), page); Strings.Append(page, want);
+  found := FALSE;
+  FOR i := 1 TO p.browser.Count() DO p.browser.GetText(i, line); IF line = want THEN found := TRUE END END;
+  RETURN found
+END Listed;
 
 PROCEDURE Value(s: FlValuators.Spinner): INTEGER;
 BEGIN RETURN SHORT(ENTIER(s.Value()))
@@ -210,6 +230,16 @@ BEGIN
   Turn(OvaSettings.combined, TRUE);
   Check.Check(c.options.combinedEffectiveness & Has(Saved(), "combined-effectiveness: true"),
     "Combined Effectiveness on, saved");
+  Check.Check(Listed(OvaWindow.abilities, "+3 Attack", "", "Attack"), "no points in the lists without Scaled Cost");
+  Turn(OvaSettings.scaledCost, TRUE);
+  Check.Check(Listed(OvaWindow.abilities, "+3 Attack", "4 pts", "Attack")
+    & Listed(OvaWindow.abilities, "+3 Knowledge", "2 pts", "Knowledge"),
+    "Scaled Cost: each Ability's points listed, Knowledge +3's halved");
+  AddWeakness("Weak", -1);
+  Check.Check(Listed(OvaWindow.weaknesses, "-1 Weak", "1 pt", "Weak"), "and each Weakness's");
+  Turn(OvaSettings.scaledCost, FALSE);
+  Check.Check(Listed(OvaWindow.abilities, "+3 Attack", "", "Attack") & Listed(OvaWindow.weaknesses, "-1 Weak", "", "Weak"),
+    "Scaled Cost off: the points gone from the lists");
 
   OvaSettings.cancel.DoCallback;
   Check.Check((OvaSettings.dialog = NIL) & ~c.hasOptions & ~c.options.halfCostKnowledge

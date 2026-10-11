@@ -735,8 +735,15 @@ END ShowNpcType;
 
 (* ---- The transformed form ---- *)
 
-(* Character > Limits...: OvaSettings, which tells Changed each change.
-   Cancel puts the options back, and the title's mark as it was. *)
+(* Character > Limits...: OvaSettings, which tells LimitsChanged each
+   change. Cancel puts the options back, and the title's mark as it was. *)
+PROCEDURE LimitsChanged;
+BEGIN
+  Changed;
+  (* The lists show Scaled Cost's points only under it. *)
+  abilities.Refresh(abilities.browser.Value()); weaknesses.Refresh(weaknesses.browser.Value())
+END LimitsChanged;
+
 PROCEDURE LimitsDone(ok: BOOLEAN);
 BEGIN
   IF ~ok THEN modified := wasModified; ShowTitle END
@@ -1174,7 +1181,7 @@ BEGIN
   OvaWidgets.openPage := OpenPage; OvaAttackDialog.tell := Tell;
   OvaBackground.tell := Tell; OvaBackground.changed := BackgroundChanged;
   OvaTraitPanel.tell := Tell; OvaLinkedDialog.tell := Tell; OvaLinkedDialog.changed := LinkedChanged;
-  OvaSettings.changed := Changed;
+  OvaSettings.changed := LimitsChanged;
   rulebookOption := NIL; savedRulebook := NIL; preferences := NIL;
   OvaViewer.Default(viewer); viewerOption := FALSE;
   characters := NIL; current := 0; character := NIL; path := NIL; modified := FALSE

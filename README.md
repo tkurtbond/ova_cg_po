@@ -91,7 +91,8 @@ a Secondary NPC, always 1 for an Extra), and is saved with the
 character.
 
 **Abilities and Weaknesses.** Each list shows a trait's level, name
-and detail, and the rulebook page its name is on. To add one, choose
+and detail, its points when Scaled Cost is on, and the rulebook page
+its name is on. To add one, choose
 its name from the menu under the list (each name shows its page), set
 its level and its detail, and press **Add**. Clicking a line puts it
 back in those controls: change them and press **Change** to replace

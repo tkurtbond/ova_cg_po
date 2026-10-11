@@ -368,7 +368,8 @@ characters in a file", below).
      Type (none, Heroic, Secondary, Extra), which sets the sheet's
      starting Health and Endurance and its TV;
    - **Abilities** and **Weaknesses**, side by side as on the sheet:
-     each a browser of lines (`+3 Attack (Kaze Satsujinsha)`), and
+     each a browser of lines (`+3 Attack (Kaze Satsujinsha)`; under
+     Scaled Cost with its points, `4 pts`, before the page), and
      under it a `Choice` of every name, a `Spinner` for the level (+1
      to +5, or -1 to -3), a detail `Input`, and Add, Change, Remove and
      **?** buttons. **?** opens the rulebook at the chosen name's page.
@@ -1159,6 +1160,16 @@ committed in their own repos, with the user's go-ahead.
      Abilities' levels, or under Scaled Cost the Abilities' points,
      which they count there (shown since 2026-10-11, in a box of their
      own beside the net points, with its override as every total has).
+   - **Each trait's Scaled Cost points in the lists** (decided
+     2026-10-11): under Scaled Cost a line shows its trait's points
+     (`+3 Attack`, `4 pts`, `p. 50`), as the totals count them
+     (Knowledge and Ineptitude halved under half cost), from
+     `OvaCalc`'s `Trait.points`. Not a form's lines, which no total
+     counts (p. 63). A line's points have no override box of their
+     own: they are the parts of the Ability or Weakness points, and
+     the Ability points' box overrides what they add up to. The lists
+     refresh when the limits change, so turning Scaled Cost on or off
+     shows them or takes them away.
    - **Preferences**: `FlPreferences`, `$XDG_CONFIG_HOME/ova_cg_po/
      ova_cg_po.prefs` (FLTK's vendor and application both
      `ova_cg_po`), holding `rulebook` and `viewer`, written as each is
@@ -1177,7 +1188,7 @@ committed in their own repos, with the user's go-ahead.
      isn't one, else kept). A rulebook not found is asked for once,
      with the same chooser; cancelled, the message says where it
      looked and how to give it.
-   - `TestLimits` (37 checks, on Xvfb and sway): a new character with
+   - `TestLimits` (41 checks, on Xvfb and sway): a new character with
      Attack +3 through each rule, its number, what is saved, and which
      total is red; half cost's activity and count; Cancel, OK, the
      close button; an empty `options:` block kept; Sheet's limits
@@ -1194,7 +1205,9 @@ committed in their own repos, with the user's go-ahead.
      rulebook not asked for (3), the range's spinner ignored (4), and
      a file's empty block dropped (1); the Abilities' points not
      shown and their levels red under Scaled Cost (2), the net points
-     ignoring the Abilities' points' override (2, `TestCalc`).
+     ignoring the Abilities' points' override (2, `TestCalc`); a
+     trait's points not halved (2, `TestCalc`), the lists not
+     refreshed when the limits change (2).
 9. **Finish**: valgrind clean, `make install`, README's user guide.
    [done]
    - **README's user guide**, "Using the window": the menus and their
