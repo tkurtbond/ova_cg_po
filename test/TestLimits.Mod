@@ -107,7 +107,7 @@ PROCEDURE Fresh;
 BEGIN
   OvaWindow.bar.Pick(OvaWindow.newItem); c := OvaWindow.character;
   AddAbility("Attack", 3);
-  OvaWindow.Adopt(c, NIL);
+  OvaWindow.Adopt(OvaCharacter.One(c), NIL);
   OvaWindow.bar.Pick(OvaWindow.limitsItem)
 END Fresh;
 

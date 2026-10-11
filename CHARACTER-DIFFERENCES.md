@@ -65,10 +65,10 @@ them, and saves it so (`OvaCharacter.SingleDefense`). Acacia's 4 is
 three values, the generator computed only Barrier's alternate, and
 these were three notices.
 
-Acacia's file holds three entities, herself and her demons, and so
-does Zurkrieg's (two). The generator edits one character at a time
-and refuses both. The numbers above come from loading each entity on
-its own.
+Acacia's file holds three entities, herself and her demons, and
+Zurkrieg's two, him and his Men in Black. The generator loads every
+character of a file (PLAN.md, Phase 13); until then it refused both,
+and the numbers above came from loading each entity on its own.
 
 Acacia's three spells (Break, Impede, Wither) cost 10, 10 and 20 in the
 book. The generator gave them no cost until it learned that a spell at

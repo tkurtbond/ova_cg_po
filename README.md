@@ -53,10 +53,34 @@ after it while there are unsaved changes.
 | File | New, Open..., Save, Save As..., Quit | Ctrl+N, Ctrl+O, Ctrl+S, Ctrl+Shift+S, Ctrl+Q |
 | Character | Limits... | Ctrl+E |
 | Character | Transformed form | Ctrl+T |
+| Character | Add Character, Duplicate Character, Remove Character... | |
+| Character | Move Up, Move Down | |
+| Character | Next Character, Previous Character | Ctrl+PgDn, Ctrl+PgUp |
 | Rulebook | Open, Choose PDF..., Viewer... | |
 
 New, Open and Quit ask first whether to save unsaved changes (Save,
 Don't save, Cancel), and so does the window's close button.
+
+### Several characters in a file
+
+A file can hold several characters, such as an NPC and their minions.
+The window shows one at a time. The menu at the right of the menu bar
+lists them by number and name: choose one to show it. The title says
+which is shown, of how many ("Acacia.yaml (1 of 3)").
+
+- **Add Character** puts a new, empty character last, and
+  **Duplicate Character** a copy of the one shown.
+- **Remove Character...** asks first. A file keeps at least one
+  character, so it is greyed out when there is only one.
+- **Move Up** and **Move Down** change the order. ova_fmt sets every
+  character after the first as a subentry, so put the main one first.
+- **Next Character** and **Previous Character** step through them.
+  Their keys don't work while the cursor is in Combat Notes or one of
+  the Background tab's text boxes, which use Ctrl+PgUp and Ctrl+PgDn
+  themselves.
+
+**Save** writes every character to the file, in order, and the
+question about unsaved changes covers all of them.
 
 ### The Character tab
 

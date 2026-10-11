@@ -9,8 +9,8 @@ MODULE OvaSave; (* Writes a character as YAML in ova_fmt's format *)
    other, plain where that is safe, else double-quoted. Numbers,
    booleans and keys are plain.
 
-   One document, a sequence of one entity, its keys in the order of
-   ova_fmt's fixtures. The numbers written are the ones in effect: an
+   One document, a sequence of the file's characters, in order, each
+   entity's keys in the order of ova_fmt's fixtures. The numbers written are the ones in effect: an
    override where there is one, which the mapping's overrides: key
    then lists. Only keys both ova_fmts read are written (AGENTS.md).
 
@@ -350,23 +350,23 @@ BEGIN
   RETURN m
 END Entity;
 
-(* c's document; NIL if building it failed (a duplicate key: a
-   programmer's error, never the user's). *)
-PROCEDURE Document(c: OvaCharacter.Character): Fyaml.Document;
-  VAR root: Node;
+(* The document of the characters cs, in order; NIL if building it
+   failed (a duplicate key: a programmer's error, never the user's). *)
+PROCEDURE Document(cs: OvaCharacter.Characters): Fyaml.Document;
+  VAR root: Node; i: INTEGER;
 BEGIN
   d := Fyaml.NewDocument(); ok := TRUE;
   root := d.CreateSequence(); d.SetRoot(root);
-  root.Append(Entity(c));
+  FOR i := 0 TO SHORT(LEN(cs^)) - 1 DO root.Append(Entity(cs[i])) END;
   IF ~ok THEN d.Close; d := NIL END;
   RETURN d
 END Document;
 
-(* c as YAML text, for the tests. *)
-PROCEDURE ToText*(c: OvaCharacter.Character): Rope;
+(* The characters cs as YAML text, for the tests. *)
+PROCEDURE AllToText*(cs: OvaCharacter.Characters): Rope;
   VAR doc: Fyaml.Document; s: Fyaml.String; err: Fyaml.Error; r: Rope;
 BEGIN
-  doc := Document(c); r := NIL;
+  doc := Document(cs); r := NIL;
   IF doc # NIL THEN
     s := doc.ToYAML(Fyaml.emitModeBlock, err);
     IF s # NIL THEN r := Ropes.FromString(s^) END;
@@ -374,19 +374,24 @@ BEGIN
   END;
   d := NIL;
   RETURN r
+END AllToText;
+
+(* c as YAML text, for the tests. *)
+PROCEDURE ToText*(c: OvaCharacter.Character): Rope;
+BEGIN RETURN AllToText(OvaCharacter.One(c))
 END ToText;
 
-(* Writes c to the file at path, through path.tmp, which replaces it
-   only once written. FALSE, with msg, if it couldn't be, the old file
-   left as it was. *)
-PROCEDURE Save*(c: OvaCharacter.Character; path: ARRAY OF CHAR; VAR msg: Rope): BOOLEAN;
+(* Writes the characters cs to the file at path, through path.tmp,
+   which replaces it only once written. FALSE, with msg, if it couldn't
+   be, the old file left as it was. *)
+PROCEDURE SaveAll*(cs: OvaCharacter.Characters; path: ARRAY OF CHAR; VAR msg: Rope): BOOLEAN;
   VAR doc: Fyaml.Document; err: Fyaml.Error; tmp, p: OvaText.String; t: Rope; e: Platform.ErrorCode;
     written: BOOLEAN;
 BEGIN
   msg := NIL;
-  doc := Document(c);
+  doc := Document(cs);
   IF doc = NIL THEN
-    msg := Ropes.FromString("the character's YAML couldn't be built (a duplicate key)"); RETURN FALSE
+    msg := Ropes.FromString("the characters' YAML couldn't be built (a duplicate key)"); RETURN FALSE
   END;
   t := Ropes.FromString(path); OvaText.Add(t, ".tmp"); tmp := OvaText.Chars(t);
   written := doc.ToFile(tmp^, Fyaml.emitModeBlock, err);
@@ -405,7 +410,33 @@ BEGIN
     RETURN FALSE
   END;
   RETURN TRUE
+END SaveAll;
+
+(* c alone, as SaveAll. *)
+PROCEDURE Save*(c: OvaCharacter.Character; path: ARRAY OF CHAR; VAR msg: Rope): BOOLEAN;
+BEGIN RETURN SaveAll(OvaCharacter.One(c), path, msg)
 END Save;
+
+(* A copy of c, sharing nothing with it: c as it would be saved, read
+   back as a file's character is. A saved character reads back with no
+   notices, so the copy's numbers are c's. NIL if c's YAML couldn't be
+   built or read (a programmer's error). *)
+PROCEDURE Copy*(c: OvaCharacter.Character): OvaCharacter.Character;
+  VAR doc: Fyaml.Document; e: OvaEntities.Entity; msg: Rope; it: Fyaml.ItemIter; root, item: Node;
+    copy: OvaCharacter.Character;
+BEGIN
+  copy := NIL;
+  doc := Document(OvaCharacter.One(c)); d := NIL;
+  IF doc # NIL THEN
+    OvaEntities.ResetErrors;
+    root := doc.Root(); root.Items(it);
+    IF it.Next(item) & OvaEntities.Load(item, e, msg) & (OvaEntities.errors.n = 0) THEN
+      copy := OvaCharacter.FromEntity(e)
+    END;
+    doc.Close
+  END;
+  RETURN copy
+END Copy;
 
 BEGIN
   (* OvaEntities' fluff keys, in the order of its constants. *)

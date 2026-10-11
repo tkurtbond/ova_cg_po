@@ -87,6 +87,10 @@ TYPE
     hasDescription*: BOOLEAN; description*: Rope
   END;
 
+  (* A file's characters, in its order; and its entities. *)
+  Characters* = POINTER TO ARRAY OF Character;
+  Entities* = POINTER TO ARRAY OF OvaEntities.Entity;
+
   Spell* = POINTER TO SpellDesc;
   SpellDesc* = RECORD (OvaCalc.SpellDesc)
     name*, ability*: Rope
@@ -542,15 +546,28 @@ PROCEDURE YamlMessage(err: Fyaml.Error): Rope;
 BEGIN RETURN OvaText.Trim(Ropes.FromString(err.msg^))
 END YamlMessage;
 
-(* The first entity of the file at path, read as po_ova_fmt reads it,
-   and n, how many the file holds. FALSE, with msg, if it can't be
-   read, or OvaEntities finds a problem in any of them. *)
-PROCEDURE ReadEntity*(path: ARRAY OF CHAR; VAR first: OvaEntities.Entity; VAR n: INTEGER; VAR msg: Rope): BOOLEAN;
+(* Adds e to the n entities in es, growing es. *)
+PROCEDURE KeepEntity(VAR es: Entities; VAR n: INTEGER; e: OvaEntities.Entity);
+  VAR t: Entities; i: INTEGER;
+BEGIN
+  IF es = NIL THEN NEW(es, 4)
+  ELSIF n = LEN(es^) THEN
+    NEW(t, 2 * n);
+    FOR i := 0 TO n - 1 DO t[i] := es[i] END;
+    es := t
+  END;
+  es[n] := e; INC(n)
+END KeepEntity;
+
+(* Every entity of the file at path, of every document in it, in order,
+   read as po_ova_fmt reads them: es[0 .. n-1]. FALSE, with msg, if it
+   can't be read, or OvaEntities finds a problem in any of them. *)
+PROCEDURE ReadEntities*(path: ARRAY OF CHAR; VAR es: Entities; VAR n: INTEGER; VAR msg: Rope): BOOLEAN;
   VAR s: FyamlStreams.Stream; d: Fyaml.Document; err: Fyaml.Error; root, item: Fyaml.Node;
     it: Fyaml.ItemIter; e: OvaEntities.Entity; ok: BOOLEAN; l: OvaText.List; i: INTEGER;
     le: OvaEntities.LoadError; r: Rope;
 BEGIN
-  first := NIL; n := 0; msg := NIL;
+  es := NIL; n := 0; msg := NIL;
   OvaEntities.ResetErrors;
   s := FyamlStreams.OpenFile(path, err);
   IF s = NIL THEN msg := YamlMessage(err); RETURN FALSE END;
@@ -564,11 +581,7 @@ BEGIN
     ELSE
       root.Items(it);
       WHILE ok & it.Next(item) DO
-        IF OvaEntities.Load(item, e, msg) THEN
-          IF n = 0 THEN first := e END;
-          INC(n)
-        ELSE ok := FALSE
-        END
+        IF OvaEntities.Load(item, e, msg) THEN KeepEntity(es, n, e) ELSE ok := FALSE END
       END
     END;
     d.Close;
@@ -585,29 +598,69 @@ BEGIN
     END;
     msg := OvaText.Join(l, 0AX); ok := FALSE
   END;
-  IF ~ok THEN first := NIL END;
+  IF ~ok THEN es := NIL; n := 0 END;
+  RETURN ok
+END ReadEntities;
+
+(* The first entity of the file at path, and n, how many it holds;
+   as ReadEntities. *)
+PROCEDURE ReadEntity*(path: ARRAY OF CHAR; VAR first: OvaEntities.Entity; VAR n: INTEGER; VAR msg: Rope): BOOLEAN;
+  VAR es: Entities; ok: BOOLEAN;
+BEGIN
+  ok := ReadEntities(path, es, n, msg);
+  IF ok & (n > 0) THEN first := es[0] ELSE first := NIL END;
   RETURN ok
 END ReadEntity;
 
-(* The character in the file at path, its numbers the file's: each its
-   mapping's overrides: lists is an override, and each other that
-   differs from the rules' is kept as one too, in notices. FALSE,
-   with msg, if the file can't be read, OvaEntities finds a problem, or
-   it doesn't hold exactly one character (the generator edits one at a
-   time). *)
-PROCEDURE Load*(path: ARRAY OF CHAR; VAR c: Character; VAR msg: Rope): BOOLEAN;
-  VAR e: OvaEntities.Entity; n: INTEGER;
+(* The character of entity e, its numbers e's: each its mapping's
+   overrides: lists is an override, and each other that differs from
+   the rules' is kept as one too, added to notices. *)
+PROCEDURE FromEntity*(e: OvaEntities.Entity): Character;
+  VAR c: Character;
 BEGIN
-  c := NIL; OvaText.Clear(notices);
-  IF ~ReadEntity(path, e, n, msg) THEN RETURN FALSE END;
-  IF n # 1 THEN
-    msg := Ropes.FromString(path); OvaText.Add(msg, " holds ");
-    msg := Ropes.Cat(msg, OvaText.Int(n));
-    OvaText.Add(msg, " characters: the generator edits one at a time");
-    RETURN FALSE
-  END;
   c := Build(e);
   AdoptNumbers(e, c);
+  RETURN c
+END FromEntity;
+
+(* c alone, as a file's characters. *)
+PROCEDURE One*(c: Character): Characters;
+  VAR cs: Characters;
+BEGIN NEW(cs, 1); cs[0] := c; RETURN cs
+END One;
+
+(* Every character in the file at path, in order, as FromEntity builds
+   them, with notices for all of them (each names its character).
+   FALSE, with msg, if the file can't be read, OvaEntities finds a
+   problem, or it holds none. *)
+PROCEDURE LoadAll*(path: ARRAY OF CHAR; VAR cs: Characters; VAR msg: Rope): BOOLEAN;
+  VAR es: Entities; n, i: INTEGER;
+BEGIN
+  cs := NIL; OvaText.Clear(notices);
+  IF ~ReadEntities(path, es, n, msg) THEN RETURN FALSE END;
+  IF n = 0 THEN
+    msg := Ropes.FromString(path); OvaText.Add(msg, " holds no characters");
+    RETURN FALSE
+  END;
+  NEW(cs, n);
+  FOR i := 0 TO n - 1 DO cs[i] := FromEntity(es[i]) END;
+  RETURN TRUE
+END LoadAll;
+
+(* The one character in the file at path, as LoadAll; FALSE, with msg,
+   as LoadAll, or if the file holds more than one. *)
+PROCEDURE Load*(path: ARRAY OF CHAR; VAR c: Character; VAR msg: Rope): BOOLEAN;
+  VAR cs: Characters;
+BEGIN
+  c := NIL;
+  IF ~LoadAll(path, cs, msg) THEN RETURN FALSE END;
+  IF LEN(cs^) # 1 THEN
+    msg := Ropes.FromString(path); OvaText.Add(msg, " holds ");
+    msg := Ropes.Cat(msg, OvaText.Int(SHORT(LEN(cs^))));
+    OvaText.Add(msg, " characters, not one");
+    RETURN FALSE
+  END;
+  c := cs[0];
   RETURN TRUE
 END Load;
 

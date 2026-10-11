@@ -10,7 +10,7 @@ MODULE TestWindow; (* OvaWindow: the first tab, driven as a user would, and its 
    every name shown; an override changes what is shown, saved, and
    computed from it, and clearing it undoes that. *)
 
-IMPORT Check, Fl, FlBrowsers, OvaAttackDialog, OvaBackground, OvaCalc, OvaCharacter, OvaEntities, OvaRules, OvaSave, OvaText,
+IMPORT Check, Fl, FlBrowsers, FlMenus, OvaAttackDialog, OvaBackground, OvaCalc, OvaCharacter, OvaEntities, OvaRules, OvaSave, OvaText,
   OvaTraitPanel,
   OvaWidgets, OvaWindow,
   Out, Ropes;
@@ -22,6 +22,9 @@ TYPE Rope = Ropes.Rope;
 VAR
   tells: INTEGER;           (* how many messages were shown *)
   answer, asked: INTEGER;   (* what ask answers, and how often it was asked *)
+  question: Rope;           (* what ask asked last *)
+  yes: BOOLEAN;             (* what confirm answers, *)
+  confirmed: INTEGER;       (* and how often it was asked *)
   chosen: Rope;             (* what choosePath answers; NIL: cancelled *)
   page: INTEGER;            (* the last page openPage was asked for *)
   c: OvaCharacter.Character;
@@ -40,9 +43,13 @@ PROCEDURE Tell(text: Rope);
 BEGIN INC(tells); s := OvaText.Chars(text); Out.String("    told: "); Out.String(s^); Out.Ln
 END Tell;
 
-PROCEDURE Ask(question: Rope): INTEGER;
-BEGIN INC(asked); RETURN answer
+PROCEDURE Ask(q: Rope): INTEGER;
+BEGIN INC(asked); question := q; RETURN answer
 END Ask;
+
+PROCEDURE Confirm(q, button: Rope): BOOLEAN;
+BEGIN INC(confirmed); question := q; RETURN yes
+END Confirm;
 
 PROCEDURE ChoosePath(save: BOOLEAN; VAR p: Rope): BOOLEAN;
 BEGIN p := chosen; RETURN chosen # NIL
@@ -217,6 +224,34 @@ BEGIN
   RETURN r
 END LastRow;
 
+(* Whether the Choice of characters lists labels, "|" between them,
+   and shows the one shown. *)
+PROCEDURE Listed(labels: ARRAY OF CHAR): BOOLEAN;
+  VAR i: INTEGER; r: Rope; l: ARRAY 128 OF CHAR;
+BEGIN
+  r := NIL;
+  FOR i := 0 TO SHORT(LEN(OvaWindow.characters^)) - 1 DO
+    IF i > 0 THEN OvaText.Add(r, "|") END;
+    OvaWindow.characterChoice.ItemLabel(i, l); OvaText.Add(r, l)
+  END;
+  RETURN Ropes.EqualString(r, labels) & (OvaWindow.characterChoice.Value() = OvaWindow.current)
+    & (OvaWindow.character = OvaWindow.characters[OvaWindow.current])
+END Listed;
+
+(* Whether item i of the menu bar is active. *)
+PROCEDURE Active(i: INTEGER): BOOLEAN;
+BEGIN RETURN OvaWindow.bar.ItemFlags(i) * FlMenus.MenuInactive = {}
+END Active;
+
+(* Whether the window shows the character shown: its name, and every
+   number. *)
+PROCEDURE ShownNow(name: ARRAY OF CHAR): BOOLEAN;
+  VAR v: ARRAY 128 OF CHAR;
+BEGIN
+  OvaWindow.nameIn.Value(v);
+  RETURN (v = name) & AllShown()
+END ShownNow;
+
 PROCEDURE Load(name: ARRAY OF CHAR): BOOLEAN;
   VAR r: Rope;
 BEGIN r := Ropes.FromString("data/"); OvaText.Add(r, name); RETURN OvaWindow.Load(r)
@@ -226,6 +261,7 @@ BEGIN
   tells := 0; asked := 0; answer := OvaWindow.Cancel; chosen := NIL; page := 0;
   OvaWindow.Build;
   OvaWindow.tell := Tell; OvaWindow.ask := Ask; OvaWindow.choosePath := ChoosePath;
+  OvaWindow.confirm := Confirm; yes := FALSE; confirmed := 0; question := NIL;
   OvaWidgets.openPage := OpenPage;
 
   (* ---- The frame ---- *)
@@ -312,7 +348,7 @@ BEGIN
      says so. *)
   t := OvaCharacter.NewTrait(NIL, OvaRules.Ability, 1, Ropes.FromString("Magic, Testing"), NIL);
   OvaCharacter.InsertTrait(c.traits, t);
-  OvaWindow.Adopt(c, NIL);
+  OvaWindow.Adopt(OvaCharacter.One(c), NIL);
   i := LineWith(OvaWindow.abilities.browser, "Magic, Testing");
   IF i > 0 THEN OvaWindow.abilities.browser.GetText(i, s) ELSE s[0] := 0X END;
   Columns("+1 Magic, Testing", "p. ?", "", want);
@@ -493,6 +529,101 @@ BEGIN
   ok := Load("Jiro.yaml");
   Check.Check(ok & (tells = 0) & (OvaWindow.npcTypeIn.Value() = 1 + OvaEntities.Secondary) & AllShown(),
     "Jiro.yaml: his type shown, and his numbers the rules' for it, so nothing to say");
+
+  (* ---- Several characters in a file ---- *)
+  tells := 0;
+  ok := Load("Acacia.yaml"); Title(s);
+  Check.Check(ok & (tells = 1) & (LEN(OvaWindow.characters^) = 3) & (OvaWindow.current = 0)
+    & (s = "OVA Character Generator - Acacia.yaml (1 of 3)") & ShownNow("Acacia"),
+    "Acacia.yaml: her and her demons, the first shown, the title saying which of how many");
+  Check.Check(Listed("1. Acacia|2. Sazza and Fraz|3. High Fructo Cezar"),
+    "the Choice beside the menus lists them, by number and name, the first chosen");
+  Check.Check(~Active(OvaWindow.previousItem) & ~Active(OvaWindow.moveUpItem) & Active(OvaWindow.nextItem)
+    & Active(OvaWindow.moveDownItem) & Active(OvaWindow.removeCharacterItem),
+    "Previous and Move Up inactive at the first; Next, Move Down and Remove active");
+  OvaWindow.characterChoice.Pick(2); Title(s);
+  Check.Check((OvaWindow.current = 2) & ShownNow("High Fructo Cezar") & ~OvaWindow.modified
+    & (s = "OVA Character Generator - Acacia.yaml (3 of 3)") & ~Active(OvaWindow.nextItem)
+    & ~Active(OvaWindow.moveDownItem) & Active(OvaWindow.previousItem),
+    "the third chosen: shown, nothing changed, Next and Move Down inactive at the last");
+  OvaWindow.bar.Pick(OvaWindow.previousItem);
+  Check.Check((OvaWindow.current = 1) & ShownNow("Sazza and Fraz") & Listed("1. Acacia|2. Sazza and Fraz|3. High Fructo Cezar"),
+    "Character > Previous Character: the second");
+  OvaWindow.bar.Pick(OvaWindow.nextItem);
+  Check.Check((OvaWindow.current = 2) & ShownNow("High Fructo Cezar"), "Next Character: the third again");
+  OvaWindow.nameIn.SetValue("Cezar"); OvaWindow.nameIn.DoCallback; Title(s);
+  Check.Check(Listed("1. Acacia|2. Sazza and Fraz|3. Cezar") & OvaWindow.modified
+    & (s = "OVA Character Generator - Acacia.yaml (3 of 3) *"), "renamed: the Choice follows, the file modified");
+
+  OvaWindow.bar.Pick(OvaWindow.addCharacterItem);
+  Check.Check((LEN(OvaWindow.characters^) = 4) & (OvaWindow.current = 3) & ShownNow("")
+    & (OvaWindow.abilities.browser.Count() = 0) & (RowCount() = 0)
+    & Listed("1. Acacia|2. Sazza and Fraz|3. Cezar|4. (no name)"),
+    "Character > Add Character: a new one, last, shown");
+  OvaWindow.nameIn.SetValue("Imp & Co"); OvaWindow.nameIn.DoCallback;
+  Check.Check(Listed("1. Acacia|2. Sazza and Fraz|3. Cezar|4. Imp && Co"), "an & in a name doubled, so FLTK shows it");
+
+  OvaWindow.characterChoice.Pick(0);
+  OvaWindow.bar.Pick(OvaWindow.duplicateItem);
+  c := OvaWindow.character;
+  Check.Check((LEN(OvaWindow.characters^) = 5) & (OvaWindow.current = 4) & ShownNow("Acacia")
+    & (c # OvaWindow.characters[0]) & Ropes.Equal(OvaSave.ToText(c), OvaSave.ToText(OvaWindow.characters[0])),
+    "Duplicate Character: a copy of Acacia, last, shown, the same when saved");
+  Type(OvaWindow.numbers[2], "55");
+  Check.Check(c.health.overridden & ~OvaWindow.characters[0].health.overridden,
+    "the copy's HEALTH overridden, the first's not: they share nothing");
+  OvaWindow.bar.Pick(OvaWindow.moveUpItem); Title(s);
+  Check.Check((OvaWindow.current = 3) & (OvaWindow.characters[3] = c) & (s = "OVA Character Generator - Acacia.yaml (4 of 5) *")
+    & Listed("1. Acacia|2. Sazza and Fraz|3. Cezar|4. Acacia|5. Imp && Co") & ShownNow("Acacia"),
+    "Move Up: the copy fourth, still shown");
+  OvaWindow.bar.Pick(OvaWindow.moveDownItem);
+  Check.Check((OvaWindow.current = 4) & (OvaWindow.characters[4] = c)
+    & Listed("1. Acacia|2. Sazza and Fraz|3. Cezar|4. Imp && Co|5. Acacia"), "Move Down: last again");
+
+  confirmed := 0; yes := FALSE;
+  OvaWindow.bar.Pick(OvaWindow.removeCharacterItem);
+  Check.Check((confirmed = 1) & Ropes.EqualString(question, "Remove Acacia from the file?")
+    & (LEN(OvaWindow.characters^) = 5), "Remove Character...: asked first; Cancel removes nothing");
+  yes := TRUE;
+  OvaWindow.bar.Pick(OvaWindow.removeCharacterItem);
+  Check.Check((LEN(OvaWindow.characters^) = 4) & (OvaWindow.current = 3) & ShownNow("Imp & Co")
+    & Listed("1. Acacia|2. Sazza and Fraz|3. Cezar|4. Imp && Co"), "removed, the last: the one before it shown");
+  OvaWindow.characterChoice.Pick(1);
+  OvaWindow.bar.Pick(OvaWindow.removeCharacterItem);
+  Check.Check((OvaWindow.current = 1) & ShownNow("Cezar") & Listed("1. Acacia|2. Cezar|3. Imp && Co"),
+    "removed from the middle: the one after it shown");
+
+  (* Saved: every character, in order; each portrait rebased. *)
+  OvaCharacter.SetText(OvaWindow.characters[2].hasPortrait, OvaWindow.characters[2].portrait,
+    Ropes.FromString("images/imp.png"));
+  chosen := Ropes.FromString("../obj/several.yaml");
+  OvaWindow.bar.Pick(OvaWindow.saveAsItem); Title(s);
+  Check.Check(~OvaWindow.modified & (s = "OVA Character Generator - several.yaml (2 of 3)")
+    & Ropes.EqualString(OvaWindow.characters[2].portrait, "../test/data/images/imp.png"),
+    "Save As: saved, and a portrait not shown rebased too");
+  text := OvaSave.AllToText(OvaWindow.characters);
+  tells := 0;
+  ok := Load("../../obj/several.yaml"); Title(s);
+  Check.Check(ok & (tells = 0) & (s = "OVA Character Generator - several.yaml (1 of 3)")
+    & Listed("1. Acacia|2. Cezar|3. Imp && Co") & Ropes.Equal(OvaSave.AllToText(OvaWindow.characters), text),
+    "loaded again: all three, in order, the same, with nothing to say");
+  OvaWindow.nameIn.SetValue("Acacia II"); OvaWindow.nameIn.DoCallback;
+  answer := OvaWindow.Cancel; asked := 0;
+  OvaWindow.bar.Pick(OvaWindow.newItem);
+  Check.Check((asked = 1) & Ropes.EqualString(question, "Save the changes to several.yaml first?"),
+    "New with changes: the question names the file");
+  yes := TRUE;
+  OvaWindow.bar.Pick(OvaWindow.removeCharacterItem); OvaWindow.bar.Pick(OvaWindow.removeCharacterItem);
+  Title(s);
+  Check.Check((LEN(OvaWindow.characters^) = 1) & ~Active(OvaWindow.removeCharacterItem)
+    & (s = "OVA Character Generator - several.yaml *") & Listed("1. Imp && Co"),
+    "down to one: Remove inactive, and the title without a count");
+  confirmed := 0;
+  OvaWindow.bar.Pick(OvaWindow.removeCharacterItem);
+  Check.Check((confirmed = 0) & (LEN(OvaWindow.characters^) = 1), "and Remove does nothing: a file holds at least one");
+  answer := OvaWindow.Discard;
+  OvaWindow.bar.Pick(OvaWindow.newItem);
+  Check.Check((LEN(OvaWindow.characters^) = 1) & Listed("1. (no name)"), "New: one new character");
 
   OvaWindow.Close;
   Check.Check(Fl.OpenWidgets() = 0, "every widget is deleted");

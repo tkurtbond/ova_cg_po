@@ -354,8 +354,11 @@ columns, until Phase 12). The first tab is the one shown when the
 window opens.
 
 The menu bar, above the tabs: File (New, Open, Save, Save As, Quit),
-Character (Limits..., Transformed form), Rulebook (Open, Choose PDF...,
-Viewer...).
+Character (Limits..., Transformed form; Add Character, Duplicate
+Character, Remove Character...; Move Up, Move Down; Next Character,
+Previous Character), Rulebook (Open, Choose PDF..., Viewer...). At its
+right, a `Choice` of the file's characters (Phase 13, "Several
+characters in a file", below).
 
 1. **First and second tabs, "Character" and "Attacks" (the sheet's
    right half)**; Attacks has the combat box and the numbers below it,
@@ -613,8 +616,36 @@ desktop.
   would lose what they wrote). Since Phase 3a no sample gives a notice;
   po_ova_fmt's own Escaping, Unsorted and Vehicle, whose numbers were
   never the rules', do. A copy saved lists every override, so it loads
-  with none. A file must hold exactly one character: the generator
-  edits one at a time, and says so of a file with more.
+  with none. A file may hold several characters (Phase 13): each is
+  loaded, and saved, in order.
+- **Several characters in a file** (asked for by the user, 2026-10-10;
+  designed with them: the switcher a `Choice` at the menu bar's right,
+  and Duplicate and Move Up/Down as well as Add and Remove).
+  `OvaCharacter.LoadAll` reads every entity of every document in the
+  file, in order, and builds each (`FromEntity`); the notices of all of
+  them are listed together, each starting with its character's name.
+  `OvaSave.SaveAll` writes them as one document, a sequence in that
+  order, so a file of several `---` documents is saved as one; po_ova_fmt
+  numbers a file's entities across its documents, so it formats both
+  the same (`two-documents.yaml`). The window holds `characters` and
+  shows one, `characters[current]`, as `character`, so the rest of it is
+  unchanged. "Modified" is the file's: a change to any character marks
+  it, and the save-first question names the file. The title says which
+  is shown of how many ("Acacia.yaml (1 of 3)"), when there are more
+  than one. Add Character and Duplicate Character put the new one last
+  and show it; Duplicate copies by building the character's YAML and
+  reading it back (`OvaSave.Copy`), so the copy holds exactly what a
+  save would, and shares nothing. Remove Character... asks first, and
+  is inactive for the only character, since a file holds at least one;
+  the one after shows, or before, if it was last. Move Up and Move
+  Down reorder; Next and Previous (Ctrl+PgDn, Ctrl+PgUp) don't wrap,
+  and like Move are inactive at the ends. Save As rebases every
+  character's portrait. ova_fmt underlines entities after the first
+  with `-U`'s character, so the first is the file's main character.
+  FLTK's text editors take Ctrl+PgUp and Ctrl+PgDn themselves, so
+  those keys don't switch characters from the Background tab's prose
+  or Combat Notes. `OvaCharacter.Load` remains, for a file of exactly
+  one (the tests').
 - **Loading** reuses po_ova_fmt's `OvaEntities` (copied, as po_ova_fmt
   copies `Besm2Out`, and kept in step with it), so the generator reads
   exactly what po_ova_fmt reads.
@@ -1281,6 +1312,39 @@ committed in their own repos, with the user's go-ahead.
    tabs' order, and which holds the attacks and the portrait; two bugs
    planted (the attacks, or the fluff, left inside the tab before)
    failed it. Valgrind clean on Xvfb. [done]
+13. **Several characters in a file** (asked for by the user, 2026-10-10;
+   "Files", "Several characters in a file"). [done]
+   - `OvaCharacter`: `Characters`, `ReadEntities`, `FromEntity`,
+     `LoadAll`, `One`; `Load` keeps exactly one. `OvaSave`: `SaveAll`,
+     `AllToText`, and `Copy` for Duplicate. `OvaCg` opens a file of
+     any number.
+   - `OvaWindow`: `characters` and `current`; the `Choice` at the menu
+     bar's right (the bar 390 wide, the Choice 250); Character > Add,
+     Duplicate, Remove..., Move Up, Move Down, Next, Previous, each
+     inactive where it can do nothing; `confirm`, a question with its
+     own button and Cancel, for Remove; the title's "(N of M)"; Save As
+     rebasing every portrait.
+   - `TestFiles` round-trips Acacia (one notice, so `files.sh` unmarks
+     it), Zurkrieg, Fragment, Options and the new `two-documents.yaml`
+     (two `---` documents, saved as one, which po_ova_fmt formats the
+     same), and checks their order and notices. `TestWindow` checks
+     switching, renaming, adding, duplicating (the copy shares
+     nothing), moving, removing, saving all and loading them back, the
+     save question, and the menu items' states.
+   - Shown to fail with 13 bugs planted (only the first saved, every
+     character built from the first, the Choice not following a rename,
+     "&" not doubled, Move leaving the shown one behind, only the shown
+     portrait rebased, Duplicate sharing the character, Next always
+     active, no count in the title, the question not naming the file,
+     switching leaving `character` behind, Remove not asking, the first
+     shown after Remove): each failed between 1 and 53 checks. Found
+     doing so: a planted file put back with its backup's older time
+     isn't rebuilt by make, so later runs used the planted binary; the
+     plants were run again, each restored file touched, with the same
+     results. Valgrind clean on Xvfb.
+   - Screenshots under Xvfb (Acacia): the Choice beside the menus, the
+     Character menu, the Choice open. FLTK names the keys by their X
+     keysyms there: "Ctrl+Next", "Ctrl+Prior".
 
 ## Testing
 

@@ -1,4 +1,4 @@
-MODULE OvaWindow; (* The main window: its menu bar, the sheet's first two tabs, and the file *)
+MODULE OvaWindow; (* The main window: its menu bar, the sheet's first two tabs, and the file's characters *)
 
 (* PLAN.md, "The window". One window, narrow enough to sit beside the
    rulebook's viewer, a menu bar, and four tabs, each a column: the
@@ -7,6 +7,13 @@ MODULE OvaWindow; (* The main window: its menu bar, the sheet's first two tabs, 
    and "Attacks" (the combat box and the sheet's numbers), with a box
    beside every computed number for its override; the other two the
    sheet's left half, "Background" and "Fluff", OvaBackground's.
+
+   A file holds one character or several (PLAN.md, "Several characters
+   in a file"): characters, in the file's order, of which one,
+   character, is shown. The Choice at the right of the menu bar, and
+   the Character menu, switch between them, add, copy, remove and
+   reorder them. Every change marks the file modified, and Save writes
+   them all.
 
    The character is OvaCharacter's, in a module variable: every change
    a widget makes goes into it, then OvaCharacter.Recompute, then the
@@ -29,6 +36,7 @@ IMPORT Fl, FlButtons, FlBrowsers, FlDialogs, FlInputs, FlLayout, FlMenus, FlPref
 
 CONST
   Width = 640; Height = 800; BarHeight = 25; TabHeight = 25;
+  ChoiceW = 250;  (* the characters' Choice, at the menu bar's right *)
   Title = "OVA Character Generator";
   Row = 25;
   (* Each tab's one column. *)
@@ -75,9 +83,15 @@ VAR
   sheetTab-, attacksTab-, backgroundTab-, fluffTab-: Fl.Group;
   newItem-, openItem-, saveItem-, saveAsItem-, quitItem-: INTEGER;
   limitsItem-, rulebookItem-, choosePdfItem-, viewerItem-: INTEGER;
+  addCharacterItem-, duplicateItem-, removeCharacterItem-, moveUpItem-, moveDownItem-,
+  nextItem-, previousItem-: INTEGER;
+  characterChoice-: FlMenus.Choice;  (* the characters, by number and name; current chosen *)
 
-  (* The character, the file it came from or was saved to (NIL: none),
-     and whether it has changed since. *)
+  (* The file's characters, in order, and the one shown,
+     characters[current]; the file they came from or were saved to (NIL:
+     none), and whether any has changed since. *)
+  characters-: OvaCharacter.Characters;
+  current-: INTEGER;
   character-: OvaCharacter.Character;
   path-: Rope;
   modified-: BOOLEAN;
@@ -106,6 +120,9 @@ VAR
   tell*: PROCEDURE (text: Rope);
   ask*: PROCEDURE (question: Rope): INTEGER;
   choosePath*: PROCEDURE (save: BOOLEAN; VAR path: Rope): BOOLEAN;
+  (* confirm asks whether to do what question says, as yes, which names
+     it, or Cancel. *)
+  confirm*: PROCEDURE (question, yes: Rope): BOOLEAN;
   (* choosePdf asks for the rulebook's PDF; askText for a line of text,
      showing text as it is. *)
   choosePdf*: PROCEDURE (VAR path: Rope): BOOLEAN;
@@ -125,6 +142,7 @@ VAR
 
 PROCEDURE^ ShowAll;
 PROCEDURE^ ShowRows;
+PROCEDURE^ ShowCharacters;
 
 (* ---- Text ---- *)
 
@@ -171,6 +189,14 @@ BEGIN
   IF (r < 0) OR (r > 2) THEN r := Cancel END;
   RETURN r
 END DialogAsk;
+
+(* Cancel is the default, pushed by Enter. *)
+PROCEDURE DialogConfirm(question, yes: Rope): BOOLEAN;
+  VAR q, y: OvaText.String;
+BEGIN
+  q := OvaText.Chars(question); y := OvaText.Chars(yes);
+  RETURN FlDialogs.Choice(q^, y^, "Cancel", "") = 0
+END DialogConfirm;
 
 PROCEDURE DialogPath(save: BOOLEAN; VAR p: Rope): BOOLEAN;
   VAR c: FlDialogs.NativeFileChooser; name: ARRAY 4096 OF CHAR; filter: ARRAY 32 OF CHAR; ok: BOOLEAN;
@@ -307,14 +333,27 @@ END ViewerAction;
 
 (* ---- Title and changes ---- *)
 
+(* How many characters the file holds. *)
+PROCEDURE Count(): INTEGER;
+BEGIN RETURN SHORT(LEN(characters^))
+END Count;
+
+(* The file's name, path without its directory. *)
+PROCEDURE FileName(): Rope;
+  VAR slash: LONGINT;
+BEGIN
+  slash := Ropes.RIndexChar(path, "/", Ropes.Length(path));
+  RETURN Ropes.Substring(path, slash + 1, Ropes.Length(path) - slash - 1)
+END FileName;
+
 PROCEDURE ShowTitle;
-  VAR t: Rope; s: OvaText.String; slash: LONGINT;
+  VAR t: Rope; s: OvaText.String;
 BEGIN
   t := R(Title);
-  IF path # NIL THEN
-    OvaText.Add(t, " - ");
-    slash := Ropes.RIndexChar(path, "/", Ropes.Length(path));
-    t := Ropes.Cat(t, Ropes.Substring(path, slash + 1, Ropes.Length(path) - slash - 1))
+  IF path # NIL THEN OvaText.Add(t, " - "); t := Ropes.Cat(t, FileName()) END;
+  IF Count() > 1 THEN
+    OvaText.Add(t, " ("); t := Ropes.Cat(t, OvaText.Int(current + 1));
+    OvaText.Add(t, " of "); t := Ropes.Cat(t, OvaText.Int(Count())); OvaText.Add(t, ")")
   END;
   IF modified THEN OvaText.Add(t, " *") END;
   s := OvaText.Chars(t); window.SetLabel(s^)
@@ -651,7 +690,7 @@ PROCEDURE TextAction(w: Fl.Widget);
   VAR c: OvaCharacter.Character;
 BEGIN
   c := character;
-  IF w = nameIn THEN c.name := OvaText.Trim(InputText(nameIn))
+  IF w = nameIn THEN c.name := OvaText.Trim(InputText(nameIn)); ShowCharacters
   ELSIF w = playerIn THEN OvaCharacter.SetText(c.hasPlayer, c.player, OvaText.Trim(InputText(playerIn)))
   ELSIF w = taglineIn THEN OvaCharacter.SetText(c.hasTagline, c.tagline, OvaText.Trim(InputText(taglineIn)))
   ELSIF w = combatNotes THEN OvaCharacter.SetText(c.hasCombatNotes, c.combatNotes, InputText(combatNotes))
@@ -719,6 +758,145 @@ BEGIN
   bar.SetItemFlags(transformedItem, f)
 END ShowTransformed;
 
+(* ---- The file's characters ---- *)
+
+(* Character i's label in the Choice: its number and name, any "&"
+   doubled so that FLTK shows it. *)
+PROCEDURE CharacterLabel(i: INTEGER): Rope;
+  VAR r, name: Rope; k: LONGINT; ch: CHAR;
+BEGIN
+  r := OvaText.Int(i + 1); OvaText.Add(r, ". ");
+  name := characters[i].name;
+  IF name = NIL THEN OvaText.Add(r, "(no name)")
+  ELSE
+    FOR k := 0 TO Ropes.Length(name) - 1 DO
+      ch := Ropes.Fetch(name, k);
+      IF ch = "&" THEN r := Ropes.AppendChar(r, "&") END;
+      r := Ropes.AppendChar(r, ch)
+    END
+  END;
+  RETURN r
+END CharacterLabel;
+
+(* Item i of the menu bar active if on. *)
+PROCEDURE Activate(i: INTEGER; on: BOOLEAN);
+  VAR f: SET;
+BEGIN
+  f := bar.ItemFlags(i);
+  IF on THEN f := f - FlMenus.MenuInactive ELSE f := f + FlMenus.MenuInactive END;
+  bar.SetItemFlags(i, f)
+END Activate;
+
+(* The Choice lists the characters again, current chosen, and the
+   Character menu's items are active where they can do something. *)
+PROCEDURE ShowCharacters;
+  VAR i, n: INTEGER; s: OvaText.String;
+BEGIN
+  n := Count();
+  characterChoice.Clear;
+  FOR i := 0 TO n - 1 DO
+    IF characterChoice.Add("-", 0, {}, NIL, {}) >= 0 THEN END;
+    s := OvaText.Chars(CharacterLabel(i)); characterChoice.SetItemLabel(i, s^)
+  END;
+  IF characterChoice.SetValue(current) THEN END;
+  Activate(removeCharacterItem, n > 1);
+  Activate(moveUpItem, current > 0); Activate(previousItem, current > 0);
+  Activate(moveDownItem, current < n - 1); Activate(nextItem, current < n - 1)
+END ShowCharacters;
+
+(* Shows character i. *)
+PROCEDURE ShowCharacter(i: INTEGER);
+BEGIN
+  current := i; character := characters[i];
+  OvaCharacter.Recompute(character);
+  ShowAll
+END ShowCharacter;
+
+PROCEDURE CharacterChoiceAction(w: Fl.Widget);
+  VAR i: INTEGER;
+BEGIN
+  i := characterChoice.Value();
+  IF (i >= 0) & (i # current) THEN ShowCharacter(i) END
+END CharacterChoiceAction;
+
+(* Adds c after the last character, and shows it. *)
+PROCEDURE Append(c: OvaCharacter.Character);
+  VAR cs: OvaCharacter.Characters; i: INTEGER;
+BEGIN
+  NEW(cs, LEN(characters^) + 1);
+  FOR i := 0 TO Count() - 1 DO cs[i] := characters[i] END;
+  cs[Count()] := c;
+  characters := cs;
+  modified := TRUE;
+  ShowCharacter(Count() - 1)
+END Append;
+
+(* Character > Add Character: a new character, last. *)
+PROCEDURE AddCharacterAction(w: Fl.Widget);
+BEGIN Append(OvaCharacter.New())
+END AddCharacterAction;
+
+(* Character > Duplicate Character: a copy of the one shown, last. *)
+PROCEDURE DuplicateAction(w: Fl.Widget);
+  VAR c: OvaCharacter.Character;
+BEGIN
+  c := OvaSave.Copy(character);
+  IF c = NIL THEN tell(R("The character couldn't be copied."))
+  ELSE Append(c)
+  END
+END DuplicateAction;
+
+(* Character > Remove Character...: the one shown, once the user says
+   so; not the only one, since a file holds at least one. The one after
+   it is shown, or the one before if it was last. *)
+PROCEDURE RemoveCharacterAction(w: Fl.Widget);
+  VAR cs: OvaCharacter.Characters; i, j: INTEGER; q: Rope;
+BEGIN
+  IF Count() > 1 THEN
+    q := R("Remove ");
+    IF character.name # NIL THEN q := Ropes.Cat(q, character.name) ELSE OvaText.Add(q, "this character") END;
+    OvaText.Add(q, " from the file?");
+    IF confirm(q, R("Remove")) THEN
+      NEW(cs, LEN(characters^) - 1); j := 0;
+      FOR i := 0 TO Count() - 1 DO
+        IF i # current THEN cs[j] := characters[i]; INC(j) END
+      END;
+      characters := cs;
+      modified := TRUE;
+      IF current = Count() THEN ShowCharacter(current - 1) ELSE ShowCharacter(current) END
+    END
+  END
+END RemoveCharacterAction;
+
+(* The character shown swapped with the one d after it, and still
+   shown. *)
+PROCEDURE Move(d: INTEGER);
+  VAR c: OvaCharacter.Character;
+BEGIN
+  IF (current + d >= 0) & (current + d < Count()) THEN
+    c := characters[current + d]; characters[current + d] := character; characters[current] := c;
+    current := current + d;
+    modified := TRUE;
+    ShowCharacters; ShowTitle
+  END
+END Move;
+
+PROCEDURE MoveUpAction(w: Fl.Widget);
+BEGIN Move(-1)
+END MoveUpAction;
+
+PROCEDURE MoveDownAction(w: Fl.Widget);
+BEGIN Move(1)
+END MoveDownAction;
+
+PROCEDURE NextAction(w: Fl.Widget);
+BEGIN IF current < Count() - 1 THEN ShowCharacter(current + 1) END
+END NextAction;
+
+PROCEDURE PreviousAction(w: Fl.Widget);
+BEGIN IF current > 0 THEN ShowCharacter(current - 1) END
+END PreviousAction;
+
 (* ---- Everything shown ---- *)
 
 PROCEDURE ShowAll;
@@ -730,26 +908,29 @@ BEGIN
   ShowTransformed;
   ShowRows;
   IF path # NIL THEN OvaBackground.Show(character, OvaPaths.Dir(path)) ELSE OvaBackground.Show(character, NIL) END;
+  ShowCharacters;
   ShowTitle
 END ShowAll;
 
 (* ---- Files ---- *)
 
-(* Shows c, from file p (NIL: none). *)
-PROCEDURE Take(c: OvaCharacter.Character; p: Rope);
+(* Shows the characters cs, from file p (NIL: none), the first of
+   them. *)
+PROCEDURE Take(cs: OvaCharacter.Characters; p: Rope);
 BEGIN
-  character := c; path := p; modified := FALSE;
+  characters := cs; current := 0; character := cs[0]; path := p; modified := FALSE;
   OvaCharacter.Recompute(character);
   ShowAll
 END Take;
 
-(* Shows c, just loaded by OvaCharacter.Load from the file at p, and
-   says what the file gives that the rules compute differently (each is
-   kept as an override): OvaCharacter.notices. *)
-PROCEDURE Adopt*(c: OvaCharacter.Character; p: Rope);
+(* Shows the characters cs, just loaded by OvaCharacter.LoadAll from
+   the file at p, and says what the file gives that the rules compute
+   differently (each is kept as an override): OvaCharacter.notices,
+   each naming its character. *)
+PROCEDURE Adopt*(cs: OvaCharacter.Characters; p: Rope);
   VAR r: Rope;
 BEGIN
-  Take(c, p);
+  Take(cs, p);
   IF OvaCharacter.notices.n > 0 THEN
     r := R("Numbers the file gives differently from the rules, kept as overrides:");
     r := Ropes.AppendChar(r, 0AX);
@@ -758,29 +939,35 @@ BEGIN
   END
 END Adopt;
 
-(* Opens the character in the file at p; FALSE, said why, if it
+(* Opens the characters in the file at p; FALSE, said why, if it
    can't. *)
 PROCEDURE Load*(p: Rope): BOOLEAN;
-  VAR c: OvaCharacter.Character; msg: Rope; s: OvaText.String;
+  VAR cs: OvaCharacter.Characters; msg: Rope; s: OvaText.String;
 BEGIN
   s := OvaText.Chars(p);
-  IF ~OvaCharacter.Load(s^, c, msg) THEN tell(msg); RETURN FALSE END;
-  Adopt(c, p);
+  IF ~OvaCharacter.LoadAll(s^, cs, msg) THEN tell(msg); RETURN FALSE END;
+  Adopt(cs, p);
   RETURN TRUE
 END Load;
 
-(* Saves to p; FALSE, said why, if it can't. The portrait's path,
-   relative to the file, is rebased to p's directory first (OvaPaths),
-   and put back if the save fails. *)
+(* Saves every character to p; FALSE, said why, if it can't. Each
+   portrait's path, relative to the file, is rebased to p's directory
+   first (OvaPaths), and put back if the save fails. *)
 PROCEDURE SaveTo(p: Rope): BOOLEAN;
-  VAR msg, old, from, to: Rope; s: OvaText.String;
+  VAR msg, from, to: Rope; s: OvaText.String; old: POINTER TO ARRAY OF Rope; i: INTEGER;
 BEGIN
-  old := character.portrait;
+  NEW(old, LEN(characters^));
   IF path # NIL THEN from := OvaPaths.Dir(path) ELSE from := NIL END;
   to := OvaPaths.Dir(p);
-  character.portrait := OvaPaths.Rebase(old, from, to);
+  FOR i := 0 TO Count() - 1 DO
+    old[i] := characters[i].portrait;
+    characters[i].portrait := OvaPaths.Rebase(old[i], from, to)
+  END;
   s := OvaText.Chars(p);
-  IF ~OvaSave.Save(character, s^, msg) THEN character.portrait := old; tell(msg); RETURN FALSE END;
+  IF ~OvaSave.SaveAll(characters, s^, msg) THEN
+    FOR i := 0 TO Count() - 1 DO characters[i].portrait := old[i] END;
+    tell(msg); RETURN FALSE
+  END;
   path := p; modified := FALSE; ShowTitle;
   OvaBackground.SetDir(to);
   RETURN TRUE
@@ -796,15 +983,20 @@ BEGIN
   IF path = NIL THEN RETURN SaveAs() ELSE RETURN SaveTo(path) END
 END Save;
 
-(* Whether the character may be put away: saved, or the user doesn't
-   want it saved. *)
+(* Whether the characters may be put away: saved, or the user doesn't
+   want them saved. The question names the file, or the character if
+   it is the only one and has no file. *)
 PROCEDURE MayLeave(): BOOLEAN;
   VAR q: Rope; ok: BOOLEAN;
 BEGIN
   ok := ~modified;
   IF ~ok THEN
     q := R("Save the changes to ");
-    IF character.name # NIL THEN q := Ropes.Cat(q, character.name) ELSE OvaText.Add(q, "the character") END;
+    IF path # NIL THEN q := Ropes.Cat(q, FileName())
+    ELSIF Count() > 1 THEN OvaText.Add(q, "the characters")
+    ELSIF character.name # NIL THEN q := Ropes.Cat(q, character.name)
+    ELSE OvaText.Add(q, "the character")
+    END;
     OvaText.Add(q, " first?");
     CASE ask(q) OF
       SaveFirst: ok := Save()
@@ -816,7 +1008,7 @@ BEGIN
 END MayLeave;
 
 PROCEDURE NewAction(w: Fl.Widget);
-BEGIN IF MayLeave() THEN Take(OvaCharacter.New(), NIL) END
+BEGIN IF MayLeave() THEN Take(OvaCharacter.One(OvaCharacter.New()), NIL) END
 END NewAction;
 
 PROCEDURE OpenAction(w: Fl.Widget);
@@ -919,7 +1111,7 @@ END BuildSheetTab;
 PROCEDURE Build*;
 BEGIN
   NEW(window); Fl.OpenDoubleWindow(window, Width, Height, Title);
-  NEW(bar); FlMenus.OpenMenuBar(bar, 0, 0, Width, BarHeight, "");
+  NEW(bar); FlMenus.OpenMenuBar(bar, 0, 0, Width - ChoiceW, BarHeight, "");
   newItem := bar.Add("&File/&New", ORD("n"), Fl.Command, NewAction, {});
   openItem := bar.Add("&File/&Open...", ORD("o"), Fl.Command, OpenAction, {});
   saveItem := bar.Add("&File/&Save", ORD("s"), Fl.Command, SaveAction, {});
@@ -927,10 +1119,21 @@ BEGIN
   quitItem := bar.Add("&File/&Quit", ORD("q"), Fl.Command, Quit, {});
   limitsItem := bar.Add("&Character/&Limits...", ORD("e"), Fl.Command, LimitsAction, {});
   transformedItem := bar.Add("&Character/&Transformed form", ORD("t"), Fl.Command, TransformedAction,
-    FlMenus.MenuToggle);
+    FlMenus.MenuToggle + FlMenus.MenuDivider);
+  addCharacterItem := bar.Add("&Character/&Add Character", 0, {}, AddCharacterAction, {});
+  duplicateItem := bar.Add("&Character/&Duplicate Character", 0, {}, DuplicateAction, {});
+  removeCharacterItem := bar.Add("&Character/&Remove Character...", 0, {}, RemoveCharacterAction,
+    FlMenus.MenuDivider);
+  moveUpItem := bar.Add("&Character/Move &Up", 0, {}, MoveUpAction, {});
+  moveDownItem := bar.Add("&Character/Move Do&wn", 0, {}, MoveDownAction, FlMenus.MenuDivider);
+  nextItem := bar.Add("&Character/&Next Character", Fl.KeyPageDown, Fl.Command, NextAction, {});
+  previousItem := bar.Add("&Character/&Previous Character", Fl.KeyPageUp, Fl.Command, PreviousAction, {});
   rulebookItem := bar.Add("&Rulebook/&Open", 0, {}, RulebookAction, FlMenus.MenuDivider);
   choosePdfItem := bar.Add("&Rulebook/&Choose PDF...", 0, {}, ChoosePdfAction, {});
   viewerItem := bar.Add("&Rulebook/&Viewer...", 0, {}, ViewerAction, {});
+  NEW(characterChoice); FlMenus.OpenChoice(characterChoice, Width - ChoiceW, 0, ChoiceW, BarHeight, "");
+  characterChoice.action := CharacterChoiceAction;
+  characterChoice.SetTooltip("The character shown, of the file's");
   NEW(tabs); FlLayout.OpenTabs(tabs, 0, BarHeight, Width, Height - BarHeight, "");
   BuildSheetTab;
   NEW(backgroundTab); NEW(fluffTab);
@@ -939,7 +1142,7 @@ BEGIN
   window.End;
   window.action := Quit;
   NEW(rebuild); rebuild.action := RebuildAction;
-  Take(OvaCharacter.New(), NIL)
+  Take(OvaCharacter.One(OvaCharacter.New()), NIL)
 END Build;
 
 (* Deletes the window and everything in it, for tests. *)
@@ -952,19 +1155,19 @@ BEGIN
   OvaWidgets.ClosePanel(abilities); OvaWidgets.ClosePanel(weaknesses);
   window.Delete;
   OvaBackground.Close;
-  window := NIL; bar := NIL; tabs := NIL; sheetTab := NIL; attacksTab := NIL; backgroundTab := NIL; fluffTab := NIL;
+  window := NIL; bar := NIL; characterChoice := NIL; tabs := NIL; sheetTab := NIL; attacksTab := NIL; backgroundTab := NIL; fluffTab := NIL;
   abilities := NIL; weaknesses := NIL; rows := NIL; attackBox := NIL; warnings := NIL;
   nameIn := NIL; playerIn := NIL; taglineIn := NIL; npcTypeIn := NIL; combatNotes := NIL; abilityEnd := NIL; abilityMods := NIL;
   addAttack := NIL
 END Close;
 
 BEGIN
-  tell := DialogTell; ask := DialogAsk; choosePath := DialogPath; choosePdf := DialogPdf; askText := DialogText;
+  tell := DialogTell; ask := DialogAsk; confirm := DialogConfirm; choosePath := DialogPath; choosePdf := DialogPdf; askText := DialogText;
   OvaWidgets.openPage := OpenPage; OvaAttackDialog.tell := Tell;
   OvaBackground.tell := Tell; OvaBackground.changed := BackgroundChanged;
   OvaTraitPanel.tell := Tell; OvaLinkedDialog.tell := Tell; OvaLinkedDialog.changed := LinkedChanged;
   OvaSettings.changed := Changed;
   rulebookOption := NIL; savedRulebook := NIL; preferences := NIL;
   OvaViewer.Default(viewer); viewerOption := FALSE;
-  character := NIL; path := NIL; modified := FALSE
+  characters := NIL; current := 0; character := NIL; path := NIL; modified := FALSE
 END OvaWindow.

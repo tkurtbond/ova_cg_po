@@ -1,6 +1,6 @@
 MODULE TestFiles; (* OvaCharacter and OvaSave: loading, saving, and loading again *)
 
-(* PLAN.md, "Files". Each fixture holding one character is loaded,
+(* PLAN.md, "Files". Each fixture, every character in it, is loaded,
    saved into ../obj/files/ (for test/files.sh, which formats both with
    po_ova_fmt and compares), and loaded again: the second load must
    give the same YAML, and no notices, since the copy's overrides: keys
@@ -35,27 +35,28 @@ BEGIN
   END
 END ShowNotices;
 
-(* Loads name, saves it, loads the copy; want: the notices expected. *)
+(* Loads name, every character in it, saves them, loads the copy;
+   want: the notices expected. *)
 PROCEDURE RoundTrip(name: ARRAY OF CHAR; want: INTEGER);
-  VAR path, saved: ARRAY 128 OF CHAR; c, c2: OvaCharacter.Character; msg, text, text2: Ropes.Rope;
+  VAR path, saved: ARRAY 128 OF CHAR; c, c2: OvaCharacter.Characters; msg, text, text2: Ropes.Rope;
     loaded, n: INTEGER; ok: BOOLEAN; m: OvaText.String;
 BEGIN
   Path(DataDir, name, path); Path(SavedDir, name, saved);
-  ok := OvaCharacter.Load(path, c, msg);
+  ok := OvaCharacter.LoadAll(path, c, msg);
   L(name, "loaded"); Check.Check(ok, label);
   IF ~ok THEN m := OvaText.Chars(msg); Out.String("    "); Out.String(m^); Out.Ln; RETURN END;
   n := OvaCharacter.notices.n;
   L(name, "notices");
   Check.Check(n = want, label);
   IF (n # want) OR (n > 0) THEN ShowNotices END;
-  text := OvaSave.ToText(c);
-  L(name, "saved"); Check.Check(OvaSave.Save(c, saved, msg), label);
-  ok := OvaCharacter.Load(saved, c2, msg);
+  text := OvaSave.AllToText(c);
+  L(name, "saved"); Check.Check(OvaSave.SaveAll(c, saved, msg), label);
+  ok := OvaCharacter.LoadAll(saved, c2, msg);
   L(name, "the copy loaded"); Check.Check(ok, label);
   IF ok THEN
     L(name, "the copy has no notices: it lists its overrides"); Check.Check(OvaCharacter.notices.n = 0, label);
     IF OvaCharacter.notices.n > 0 THEN ShowNotices END;
-    text2 := OvaSave.ToText(c2);
+    text2 := OvaSave.AllToText(c2);
     L(name, "the copy saves the same"); Check.Check((text # NIL) & Ropes.Equal(text, text2), label)
   END
 END RoundTrip;
@@ -81,7 +82,8 @@ BEGIN
      Nazo's and Shadowman's single Defense is their best, as the book
      prints it, but Nazo's TV is the book's own
      (CHARACTER-DIFFERENCES.md). Acacia and Zurkrieg hold more than one
-     entity (Errors). *)
+     entity (Several); Acacia's notice is its Lock Heaven's Door's END. *)
+  RoundTrip("Acacia", 1); RoundTrip("Zurkrieg", 0);
   RoundTrip("Ancel", 0); RoundTrip("Dr-Tomori", 0); RoundTrip("Jiro", 0); RoundTrip("Nazo", 1);
   RoundTrip("Saspar", 0); RoundTrip("Shadowman", 0);
   (* The NPC Fragments: no combat: block, so nothing to compare. *)
@@ -91,8 +93,52 @@ BEGIN
   RoundTrip("Ninja", 0); RoundTrip("Oni", 0); RoundTrip("Sentry-Bots", 0); RoundTrip("Shady-Teacher", 0);
   RoundTrip("Shinto-Priest", 0); RoundTrip("Snobbish-Upperclassman", 0); RoundTrip("Spider-Tank", 0);
   RoundTrip("Thugs", 0); RoundTrip("Venomous-Killer", 0); RoundTrip("Weathered-Salaryman", 0);
-  RoundTrip("Weird-Exchange-Student", 0); RoundTrip("Wild-Beast", 0); RoundTrip("Zombies", 0)
+  RoundTrip("Weird-Exchange-Student", 0); RoundTrip("Wild-Beast", 0); RoundTrip("Zombies", 0);
+  (* po_ova_fmt's two of two Fragments each, and the generator's own of
+     two YAML documents. *)
+  RoundTrip("Fragment", 0); RoundTrip("Options", 0); RoundTrip("two-documents", 0)
 END Fixtures;
+
+(* Whether r holds s. *)
+PROCEDURE^ Holds(r: Ropes.Rope; s: ARRAY OF CHAR): BOOLEAN;
+
+(* Whether cs are n characters named by names, "|" between them. *)
+PROCEDURE Named(cs: OvaCharacter.Characters; n: INTEGER; names: ARRAY OF CHAR): BOOLEAN;
+  VAR i: INTEGER; r: Ropes.Rope;
+BEGIN
+  IF (cs = NIL) OR (LEN(cs^) # n) THEN RETURN FALSE END;
+  r := cs[0].name;
+  FOR i := 1 TO n - 1 DO OvaText.Add(r, "|"); r := Ropes.Cat(r, cs[i].name) END;
+  RETURN Ropes.EqualString(r, names)
+END Named;
+
+(* Files of several characters (PLAN.md, "Several characters in a
+   file"): every one loaded, in order, each its notices, and saved in
+   that order; Load still takes exactly one. *)
+PROCEDURE Several;
+  VAR cs, cs2: OvaCharacter.Characters; c: OvaCharacter.Character; msg: Ropes.Rope; ok: BOOLEAN;
+    s: OvaText.String;
+BEGIN
+  ok := OvaCharacter.LoadAll("data/Acacia.yaml", cs, msg);
+  Check.Check(ok & Named(cs, 3, "Acacia|Sazza and Fraz|High Fructo Cezar"),
+    "Acacia.yaml: her and her two demons, in the file's order");
+  Check.Check((OvaCharacter.notices.n = 1) & Holds(OvaCharacter.notices.items[0], "Acacia: Lock Heaven's Door: END"),
+    "its one notice names its character");
+  ok := OvaCharacter.LoadAll("data/two-documents.yaml", cs, msg);
+  Check.Check(ok & Named(cs, 2, "First Of Two|Second Of Two"), "two-documents.yaml: a character from each document");
+  ok := OvaSave.SaveAll(cs, "../obj/two-documents.yaml", msg)
+    & OvaCharacter.LoadAll("../obj/two-documents.yaml", cs2, msg);
+  Check.Check(ok & Named(cs2, 2, "First Of Two|Second Of Two")
+    & (Ropes.Find(OvaSave.AllToText(cs), "---", 1) < 0),
+    "saved as one document, the two in order");
+  ok := OvaCharacter.LoadAll("data/Zurkrieg.yaml", cs, msg);
+  Check.Check(ok & Named(cs, 2, "Zurkrieg|Men in Black") & cs[0].hasCombat & cs[1].isFragment & ~cs[1].hasCombat
+    & (OvaCharacter.notices.n = 0), "Zurkrieg.yaml: him, with combat stats, and his Men in Black, a Fragment; no notices");
+  ok := OvaCharacter.Load("data/Zurkrieg.yaml", c, msg);
+  s := OvaText.Chars(msg);
+  Check.Check(~ok & (c = NIL) & (Strings.Pos("holds 2 characters, not one", s^, 0) >= 0),
+    "Load, for one character, refuses it, saying how many it holds")
+END Several;
 
 (* A file that can't be loaded: msg must hold want. *)
 PROCEDURE Refused(path, want: ARRAY OF CHAR; what: ARRAY OF CHAR);
@@ -115,10 +161,6 @@ PROCEDURE Errors;
   VAR c: OvaCharacter.Character; msg: Ropes.Rope; ok: BOOLEAN;
 BEGIN
   Refused("data/Broken.yaml", "level", "Broken.yaml");
-  Refused("data/Fragment.yaml", "holds 2 characters", "Fragment.yaml");
-  Refused("data/Options.yaml", "holds 2 characters", "Options.yaml");
-  Refused("data/Acacia.yaml", "holds 3 characters", "Acacia.yaml");
-  Refused("data/Zurkrieg.yaml", "holds 2 characters", "Zurkrieg.yaml");
   Refused("data/no-such-file.yaml", "no-such-file.yaml", "a missing file");
   c := OvaCharacter.New(); c.name := Ropes.FromString("Nobody");
   ok := OvaSave.Save(c, "../obj/no-such-dir/x.yaml", msg);
@@ -237,6 +279,7 @@ BEGIN
   Fixtures;
   Errors;
   Defenses;
+  Several;
   AwkwardText;
   Check.Summary
 END TestFiles.

@@ -21,7 +21,7 @@ VAR
   parser: ArgParser.Parser;
   helpShown: BOOLEAN;
   file: Ropes.Rope;  (* the file argument; NIL for none *)
-  character: OvaCharacter.Character;
+  characters: OvaCharacter.Characters;  (* the file's; NIL for none *)
   preferences: FlPreferences.Preferences;
 
 PROCEDURE Fail(status: INTEGER; a, b: ARRAY OF CHAR);
@@ -71,12 +71,12 @@ BEGIN
   parser.ParseArguments(1)
 END ParseCommandLine;
 
-(* The file argument's character, or a reason on standard error. *)
+(* The file argument's characters, or a reason on standard error. *)
 PROCEDURE LoadFile;
   VAR s: OvaText.String; msg: Ropes.Rope;
 BEGIN
   s := OvaText.Chars(file);
-  IF ~OvaCharacter.Load(s^, character, msg) THEN
+  IF ~OvaCharacter.LoadAll(s^, characters, msg) THEN
     s := OvaText.Chars(msg); Fail(FailureStatus, s^, "")
   END
 END LoadFile;
@@ -105,7 +105,7 @@ BEGIN
 END RequireDisplay;
 
 BEGIN
-  helpShown := FALSE; file := NIL; character := NIL;
+  helpShown := FALSE; file := NIL; characters := NIL;
   ParseCommandLine;
   IF ~helpShown THEN
     IF file # NIL THEN LoadFile END;
@@ -114,7 +114,7 @@ BEGIN
     NEW(preferences); FlPreferences.Open(preferences, FlPreferences.User, Vendor, Application);
     OvaWindow.UsePreferences(preferences);
     OvaWindow.window.Show;
-    IF character # NIL THEN OvaWindow.Adopt(character, file) END;
+    IF characters # NIL THEN OvaWindow.Adopt(characters, file) END;
     Fl.Run;
     preferences.Close
   END
