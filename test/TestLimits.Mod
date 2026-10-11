@@ -11,8 +11,8 @@ IMPORT Check, Fl, FlButtons, FlPreferences, FlValuators, OvaCharacter, OvaRules,
   OvaViewer, OvaWidgets, OvaWindow, Out, Ropes;
 
 CONST
-  PrefsDir = "../obj";  (* the preferences file: obj/po_ova_cg.prefs *)
-  Vendor = "po_ova_cg"; Application = "po_ova_cg";
+  PrefsDir = "../obj";  (* the preferences file: obj/ova_cg_po.prefs *)
+  Vendor = "ova_cg_po"; Application = "ova_cg_po";
 
 TYPE Rope = Ropes.Rope;
 

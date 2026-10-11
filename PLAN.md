@@ -1,6 +1,6 @@
 # PLAN.md - an OVA character generator in Oberon-2, with poc
 
-`po_ova_cg` builds a character for OVA, the Open Versatile Anime
+`ova_cg_po` builds a character for OVA, the Open Versatile Anime
 engine, in a window laid out like the official character sheet. The
 user picks Abilities and Weaknesses by name and level, builds attacks
 from Perks and Flaws, and the program works out each attack's and
@@ -8,12 +8,12 @@ Ability's Endurance cost, and the sheet's ROLL, DX, Defense, Health,
 Endurance and TV, as the character changes. It knows no descriptions:
 asked about an item, it opens the rulebook at that item's page in the
 system's PDF viewer. It saves and loads YAML in ova_fmt's format, so
-po_ova_fmt and the Ada ova_fmt print what it makes.
+ova_fmt_po and the Ada ova_fmt print what it makes.
 
 It is written in Oberon-2 and compiled with poc 0.5.0 (`-OC`), with
 pofltk (FLTK 1.4) for the window, polibfyaml for YAML, Ropes for text
 and ArgParser for the command line. Its build and test setup follows
-po_ova_fmt (`~/Repos/RPG/Tools/po_ova_fmt`).
+ova_fmt_po (`~/Repos/RPG/Tools/ova_fmt_po`).
 
 ## Sources and findings
 
@@ -476,14 +476,14 @@ before calling FLTK. With neither `DISPLAY` nor `WAYLAND_DISPLAY` set
 (decided by the user, 2026-10-09) it prints
 
 ```
-po_ova_cg: no display: neither DISPLAY nor WAYLAND_DISPLAY is set
+ova_cg_po: no display: neither DISPLAY nor WAYLAND_DISPLAY is set
 ```
 
 and, inside tmux (`TMUX` set), a second line, since that is where it
 was found to happen ("Findings"):
 
 ```
-po_ova_cg: in tmux, the session may have been attached from a terminal without one; reattach from the desktop, or set them from `tmux show-environment -g`
+ova_cg_po: in tmux, the session may have been attached from a terminal without one; reattach from the desktop, or set them from `tmux show-environment -g`
 ```
 
 and exits with status 1. A display that is set but can't be opened is
@@ -588,7 +588,7 @@ desktop.
   `DISPLAY`, `WAYLAND_DISPLAY` or `XDG_CURRENT_DESKTOP` (tmux's
   `update-environment` removed them), though tmux's global environment
   and systemd's user environment (`systemctl --user
-  show-environment`) have them. This stops po_ova_cg itself, before
+  show-environment`) have them. This stops ova_cg_po itself, before
   any viewer: FLTK can't open a window. `DBUS_SESSION_BUS_ADDRESS` is
   kept, so D-Bus reuse works wherever the program can run. With no
   display, the program stops at once ("Starting").
@@ -614,7 +614,7 @@ desktop.
   override, with a notice** (changed in Phase 3 from "replaced": the
   file is the user's, a GM's ruling or a hand edit, and replacing it
   would lose what they wrote). Since Phase 3a no sample gives a notice;
-  po_ova_fmt's own Escaping, Unsorted and Vehicle, whose numbers were
+  ova_fmt_po's own Escaping, Unsorted and Vehicle, whose numbers were
   never the rules', do. A copy saved lists every override, so it loads
   with none. A file may hold several characters (Phase 13): each is
   loaded, and saved, in order.
@@ -625,7 +625,7 @@ desktop.
   file, in order, and builds each (`FromEntity`); the notices of all of
   them are listed together, each starting with its character's name.
   `OvaSave.SaveAll` writes them as one document, a sequence in that
-  order, so a file of several `---` documents is saved as one; po_ova_fmt
+  order, so a file of several `---` documents is saved as one; ova_fmt_po
   numbers a file's entities across its documents, so it formats both
   the same (`two-documents.yaml`). The window holds `characters` and
   shows one, `characters[current]`, as `character`, so the rest of it is
@@ -646,9 +646,9 @@ desktop.
   those keys don't switch characters from the Background tab's prose
   or Combat Notes. `OvaCharacter.Load` remains, for a file of exactly
   one (the tests').
-- **Loading** reuses po_ova_fmt's `OvaEntities` (copied, as po_ova_fmt
+- **Loading** reuses ova_fmt_po's `OvaEntities` (copied, as ova_fmt_po
   copies `Besm2Out`, and kept in step with it), so the generator reads
-  exactly what po_ova_fmt reads.
+  exactly what ova_fmt_po reads.
 - **Saving** builds a document with polibfyaml's emitter
   (`Fyaml.NewDocument`, `CreateStyledScalar`, `CreateSequence`,
   `CreateMapping`, `SetRoot`, `Append`, `AppendPair`, then `ToFile`,
@@ -675,8 +675,8 @@ desktop.
 ### Changes to ova_fmt
 
 What the generator saves and ova_fmt has no key for is added to **both
-the Ada ova_fmt and po_ova_fmt** (decided by the user, 2026-10-09),
-Ada first, as po_ova_fmt's AGENTS.md requires ("A change to the Ada
+the Ada ova_fmt and ova_fmt_po** (decided by the user, 2026-10-09),
+Ada first, as ova_fmt_po's AGENTS.md requires ("A change to the Ada
 program belongs here too"):
 
 | Key | Where | What |
@@ -701,7 +701,7 @@ Each is optional, as every ova_fmt key but `name` is. For each, the
 Ada repo's PLAN.md gets the schema, how every output format prints it
 (open question 2), a fixture (`test-data/Sheet.yaml`, a character
 using all of them, made with the generator once it saves), and golden
-files; then po_ova_fmt ports it, its golden files regenerated from the
+files; then ova_fmt_po ports it, its golden files regenerated from the
 new Ada binary (`make golden`), its `test/data/` copied over. Both are
 committed in their own repos, with the user's go-ahead.
 
@@ -713,7 +713,7 @@ committed in their own repos, with the user's go-ahead.
 | `OvaRules` | the data tables above: names, kinds, pages, costs, flags |
 | `OvaCalc` | the calculations: END, ROLL, DX, Defense, Health, Endurance, TV, totals, limits and warnings |
 | `OvaCharacter` | the character being built, loaded from a file; the edits the window makes, and `Recompute` (Endurance Use tied, then `OvaCalc.Compute`) |
-| `OvaEntities` | po_ova_fmt's loader, copied |
+| `OvaEntities` | ova_fmt_po's loader, copied |
 | `OvaSave` | the YAML writer, through polibfyaml's emitter |
 | `OvaViewer` | the rulebook's path, the viewer chosen, reusing a running one (okular over D-Bus, evince, mupdf) |
 | `OvaSpawn` (with `OvaSpawn.c`) | starting a program detached; running one and capturing its output |
@@ -725,16 +725,16 @@ committed in their own repos, with the user's go-ahead.
 | `OvaTraitPanel` | a list of Abilities or Weaknesses and its editor: the character's, a form's, a partner's |
 | `OvaSettings` | Character > Limits...: the rules that limit a character, in its `options:` |
 | `OvaLinkedDialog` | an Ability's linked content: a Transformation's form, a Magic's spells, a Companion's or Vehicle's sheet |
-| `OvaText`, `OvaOut` | po_ova_fmt's, copied, as needed |
+| `OvaText`, `OvaOut` | ova_fmt_po's, copied, as needed |
 
 `OvaRules`, `OvaCalc`, `OvaCharacter`, `OvaSave`, `OvaSpawn`,
 `OvaViewer` and `OvaPaths` import no pofltk: they are tested with no display.
 
 ## Build order
 
-0. **Skeleton.** [done] `GNUmakefile` (from po_ova_fmt's and pofltk's,
+0. **Skeleton.** [done] `GNUmakefile` (from ova_fmt_po's and pofltk's,
    with `test-headless` and `test-sway`), `README.md`, `test/Check.Mod`,
-   `test/poc-gc.supp` (po_ova_fmt's plus pofltk's), a window with a
+   `test/poc-gc.supp` (ova_fmt_po's plus pofltk's), a window with a
    menu bar that opens and quits under Xvfb.
    - `OvaCg` (main): `-h`; a file argument is refused (status 2) until
      Phase 3; the display check of "Starting". `OvaWindow`: a 1280 x 800
@@ -810,7 +810,7 @@ committed in their own repos, with the user's go-ahead.
    for `TestCalc`), `OvaCharacter` (extending `OvaCalc`'s records, and
    taking over `test/Samples.Mod`'s building), `OvaSave` (with
    `Fyaml.ToFile`); `TestFiles`: each fixture loaded, saved and
-   formatted by po_ova_fmt gives the same output as the fixture (`-H`
+   formatted by ova_fmt_po gives the same output as the fixture (`-H`
    and the terse format), and overrides survive a save and a load.
    [done]
    - `src/OvaCharacter.Mod`: `Character` extends `OvaCalc.Sheet` (and
@@ -826,14 +826,14 @@ committed in their own repos, with the user's go-ahead.
      character loaded, saved into `obj/files/`, loaded again (the same
      YAML, the same notices), with the notices each must give (none for
      seven samples; Ai 2, Braun 1, Fukiko 9, Miho 2, Natsuki 1, which
-     Phase 3a's keys and the overrides key will remove; po_ova_fmt's
+     Phase 3a's keys and the overrides key will remove; ova_fmt_po's
      own Escaping, Unsorted and Vehicle, whose numbers aren't the
      rules'); the files refused (Broken, two characters, missing); a
      failed save; a character with awkward text (a leading `#`, quotes,
      a block's first line indented) saved and read back. `test/files.sh`
      (105 checks): each saved copy formats as its fixture in all seven
-     of po_ova_fmt's formats (terse, `-H`, `-G`, `-M`, `-g`, `-m`,
-     `-O`); `make test` runs it with `PO_OVA_FMT`. `TestCalc` builds
+     of ova_fmt_po's formats (terse, `-H`, `-G`, `-M`, `-g`, `-m`,
+     `-O`); `make test` runs it with `OVA_FMT_PO`. `TestCalc` builds
      through `OvaCharacter` now; `test/Samples.Mod` is gone.
    - Shown to fail with nine bugs planted in `OvaSave` and
      `OvaCharacter` (affinity, counts-as, a form's Weaknesses, a spell's
@@ -846,7 +846,7 @@ committed in their own repos, with the user's go-ahead.
      Phase 3a. Until then they survive as numbers that come back as
      overrides, with notices (checked: the same notices after a save).
      Done in Phase 3a.
-3a. **ova_fmt's new keys**, in the Ada ova_fmt and then po_ova_fmt
+3a. **ova_fmt's new keys**, in the Ada ova_fmt and then ova_fmt_po
    ("Changes to ova_fmt"), before the generator saves them; then
    `OvaEntities` copied again. [done]
    - The Ada ova_fmt: every key of "Changes to ova_fmt", printed as
@@ -860,9 +860,9 @@ committed in their own repos, with the user's go-ahead.
      keys: Ai's attacks `telekinesis`, Fukiko's combat `transformed`,
      Miho's Mode SP `transformed`, and Braun's and Natsuki's rulings
      `overrides` (now printed with `*`). Every other output of every
-     fixture was the same bytes before and after (po_ova_fmt's 368
+     fixture was the same bytes before and after (ova_fmt_po's 368
      golden cases).
-   - po_ova_fmt ported it (its PLAN.md, "Keys for the character
+   - ova_fmt_po ported it (its PLAN.md, "Keys for the character
      generator"), golden files regenerated (390 cases, two new `bad-`
      and `edge-overrides` fixtures), planted bugs caught, valgrind
      clean.
@@ -1017,7 +1017,7 @@ committed in their own repos, with the user's go-ahead.
      "Magic", which isn't an `OvaRules` name (the book has "Magic,
      Arcane" and "Magic, Witchcraft"), so it showed `p. ?` and a
      warning. Renamed "Magic, Arcane" in all three repos' copies (the
-     user's decision, 2026-10-09; po_ova_fmt's golden files
+     user's decision, 2026-10-09; ova_fmt_po's golden files
      regenerated); its spell's END is still overridden (15, the rules'
      10), and it loads with no warnings or notices. An unknown name's
      `p. ?` and warning are checked in `TestWindow` with a made-up name
@@ -1157,9 +1157,9 @@ committed in their own repos, with the user's go-ahead.
      which it measures; a Power Ceiling's and the starting levels' the
      Abilities' levels, even under Scaled Cost, where they count the
      Abilities' points, which no box shows.
-   - **Preferences**: `FlPreferences`, `$XDG_CONFIG_HOME/po_ova_cg/
-     po_ova_cg.prefs` (FLTK's vendor and application both
-     `po_ova_cg`), holding `rulebook` and `viewer`, written as each is
+   - **Preferences**: `FlPreferences`, `$XDG_CONFIG_HOME/ova_cg_po/
+     ova_cg_po.prefs` (FLTK's vendor and application both
+     `ova_cg_po`), holding `rulebook` and `viewer`, written as each is
      chosen. `OvaCg` opens them after the window and closes them on
      quitting; FLTK writes nothing back unless one changed (its
      source, `RootNode::~RootNode`), and `make test-gui` points
@@ -1211,7 +1211,7 @@ committed in their own repos, with the user's go-ahead.
    - `make test-gui` makes `obj/files` itself, so `make test-headless`
      right after `make clean` no longer fails four `TestBackground`
      checks (its Save As writes there).
-   - `make install` checked with `DESTDIR`: `po_ova_cg` alone, mode
+   - `make install` checked with `DESTDIR`: `ova_cg_po` alone, mode
      755, in `$(DESTDIR)$(PREFIX)/bin`; `make uninstall` removes it.
    - From `make clean`: `make test`, `test-headless` and `test-sway`
      pass; valgrind clean on Xvfb and sway (no errors in any of the
@@ -1220,9 +1220,9 @@ committed in their own repos, with the user's go-ahead.
 10. **The Sample NPCs**: ova_fmt's `npc-type` and `character-hooks`,
    its Sample NPCs and NPC Fragments as fixtures, and the differences
    from the book they show. [done]
-   - `OvaEntities` copied again, with po_ova_fmt's port of the Ada
+   - `OvaEntities` copied again, with ova_fmt_po's port of the Ada
      ova_fmt's commits of 2026-10-10; the 30 new fixtures and five
-     re-synced ones copied from po_ova_fmt's `test/data/`.
+     re-synced ones copied from ova_fmt_po's `test/data/`.
    - `OvaCharacter`: `characterHooks`, and `npcType`, which sets the
      sheet's kind (`SetNpcType`): none and Heroic `OvaCalc.Character`,
      Secondary `CompanionSheet`, Extra the new `ExtraSheet` (10 and
@@ -1232,7 +1232,7 @@ committed in their own repos, with the user's go-ahead.
      Hooks editor after Personality.
    - An Ability's END of 0 isn't saved unless it is an override, as
      the fixtures write none: Unsorted's copy wrote `endurance: 0`,
-     which po_ova_fmt now prints ("0 Endurance").
+     which ova_fmt_po now prints ("0 Endurance").
    - A file's single DEFENSE, where Barrier gives a second, is saved
      single (`omitBarrier`), as the Sample NPCs print it (Shadowman).
    - Witchcraft's Weakness spells cost by their size ("Spells", above).
@@ -1257,7 +1257,7 @@ committed in their own repos, with the user's go-ahead.
    Defense, beside Barrier's, after ova_fmt's `defense` came to hold
    three values (2026-10-10; designed with the user: positional
    values, `defense-2` and `defense-3`, a single value the best). [done]
-   - `OvaEntities` copied again from po_ova_fmt: `OvDefense2` (was
+   - `OvaEntities` copied again from ova_fmt_po: `OvDefense2` (was
      `OvBarrier`, and `barrier` still read as it) and `OvDefense3`.
    - `OvaRules.ThirdDefense` on Incorporeal Form (p. 55); it was 20,
      which was also `RollEach`'s, the first Perk flag, so the Perk
@@ -1326,7 +1326,7 @@ committed in their own repos, with the user's go-ahead.
      rebasing every portrait.
    - `TestFiles` round-trips Acacia (one notice, so `files.sh` unmarks
      it), Zurkrieg, Fragment, Options and the new `two-documents.yaml`
-     (two `---` documents, saved as one, which po_ova_fmt formats the
+     (two `---` documents, saved as one, which ova_fmt_po formats the
      same), and checks their order and notices. `TestWindow` checks
      switching, renaming, adding, duplicating (the copy shares
      nothing), moving, removing, saving all and loading them back, the
@@ -1357,9 +1357,9 @@ committed in their own repos, with the user's go-ahead.
   `TestBackground`, `TestLinked`, `TestLimits`),
   never on the desktop (AGENTS.md).
 - `make valgrind`: the unit tests and window tests under valgrind, with
-  po_ova_fmt's and pofltk's suppressions and pofltk's `vg-check.sh`.
+  ova_fmt_po's and pofltk's suppressions and pofltk's `vg-check.sh`.
 - The oracle for calculations is the sample characters; the oracle for
-  files is po_ova_fmt.
+  files is ova_fmt_po.
 
 ## Open questions
 
@@ -1387,7 +1387,7 @@ Decided (2026-10-09; by the user unless it says checked):
 - ~~Does polibfyaml emit YAML~~: yes, `Fyaml.Document.ToYAML` and
   `ToFile` (`src/Fyaml.Mod`), with `NewDocument` and the `Create*`
   procedures to build it. ova_fmt ignores a key it doesn't know (tried
-  on po_ova_fmt), but the new keys are added to it anyway.
+  on ova_fmt_po), but the new keys are added to it anyway.
 - ~~How ova_fmt prints the new keys~~: as proposed: `player` beside the
   name in the header; `appearance` and `other-notes` as text sections
   like `personality` and `notes`; combat `notes` after the combat
@@ -1397,7 +1397,7 @@ Decided (2026-10-09; by the user unless it says checked):
   `overrides` lists) printed with `*` after it (`ROLL 8*`), in every
   format. In the reST and Markdown formats the `*` is escaped (`\*`),
   so it isn't read as emphasis; the golden files show it.
-- ~~No display~~: po_ova_cg needs one for its own window, so with
+- ~~No display~~: ova_cg_po needs one for its own window, so with
   neither `DISPLAY` nor `WAYLAND_DISPLAY` set it prints an error and
   exits with status 1, before opening anything ("Starting").
 - ~~The viewer through the shell or a C part~~: a C part, `OvaSpawn`,

@@ -2,7 +2,7 @@ MODULE TestFiles; (* OvaCharacter and OvaSave: loading, saving, and loading agai
 
 (* PLAN.md, "Files". Each fixture, every character in it, is loaded,
    saved into ../obj/files/ (for test/files.sh, which formats both with
-   po_ova_fmt and compares), and loaded again: the second load must
+   ova_fmt_po and compares), and loaded again: the second load must
    give the same YAML, and no notices, since the copy's overrides: keys
    list every number kept as an override. The notices are the numbers
    the first load kept as overrides, those the file differs from the
@@ -74,7 +74,7 @@ BEGIN
   RoundTrip("Daisuke", 0); RoundTrip("Fukiko", 0); RoundTrip("Karis", 0); RoundTrip("Miho", 0);
   RoundTrip("Natsuki", 0); RoundTrip("Raine", 0); RoundTrip("Shou", 0); RoundTrip("Yuu", 0);
   RoundTrip("Sheet", 0); RoundTrip("Defenses", 0); RoundTrip("Wisp", 0);
-  (* po_ova_fmt's own, for its formats: their numbers were never the
+  (* ova_fmt_po's own, for its formats: their numbers were never the
      rules', so they come back as overrides. *)
   RoundTrip("Escaping", 5); RoundTrip("Unsorted", 8); RoundTrip("Vehicle", 5);
   (* The Sample NPCs: a Secondary NPC's sheet is a Companion's
@@ -94,7 +94,7 @@ BEGIN
   RoundTrip("Shinto-Priest", 0); RoundTrip("Snobbish-Upperclassman", 0); RoundTrip("Spider-Tank", 0);
   RoundTrip("Thugs", 0); RoundTrip("Venomous-Killer", 0); RoundTrip("Weathered-Salaryman", 0);
   RoundTrip("Weird-Exchange-Student", 0); RoundTrip("Wild-Beast", 0); RoundTrip("Zombies", 0);
-  (* po_ova_fmt's two of two Fragments each, and the generator's own of
+  (* ova_fmt_po's two of two Fragments each, and the generator's own of
      two YAML documents. *)
   RoundTrip("Fragment", 0); RoundTrip("Options", 0); RoundTrip("two-documents", 0)
 END Fixtures;
@@ -257,7 +257,7 @@ BEGIN
   Check.Check(Ropes.Equal(c2.name, c.name), "awkward text: the name");
   Check.Check(Ropes.Equal(c2.tagline, c.tagline), "awkward text: the tagline");
   (* The file keeps the background's first blanks; OvaEntities trims
-     it on loading, as po_ova_fmt and the Ada ova_fmt do. *)
+     it on loading, as ova_fmt_po and the Ada ova_fmt do. *)
   d := Fyaml.ParseFile("../obj/files/awkward.yaml", err);
   ok := d # NIL;
   IF ok THEN

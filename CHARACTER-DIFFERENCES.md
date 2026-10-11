@@ -14,7 +14,7 @@ the file, 40 by the rules: kept as an override"). `TestFiles` expects
 exactly the notices below, for every file the generator can load, and
 saving a copy lists them, so a copy loads with none.
 
-po_ova_fmt's own fixtures (Escaping, Unsorted, Vehicle) aren't the
+ova_fmt_po's own fixtures (Escaping, Unsorted, Vehicle) aren't the
 book's, and their numbers were never meant to be the rules'; they are
 left out here.
 

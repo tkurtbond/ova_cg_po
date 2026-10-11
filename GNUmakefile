@@ -1,4 +1,4 @@
-# po_ova_cg -- an OVA character generator in Oberon-2, built with poc,
+# ova_cg_po -- an OVA character generator in Oberon-2, built with poc,
 # the Peaseblossom Oberon Compiler, with pofltk (FLTK) for its window and
 # polibfyaml for its files.  See AGENTS.md and PLAN.md.
 #
@@ -36,7 +36,7 @@ IMPORTS := -import-path src $(LIBPATH)
 
 OBJ := obj
 
-PROGRAM := po_ova_cg
+PROGRAM := ova_cg_po
 MAIN    := OvaCg
 
 # Every source and library a program is built from, for make's
@@ -83,9 +83,9 @@ $(PROGRAM): src/$(MAIN).Mod $(PROGSRC) $(SHAREDLIBMANIFESTS) | $(OBJ)
 $(OBJ)/Test%: test/Test%.Mod $(TESTSUPPORT) $(PROGSRC) $(SHAREDLIBMANIFESTS) | $(OBJ)
 	$(POC) $(POCFLAGS) $(IMPORTS) -import-path test -output-dir $(OBJ) $(LINK) -o $@ $<
 
-# po_ova_fmt, the oracle for files: what the generator saves must
+# ova_fmt_po, the oracle for files: what the generator saves must
 # format as the file it loaded (test/files.sh, after TestFiles).
-PO_OVA_FMT ?= $(HOME)/Repos/RPG/Tools/po_ova_fmt/po_ova_fmt
+OVA_FMT_PO ?= $(HOME)/Repos/RPG/Tools/ova_fmt_po/ova_fmt_po
 
 # What needs no display: the unit tests, test/files.sh, then
 # test/cli.sh; fail at the end if any failed.
@@ -93,7 +93,7 @@ test: $(PROGRAM) $(TESTBINS) | $(OBJ)/files
 	@status=0; for t in $(TESTS); do \
 	  echo "== $$t"; (cd test && timeout $(TIMEOUT) ../$(OBJ)/$$t) || status=1; \
 	done; \
-	echo "== files.sh"; test/files.sh $(PO_OVA_FMT) || status=1; \
+	echo "== files.sh"; test/files.sh $(OVA_FMT_PO) || status=1; \
 	echo "== cli.sh"; test/cli.sh ./$(PROGRAM) || status=1; \
 	exit $$status
 
@@ -184,7 +184,7 @@ valgrind-sway: tests
 
 # ---- Installation ----
 #
-# To $(PREFIX)/bin, $HOME/local/bin by default, as po_ova_fmt's.
+# To $(PREFIX)/bin, $HOME/local/bin by default, as ova_fmt_po's.
 # DESTDIR is prepended, for staging.
 PREFIX ?= $(HOME)/local
 BINDIR ?= $(PREFIX)/bin

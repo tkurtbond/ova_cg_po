@@ -1,14 +1,14 @@
 # AGENTS.md
 
-Working notes for an agent in this repo, which holds `po_ova_cg`, a
+Working notes for an agent in this repo, which holds `ova_cg_po`, a
 character generator for OVA (Open Versatile Anime engine). It is an
 Oberon-2 program compiled with poc, the Peaseblossom Oberon Compiler,
 with an FLTK window (pofltk) and YAML files (polibfyaml) in ova_fmt's
 format. PLAN.md is the design and the build order; this file is
 operational notes, not a design doc.
 
-Its build, test and coding conventions are po_ova_fmt's
-(`~/Repos/RPG/Tools/po_ova_fmt`), the poc port of ova_fmt, whose
+Its build, test and coding conventions are ova_fmt_po's
+(`~/Repos/RPG/Tools/ova_fmt_po`), the poc port of ova_fmt, whose
 `AGENTS.md` has the hard-won notes on ropes, polibfyaml and poc. Read it
 before writing any code here; what it says applies here too unless this
 file says otherwise.
@@ -22,7 +22,7 @@ file says otherwise.
 | Character sheet | `~/Reference/RPG/OVA/OVA-CharacterRecord-Letter.pdf` (landscape letter) |
 | Descriptions as Markdown | `~/Reference/RPG/OVA/abilities.md`, `weaknesses.md` -- **never copy into this repo** (below) |
 | The YAML format | the Ada ova_fmt: `~/Repos/RPG/Tools/ova_fmt/PLAN.md` and `test-data/*.yaml` |
-| The poc ova_fmt (loader, build, tests to copy) | `~/Repos/RPG/Tools/po_ova_fmt/` |
+| The poc ova_fmt (loader, build, tests to copy) | `~/Repos/RPG/Tools/ova_fmt_po/` |
 | The Ada ova_fmt (gets the new keys first) | `~/Repos/RPG/Tools/ova_fmt/` |
 | pofltk (FLTK 1.4 binding) | `~/Repos/Oberon/pofltk/` (`README.md`, `AGENTS.md`, `examples/`, `doc/fltk-issues.md`); poc library `pofltk` in `$POC_OBERON_LIBRARIES/pofltk` |
 | polibfyaml, Ropes, ArgParser | `~/Repos/Oberon/polibfyaml`, `~/Repos/Oberon/Ropes`, `~/Repos/Oberon/ArgParser`; poc libraries under `$POC_OBERON_LIBRARIES` (default `/usr/local/sw/versions/oberon/poc/lib`) |
@@ -54,9 +54,9 @@ labels are the printed numbers (`/PageLabels`: roman for indexes 0 and
 ## Build / test
 
 ```sh
-make                 # obj/ (poc output) and ./po_ova_cg
+make                 # obj/ (poc output) and ./ova_cg_po
 make test            # what needs no display: unit tests (TESTS), test/files.sh
-                     #   (needs po_ova_fmt built: PO_OVA_FMT), test/cli.sh
+                     #   (needs ova_fmt_po built: OVA_FMT_PO), test/cli.sh
 make check-pages     # OvaRules' pages against the rulebook PDF's headings (needs mutool)
 make test-viewers    # OvaViewer with real okular, evince, mupdf (test/viewer.sh;
                      #   its own headless sway and private bus; ~30 s)
@@ -67,7 +67,7 @@ make valgrind-headless   # every test under valgrind, on Xvfb; also valgrind-swa
                      #   (forked children silent: --child-silent-after-fork)
 make install         # to $(PREFIX)/bin, default ~/local/bin (DESTDIR for staging)
 make uninstall
-make clean           # rm -rf obj po_ova_cg
+make clean           # rm -rf obj ova_cg_po
 make print-VAR       # show a makefile variable
 ```
 
@@ -101,8 +101,8 @@ make print-VAR       # show a makefile variable
   needs nothing in the makefile; a new unit test only its name in
   `TESTS`.
 - **Don't run `make install` with the default `PREFIX` unless asked.**
-- **`src/OvaEntities.Mod` and `src/OvaText.Mod` are po_ova_fmt's,
-  copied**, so the generator reads exactly what po_ova_fmt reads.
+- **`src/OvaEntities.Mod` and `src/OvaText.Mod` are ova_fmt_po's,
+  copied**, so the generator reads exactly what ova_fmt_po reads.
   Change them there (and in the Ada ova_fmt first, for a new key), then
   copy them again; never edit the copies.
 
@@ -113,7 +113,7 @@ make print-VAR       # show a makefile variable
   not a scratch program. The user's desktop is Wayland, and XWayland is
   the desktop too. Use `make test-headless` (Xvfb, `WAYLAND_DISPLAY`
   unset) or `make test-sway` (pofltk's `tools/with-sway.sh`), and for a
-  single run `env -u WAYLAND_DISPLAY xvfb-run -a ./po_ova_cg ...`.
+  single run `env -u WAYLAND_DISPLAY xvfb-run -a ./ova_cg_po ...`.
 - **Never start the user's PDF viewer either.** `TestSpawn` and
   `TestViewer` put fakes in the programs' places (`OvaViewer.okular`,
   `.evince`, `.mupdf`, `.xdgOpen`, `.gdbus`): `test/fake-viewer.sh`
@@ -137,7 +137,7 @@ make print-VAR       # show a makefile variable
 
 ## Working with ropes, pofltk and poc here
 
-po_ova_fmt's notes hold (the empty rope is NIL; absence needs a flag;
+ova_fmt_po's notes hold (the empty rope is NIL; absence needs a flag;
 callbacks are module-level procedures; no exceptions; no call chaining;
 `(*` nests in comments; string literals of at most 255 characters;
 `CONST`, `TYPE` and `VAR` before the first procedure). Beside them:
@@ -203,7 +203,7 @@ callbacks are module-level procedures; no exceptions; no call chaining;
   (PLAN.md, "The rulebook viewer"): an argument vector, no shell and no
   quoting, detached in its own session so closing the terminal doesn't
   close the viewer, and a missing program reported as `ENOENT`.
-- **Never write the user's preferences** (`~/.config/po_ova_cg/`): a
+- **Never write the user's preferences** (`~/.config/ova_cg_po/`): a
   test opens its own file in `obj/` (`FlPreferences.OpenFile`), and
   `make test-gui` runs the program with `XDG_CONFIG_HOME` in `obj/`.
 - **Reuse the user's running viewer** (okular over D-Bus, evince by
@@ -239,24 +239,24 @@ callbacks are module-level procedures; no exceptions; no call chaining;
   transformed, a sheet shown transformed); the book's two rulings,
   which the fixtures list in `overrides:`, are set in `TestCalc`'s
   `Sample` as overrides, each commented.
-- **New YAML keys go into the Ada ova_fmt first, then po_ova_fmt**
+- **New YAML keys go into the Ada ova_fmt first, then ova_fmt_po**
   (PLAN.md, "Changes to ova_fmt"), each in its own repo, following that
   repo's AGENTS.md (golden files from the Ada binary, fixtures kept the
   same), and committed only with the user's go-ahead. The generator
   saves a key only once both ova_fmts read it.
-- **A file the program saves must load in po_ova_fmt** and format the
+- **A file the program saves must load in ova_fmt_po** and format the
   same as the file it was loaded from (round trip, PLAN.md):
   `TestFiles` saves each fixture into `obj/files/`, and `test/files.sh`
-  formats both in every po_ova_fmt format and compares. A number a
+  formats both in every ova_fmt_po format and compares. A number a
   file's `overrides:` lists is an override; any other that differs
   from the rules' is kept as one too, with a notice. `TestFiles` fixes
-  how many each fixture gives (none but po_ova_fmt's Escaping,
+  how many each fixture gives (none but ova_fmt_po's Escaping,
   Unsorted and Vehicle, and the Sample NPCs Nazo and Shadowman, which
   `files.sh` names too), so a new rule or
   key that changes them shows there; a saved copy must give none.
 - Unit tests print `ok   - <label>` / `FAIL - <label>` and end with
   `All checks passed.` or `<N> check(s) failed.`, exiting 1 on failure,
-  as po_ova_fmt's do (`test/Check.Mod`).
+  as ova_fmt_po's do (`test/Check.Mod`).
 - **Prove a new check can fail**: plant the bug it targets and watch it
   fail.
 - `make valgrind` must have no errors, nothing lost, and no

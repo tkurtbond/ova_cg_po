@@ -1,25 +1,25 @@
 #!/bin/bash
-# The round trip through po_ova_fmt (PLAN.md, "Files"): each fixture
+# The round trip through ova_fmt_po (PLAN.md, "Files"): each fixture
 # TestFiles loaded and saved (obj/files/NAME.yaml) must format exactly
-# as the fixture does (test/data/NAME.yaml), in every format po_ova_fmt
+# as the fixture does (test/data/NAME.yaml), in every format ova_fmt_po
 # has, and with -O, which shows the options: block. Run after TestFiles.
 #
 # A fixture that loaded with notices (numbers that differ from the rules
 # without its overrides: listing them) saves with those numbers listed,
-# so its copy prints them with po_ova_fmt's "*" (or "\*") after them.
-# For such a fixture (po_ova_fmt's own three, and the Sample NPCs whose
+# so its copy prints them with ova_fmt_po's "*" (or "\*") after them.
+# For such a fixture (ova_fmt_po's own three, and the Sample NPCs whose
 # book numbers aren't the rules', Acacia and Nazo, named here, as
 # TestFiles expects their notices), the two outputs are compared with that mark
 # taken out of both; TestFiles checks that the copy lists every such
 # number, since it reloads with no notices. Every other fixture's copy
 # must format exactly the same, so an override listed wrongly shows.
 #
-# usage: test/files.sh PO_OVA_FMT
+# usage: test/files.sh OVA_FMT_PO
 set -u
-fmt=${1:?usage: files.sh PO_OVA_FMT}
+fmt=${1:?usage: files.sh OVA_FMT_PO}
 cd "$(dirname "$0")/.." || exit 1
 if [ ! -x "$fmt" ]; then
-  echo "FAIL - $fmt isn't there: build po_ova_fmt (make in its repo), or set PO_OVA_FMT"
+  echo "FAIL - $fmt isn't there: build ova_fmt_po (make in its repo), or set OVA_FMT_PO"
   exit 1
 fi
 # Takes out the override mark: a "\*", or a "*" after a number but

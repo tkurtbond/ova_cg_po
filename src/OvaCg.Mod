@@ -1,4 +1,4 @@
-MODULE OvaCg; (* po_ova_cg: an OVA character generator; the main module *)
+MODULE OvaCg; (* ova_cg_po: an OVA character generator; the main module *)
 
 (* PLAN.md, "Starting": the command line, then the file, then a
    display, then the window. A file that can't be opened is said on
@@ -11,11 +11,11 @@ MODULE OvaCg; (* po_ova_cg: an OVA character generator; the main module *)
 IMPORT ArgParser, Err, Fl, FlPreferences, OvaCharacter, OvaText, OvaViewer, OvaWindow, Out, Platform, Ropes;
 
 CONST
-  Program = "po_ova_cg";
+  Program = "ova_cg_po";
   FailureStatus = 1;
   (* The preferences' file: $XDG_CONFIG_HOME (else ~/.config), then
-     po_ova_cg/po_ova_cg.prefs (FLTK's vendor and application). *)
-  Vendor = "po_ova_cg"; Application = "po_ova_cg";
+     ova_cg_po/ova_cg_po.prefs (FLTK's vendor and application). *)
+  Vendor = "ova_cg_po"; Application = "ova_cg_po";
 
 VAR
   parser: ArgParser.Parser;
@@ -61,7 +61,7 @@ END DoArgument;
    ArgParser.UsageErrorStatus (2). *)
 PROCEDURE ParseCommandLine;
 BEGIN
-  parser := ArgParser.NewParser("po_ova_cg [options] [file.yaml]", DoArgument);
+  parser := ArgParser.NewParser("ova_cg_po [options] [file.yaml]", DoArgument);
   parser.AddOption(ArgParser.MakeOption("h", "help", "Display this text.", DoHelp));
   parser.AddOption(ArgParser.MakeStringOption("r", "rulebook",
     "The rulebook's PDF (else OVA_RULEBOOK, else the one chosen before, else ~/Reference/RPG/OVA/).",

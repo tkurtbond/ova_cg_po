@@ -6,8 +6,8 @@ MODULE OvaCharacter; (* The character being built: OvaCalc's sheet, with its nam
    fluff, and the flags saying which optional keys a file had, so that
    a file loaded and saved formats the same in ova_fmt.
 
-   A file is read by OvaEntities, po_ova_fmt's loader (copied), so the
-   generator reads exactly what po_ova_fmt reads, and then built into a
+   A file is read by OvaEntities, ova_fmt_po's loader (copied), so the
+   generator reads exactly what ova_fmt_po reads, and then built into a
    Character. A number the file's overrides: key lists is an override.
    Every other number the file holds is compared with the one OvaCalc
    computes; one that differs is kept as an override too, with a
@@ -560,7 +560,7 @@ BEGIN
 END KeepEntity;
 
 (* Every entity of the file at path, of every document in it, in order,
-   read as po_ova_fmt reads them: es[0 .. n-1]. FALSE, with msg, if it
+   read as ova_fmt_po reads them: es[0 .. n-1]. FALSE, with msg, if it
    can't be read, or OvaEntities finds a problem in any of them. *)
 PROCEDURE ReadEntities*(path: ARRAY OF CHAR; VAR es: Entities; VAR n: INTEGER; VAR msg: Rope): BOOLEAN;
   VAR s: FyamlStreams.Stream; d: Fyaml.Document; err: Fyaml.Error; root, item: Fyaml.Node;

@@ -17,7 +17,7 @@ run() { env -u DISPLAY -u WAYLAND_DISPLAY -u TMUX "$prog" "$@" >"$out/stdout" 2>
 
 run -h
 check "-h exits 0" test $st -eq 0
-check "-h prints the usage" grep -q 'po_ova_cg \[options\]' "$out/stdout"
+check "-h prints the usage" grep -q 'ova_cg_po \[options\]' "$out/stdout"
 check "-h needs no display" test ! -s "$out/stderr"
 
 run --no-such-option
@@ -25,33 +25,33 @@ check "an unknown option exits 2" test $st -eq 2
 
 run --viewer nonsense
 check "a --viewer it doesn't know exits 2" test $st -eq 2
-check "and says what it takes" grep -q '^po_ova_cg: --viewer takes okular, evince, mupdf, xdg-open' "$out/stderr"
+check "and says what it takes" grep -q '^ova_cg_po: --viewer takes okular, evince, mupdf, xdg-open' "$out/stderr"
 
 run test/data/Ai.yaml test/data/Braun.yaml
 check "two files exit 2" test $st -eq 2
-check "and say one at a time" grep -qx 'po_ova_cg: one file at a time: test/data/Braun.yaml' "$out/stderr"
+check "and say one at a time" grep -qx 'ova_cg_po: one file at a time: test/data/Braun.yaml' "$out/stderr"
 
 # The file is read before the display is looked for, so these need none.
 run some-file.yaml
 check "a file that isn't there exits 1" test $st -eq 1
-check "and says why" grep -qx 'po_ova_cg: some-file.yaml: error: No such file or directory' "$out/stderr"
+check "and says why" grep -qx 'ova_cg_po: some-file.yaml: error: No such file or directory' "$out/stderr"
 
 run test/data/Broken.yaml
 check "a file with mistakes exits 1" test $st -eq 1
 check "and lists them" grep -q 'missing required key "name"' "$out/stderr"
 
 run -v okular -r /nowhere.pdf test/data/Ai.yaml
-check "a good file and options: on to the display" grep -q '^po_ova_cg: no display' "$out/stderr"
+check "a good file and options: on to the display" grep -q '^ova_cg_po: no display' "$out/stderr"
 
 run
 check "no display exits 1" test $st -eq 1
-check "no display says so" grep -qx 'po_ova_cg: no display: neither DISPLAY nor WAYLAND_DISPLAY is set' "$out/stderr"
+check "no display says so" grep -qx 'ova_cg_po: no display: neither DISPLAY nor WAYLAND_DISPLAY is set' "$out/stderr"
 check "no display, outside tmux: one line" test "$(wc -l < "$out/stderr")" -eq 1
 check "no display writes nothing to standard output" test ! -s "$out/stdout"
 
 env -u DISPLAY -u WAYLAND_DISPLAY TMUX=/tmp/tmux-test/default,1,0 "$prog" >"$out/stdout" 2>"$out/stderr"; st=$?
 check "no display in tmux exits 1" test $st -eq 1
-check "no display in tmux: the tmux hint" grep -q '^po_ova_cg: in tmux, .*tmux show-environment -g' "$out/stderr"
+check "no display in tmux: the tmux hint" grep -q '^ova_cg_po: in tmux, .*tmux show-environment -g' "$out/stderr"
 check "no display in tmux: two lines" test "$(wc -l < "$out/stderr")" -eq 2
 
 env -u TMUX DISPLAY= WAYLAND_DISPLAY= "$prog" >"$out/stdout" 2>"$out/stderr"; st=$?

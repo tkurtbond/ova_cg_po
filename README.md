@@ -1,13 +1,13 @@
-# po_ova_cg - an OVA character generator in Oberon-2, built with poc
+# ova_cg_po - an OVA character generator in Oberon-2, built with poc
 
-`po_ova_cg` builds a character for OVA, the Open Versatile Anime
+`ova_cg_po` builds a character for OVA, the Open Versatile Anime
 engine, in a window laid out like the official character sheet: pick
 Abilities and Weaknesses by name and level, build attacks from Perks and
 Flaws, and it works out Endurance costs, ROLL, DX, Defense, Health,
 Endurance and Threat Value as you go. It holds no rules text: each name
 shows its rulebook page, and the program can open the rulebook's PDF at
 that page in your PDF viewer. Characters are saved as YAML that
-[po_ova_fmt](../po_ova_fmt) and the Ada [ova_fmt](../ova_fmt) format.
+[ova_fmt_po](../ova_fmt_po) and the Ada [ova_fmt](../ova_fmt) format.
 
 It is written in Oberon-2 for poc, the
 [Peaseblossom](https://github.com/tkurtbond/peaseblossom) Oberon
@@ -23,7 +23,7 @@ the sheet's other half, the background, portrait, fluff and notes.
 ## Usage
 
 ```
-po_ova_cg [options] [file.yaml]
+ova_cg_po [options] [file.yaml]
 ```
 
 `-h` lists the options: `-r`/`--rulebook PATH` gives the rulebook's PDF
@@ -32,7 +32,7 @@ PDF..., else `~/Reference/RPG/OVA/`), and `-v`/`--viewer` the viewer
 (`okular`, `evince`, `mupdf`, `xdg-open`, or a command with `%f` for
 the PDF, `%p` its page and `%l` the printed page), else the one chosen
 with Rulebook > Viewer.... Those two choices are kept in
-`$XDG_CONFIG_HOME/po_ova_cg/po_ova_cg.prefs` (else under `~/.config`). A file that
+`$XDG_CONFIG_HOME/ova_cg_po/ova_cg_po.prefs` (else under `~/.config`). A file that
 can't be read, or holds mistakes, is reported and the program exits
 with status 1. The program needs a display (`DISPLAY` or
 `WAYLAND_DISPLAY`); without one it says so and exits with status 1.
@@ -194,8 +194,8 @@ You need:
   `POC_OBERON_LIBRARIES` (default `/usr/local/sw/versions/oberon/poc/lib`).
   Install them again after upgrading poc, which refuses a library
   another version built.
-- For `make test`: po_ova_fmt, built, at `PO_OVA_FMT` (default
-  `~/Repos/RPG/Tools/po_ova_fmt/po_ova_fmt`): what the generator saves
+- For `make test`: ova_fmt_po, built, at `OVA_FMT_PO` (default
+  `~/Repos/RPG/Tools/ova_fmt_po/ova_fmt_po`): what the generator saves
   must format as the file it loaded.
 - polibfyaml with `CreateStyledScalar` (2026-10-09 or later).
 - For the window tests: Xvfb (`xvfb-run`) and `xdotool`, or sway.
@@ -205,7 +205,7 @@ You need:
   (default `~/Repos/Oberon/pofltk`), for its `test/vg-check.sh`.
 
 ```sh
-make                 # ./po_ova_cg
+make                 # ./ova_cg_po
 make test            # the tests that need no display
 make test-headless   # the window tests, on Xvfb
 make test-sway       # the window tests, on a headless sway (Wayland)
