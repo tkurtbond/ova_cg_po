@@ -140,7 +140,9 @@ BEGIN
   Pair(n, "level", Int(t.level));
   TextPair(n, "detail", t.hasDetail, t.detail);
   Mods(n, "perks", t.mods, FALSE); Mods(n, "flaws", t.mods, TRUE);
-  IF t.hasEnd OR t.end.overridden THEN Pair(n, "endurance", Num(t.end)) END;
+  (* An END of 0 isn't written, as the fixtures don't write one; an
+     override always is. *)
+  IF t.hasEnd & (OvaCalc.Value(t.end) # 0) OR t.end.overridden THEN Pair(n, "endurance", Num(t.end)) END;
   TextPair(n, "note", t.hasNote, t.note);
   IF t.hasHalfTV THEN Pair(n, "threat-value-half", Bool(t.halfTV)) END;
   set := {}; Over(set, OvaEntities.OvEndurance, t.end); Overrides(n, set);
@@ -210,7 +212,7 @@ BEGIN
   IF ~c.hasCombat THEN RETURN END;
   n := d.CreateMapping();
   OvaCalc.Text(c.defense, def);
-  IF c.hasBarrier OR c.barrier.overridden THEN
+  IF c.hasBarrier & ~c.omitBarrier OR c.barrier.overridden THEN
     OvaCalc.Text(c.barrier, b); AppendTo(def, "/"); AppendTo(def, b)
   END;
   Pair(n, "defense", d.CreateStyledScalar(def, Fyaml.StylePlain));
@@ -272,6 +274,7 @@ BEGIN
   m := d.CreateMapping();
   Pair(m, "name", Text(c.name));
   IF c.isFragment THEN Pair(m, "fragment", Bool(TRUE)) END;
+  IF c.hasNpcType THEN Pair(m, "npc-type", Text(OvaEntities.NpcTypeName(c.npcType))) END;
   TextPair(m, "player", c.hasPlayer, c.player);
   TextPair(m, "portrait", c.hasPortrait, c.portrait);
   TextPair(m, "tagline", c.hasTagline, c.tagline);
@@ -279,6 +282,7 @@ BEGIN
   TextPair(m, "background", c.hasBackground, c.background);
   TextPair(m, "appearance", c.hasAppearance, c.appearance);
   TextPair(m, "personality", c.hasPersonality, c.personality);
+  TextPair(m, "character-hooks", c.hasCharacterHooks, c.characterHooks);
   TextPair(m, "other-notes", c.hasOtherNotes, c.otherNotes);
   IF c.hasOptions THEN
     o := d.CreateMapping();

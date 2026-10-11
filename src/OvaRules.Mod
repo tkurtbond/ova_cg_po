@@ -20,6 +20,11 @@ MODULE OvaRules; (* The rulebook's names, pages and numbers: no descriptions *)
 IMPORT Strings;
 
 CONST
+  (* Where the NPC types, Heroic, Secondary and Extra (ova_fmt's
+     npc-type:), are described: their Health and Endurance; TV's step
+     for them is on p. 124. *)
+  NpcTypesPage* = 123;
+
   (* Kinds *)
   Ability* = 0; Weakness* = 1; Perk* = 2; Flaw* = 3;
 
@@ -415,6 +420,13 @@ BEGIN
   COPY(it.name, s); PageText(it, p);
   Strings.Append(" (", s); Strings.Append(p, s); Strings.Append(")", s)
 END Label;
+
+(* "Secondary (p. 123)": a name that isn't one of the items', with the
+   page it is described on. *)
+PROCEDURE PageLabel*(name: ARRAY OF CHAR; page: INTEGER; VAR s: ARRAY OF CHAR);
+BEGIN
+  COPY(name, s); Strings.Append(" (p. ", s); AppendInt(page, s); Strings.Append(")", s)
+END PageLabel;
 
 (* name's label, as written, if the tables have it: "Magic, Testing
    (p. ?)" if they don't. *)

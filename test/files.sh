@@ -7,8 +7,9 @@
 # A fixture that loaded with notices (numbers that differ from the rules
 # without its overrides: listing them) saves with those numbers listed,
 # so its copy prints them with po_ova_fmt's "*" (or "\*") after them.
-# For such a fixture (po_ova_fmt's own three, named here, as TestFiles
-# expects their notices), the two outputs are compared with that mark
+# For such a fixture (po_ova_fmt's own three, and the Sample NPCs whose
+# book numbers aren't the rules', named here, as TestFiles expects their
+# notices), the two outputs are compared with that mark
 # taken out of both; TestFiles checks that the copy lists every such
 # number, since it reloads with no notices. Every other fixture's copy
 # must format exactly the same, so an override listed wrongly shows.
@@ -31,7 +32,7 @@ for saved in obj/files/*.yaml; do
   orig=test/data/$name.yaml
   [ -f "$orig" ] || continue
   case $name in
-    Escaping|Unsorted|Vehicle) filter=unmark; but=", but for its overrides' marks" ;;
+    Escaping|Unsorted|Vehicle|Nazo|Shadowman) filter=unmark; but=", but for its overrides' marks" ;;
     *) filter=cat; but= ;;
   esac
   for opt in "" -H -G -M -g -m -O; do

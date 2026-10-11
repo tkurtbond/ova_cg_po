@@ -28,6 +28,7 @@ CONST
   Character* = 0;       (* 40 and 40 (p. 19); a Vehicle's too (p. 64) *)
   CompanionSheet* = 1;  (* 20 and 20 (p. 52); TV 4 less, at least 1, a Secondary NPC's (p. 123-124) *)
   MinionSheet* = 2;     (* 10 and 10 (p. 58) *)
+  ExtraSheet* = 3;      (* 10 and 10 (p. 123); TV always 1, an Extra's (p. 124) *)
 
   (* Warning codes. Each names what it is about in its trait, attack,
      mod or spell; NIL for the sheet as a whole. *)
@@ -37,7 +38,7 @@ CONST
   CostRange* = 3;       (* mod: a chosen cost outside its range, or not in steps of 5 (p. 87-88) *)
   NoDamageIneffective* = 4;  (* attack: No Damage with Ineffective (p. 88) *)
   RedirectableAlone* = 5;    (* attack: Redirectable without Ranged (p. 86) *)
-  SpellRange* = 6;      (* spell: its level, or its Magic's, not 1 to 5: no cost (p. 58) *)
+  SpellRange* = 6;      (* spell: its Magic's level not 1 to 5, or its own not 1 to 5 or -1 to -3: no cost (p. 58) *)
   TableRange* = 7;      (* Tough, Vigorous or Endurance Reserve past +5 in all: counted as +5 *)
   BaseZeroBroken* = 8;  (* the Character Total (or points) beyond Base Zero's range (p. 21) *)
   StartingBroken* = 9;  (* Abilities beyond the starting levels and the Weaknesses' (p. 21) *)
@@ -511,9 +512,11 @@ END ComputeAttack;
 
 (* An Ability's or Weakness's own warnings and END, and its spells'
    costs (p. 58): by the Magic's level and the spell's, "+" for an
-   Ability that spends Endurance of its own (Barrier). *)
+   Ability that spends Endurance of its own (Barrier). A spell at -1 to
+   -3 casts a Weakness, as Witchcraft's do, at the same costs (p. 58):
+   by its size, as Acacia's curses cost (p. 134). *)
 PROCEDURE ComputeTrait(s: Sheet; t: Trait);
-  VAR sp: Spell;
+  VAR sp: Spell; size: INTEGER;
 BEGIN
   IF t.item = NIL THEN Warn(s, UnknownItem, t, NIL, NIL, NIL) END;
   IF (t.kind = OvaRules.Ability) & ((t.level < 1) OR (t.level > MaxLevel))
@@ -525,8 +528,10 @@ BEGIN
   CheckMods(s, t.mods, t, NIL);
   sp := t.spells;
   WHILE sp # NIL DO
-    IF (t.level >= 1) & (t.level <= MaxLevel) & (sp.level >= 1) & (sp.level <= MaxLevel) THEN
-      SetComputed(sp.end, OvaRules.SpellCost(t.level, sp.level), FALSE,
+    size := ABS(sp.level);
+    IF (t.level >= 1) & (t.level <= MaxLevel)
+       & ((sp.level >= 1) & (sp.level <= MaxLevel) OR (sp.level <= -1) & (sp.level >= MinWeakness)) THEN
+      SetComputed(sp.end, OvaRules.SpellCost(t.level, size), FALSE,
         (sp.item # NIL) & (OvaRules.OwnCost IN sp.item.flags))
     ELSE
       Set(sp.end, 0); Warn(s, SpellRange, t, NIL, NIL, sp)
@@ -562,7 +567,7 @@ BEGIN
   CASE s.kind OF
     Character: base := CharacterBase
   | CompanionSheet: base := CompanionBase
-  | MinionSheet: base := MinionBase
+  | MinionSheet, ExtraSheet: base := MinionBase
   END;
   Set(s.health, base + OvaRules.ToughBonus(TableLevel(s, Sum(s, OvaRules.HealthTable, form)))
     + 10 * Sum(s, OvaRules.HealthTens, form));
@@ -621,6 +626,7 @@ BEGIN
   IF s.kind = CompanionSheet THEN
     DEC(tv, CompanionTV);
     IF tv < 1 THEN tv := 1 END
+  ELSIF s.kind = ExtraSheet THEN tv := 1
   END;
   Set(s.tv, tv)
 END ComputeTV;

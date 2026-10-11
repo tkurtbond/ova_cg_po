@@ -37,8 +37,12 @@ TYPE
     name*: Rope;
     hasPlayer*, hasPortrait*: BOOLEAN;
     player*, portrait*: Rope;  (* portrait: the image's path, relative to the file *)
-    hasTagline*, hasSummary*, hasBackground*, hasAppearance*, hasPersonality*, hasOtherNotes*: BOOLEAN;
-    tagline*, summary*, background*, appearance*, personality*, otherNotes*: Rope;
+    hasTagline*, hasSummary*, hasBackground*, hasAppearance*, hasPersonality*, hasCharacterHooks*,
+    hasOtherNotes*: BOOLEAN;
+    tagline*, summary*, background*, appearance*, personality*, characterHooks*, otherNotes*: Rope;
+    (* npc-type: OvaEntities.Heroic, Secondary or Extra; it sets the
+       sheet's kind (SetNpcType). *)
+    hasNpcType-: BOOLEAN; npcType-: INTEGER;
     notes*: Note;
     hasFluff*: BOOLEAN;
     hasFluffField*: ARRAY NFluff OF BOOLEAN;
@@ -47,6 +51,9 @@ TYPE
     isFragment*: BOOLEAN;  (* an NPC Fragment, or a simple Companion *)
     hasCombat*: BOOLEAN;   (* a combat: block: a Fragment or Companion may have none *)
     hasThreatValue*: BOOLEAN;
+    (* The file gave one Defense though Barrier gives a second, as the
+       book's Shadowman has it: saved so, Barrier's left out. *)
+    omitBarrier*: BOOLEAN;
     hasCombatNotes*: BOOLEAN; combatNotes*: Rope
   END;
 
@@ -170,16 +177,38 @@ BEGIN
   c.label := NIL; c.name := NIL;
   c.hasPlayer := FALSE; c.hasPortrait := FALSE; c.player := NIL; c.portrait := NIL;
   c.hasTagline := FALSE; c.hasSummary := FALSE; c.hasBackground := FALSE; c.hasAppearance := FALSE;
-  c.hasPersonality := FALSE; c.hasOtherNotes := FALSE;
+  c.hasPersonality := FALSE; c.hasCharacterHooks := FALSE; c.hasOtherNotes := FALSE;
   c.tagline := NIL; c.summary := NIL; c.background := NIL; c.appearance := NIL;
-  c.personality := NIL; c.otherNotes := NIL;
+  c.personality := NIL; c.characterHooks := NIL; c.otherNotes := NIL;
+  c.hasNpcType := FALSE; c.npcType := OvaEntities.Heroic;
   c.notes := NIL;
   c.hasFluff := FALSE;
   FOR i := 0 TO NFluff - 1 DO c.hasFluffField[i] := FALSE; c.fluff[i] := NIL END;
   c.hasOptions := FALSE; c.isFragment := FALSE;
-  c.hasCombat := TRUE; c.hasThreatValue := TRUE;
+  c.hasCombat := TRUE; c.hasThreatValue := TRUE; c.omitBarrier := FALSE;
   c.hasCombatNotes := FALSE; c.combatNotes := NIL
 END InitCharacter;
+
+(* The sheet kind of an NPC type (p. 123-124): a Heroic NPC's is a
+   character's, a Secondary's a Companion's, an Extra's its own; no type
+   is a character's. *)
+PROCEDURE KindOf(has: BOOLEAN; npcType: INTEGER): INTEGER;
+BEGIN
+  IF ~has OR (npcType = OvaEntities.Heroic) THEN RETURN OvaCalc.Character
+  ELSIF npcType = OvaEntities.Secondary THEN RETURN OvaCalc.CompanionSheet
+  ELSE RETURN OvaCalc.ExtraSheet
+  END
+END KindOf;
+
+(* Sets c's NPC type (has FALSE: none), and so its sheet's kind: Recompute
+   after. *)
+PROCEDURE SetNpcType*(c: Character; has: BOOLEAN; npcType: INTEGER);
+BEGIN
+  ASSERT(~has OR (npcType >= OvaEntities.Heroic) & (npcType <= OvaEntities.Extra));
+  c.hasNpcType := has;
+  IF has THEN c.npcType := npcType ELSE c.npcType := OvaEntities.Heroic END;
+  c.kind := KindOf(has, npcType)
+END SetNpcType;
 
 (* A new, empty character. *)
 PROCEDURE New*(): Character;
@@ -269,6 +298,8 @@ BEGIN
   c.hasBackground := e.hasBackground; c.background := e.background;
   c.hasAppearance := e.hasAppearance; c.appearance := e.appearance;
   c.hasPersonality := e.hasPersonality; c.personality := e.personality;
+  c.hasCharacterHooks := e.hasCharacterHooks; c.characterHooks := e.characterHooks;
+  SetNpcType(c, e.hasNpcType, e.npcType);
   c.hasOtherNotes := e.hasOtherNotes; c.otherNotes := e.otherNotes;
   c.isFragment := e.isFragment;
   FOR i := 0 TO e.abilities.n - 1 DO
@@ -377,7 +408,9 @@ BEGIN
     a := a.next
   END;
   slash := Ropes.IndexChar(x.defense, "/", 0);
-  IF slash < 0 THEN Adopt(c.defense, x.defense, FALSE, FALSE, OvaEntities.OvDefense IN x.overrides, where, "DEFENSE")
+  IF slash < 0 THEN
+    Adopt(c.defense, x.defense, FALSE, FALSE, OvaEntities.OvDefense IN x.overrides, where, "DEFENSE");
+    c.omitBarrier := c.hasBarrier
   ELSE
     Adopt(c.defense, Ropes.Substring(x.defense, 0, slash), FALSE, FALSE,
       OvaEntities.OvDefense IN x.overrides, where, "DEFENSE");

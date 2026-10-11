@@ -399,7 +399,7 @@ BEGIN
 END Endurance;
 
 (* Spells (p. 58): the table's corners and middle, "+" for Barrier, a
-   level out of the table. *)
+   level out of the table, Witchcraft's Weaknesses. *)
 PROCEDURE Spells;
   VAR s: OvaCalc.Sheet; magic, low: OvaCalc.Trait; a, b, c, d, e: OvaCalc.Spell;
 
@@ -424,7 +424,16 @@ BEGIN
   L("one warning"); Is(Warnings(s), 1);
   magic.level := 5; c.level := 1; OvaCalc.Compute(s);
   L("Magic 5, Quick 1"); CheckInt(c.end, 0);
-  L("Magic 5, Barrier 2"); CheckText(a.end, "2+")
+  L("Magic 5, Barrier 2"); CheckText(a.end, "2+");
+  (* Witchcraft's curses: Weaknesses, at Arcane's costs, by their size
+     (p. 58); Acacia's, at Magic 3 (p. 134). *)
+  magic := T(s.traits, "Magic, Witchcraft", 3);
+  a := Sp(magic, "Frail", -2); b := Sp(magic, "Weak", -3); c := Sp(magic, "Slow", -4);
+  OvaCalc.Compute(s);
+  L("Witchcraft 3, Frail -2"); CheckInt(a.end, 10);
+  L("Witchcraft 3, Weak -3"); CheckInt(b.end, 20);
+  L("Slow -4 is out of the table"); CheckInt(c.end, 0);
+  L("and warned"); Check.Check(WarnedAny(s, OvaCalc.SpellRange), label)
 END Spells;
 
 (* Defense, Barrier, Health, Endurance, Endurance Reserve, by sheet kind. *)
@@ -454,7 +463,11 @@ BEGIN
   Add(s.traits, "Frail", -3); OvaCalc.Compute(s);
   L("a Companion's TV, at least 1"); CheckInt(s.tv, 1);
   s := NewSheet(OvaCalc.MinionSheet); OvaCalc.Compute(s);
-  L("Minions' HEALTH"); CheckInt(s.health, 10); L("Minions' ENDURANCE"); CheckInt(s.endurance, 10)
+  L("Minions' HEALTH"); CheckInt(s.health, 10); L("Minions' ENDURANCE"); CheckInt(s.endurance, 10);
+  s := NewSheet(OvaCalc.ExtraSheet); Add(s.traits, "Tough", 1); Add(s.traits, "Armored", 3); OvaCalc.Compute(s);
+  L("an Extra's HEALTH 10 + Tough 1"); CheckInt(s.health, 20);
+  L("an Extra's ENDURANCE"); CheckInt(s.endurance, 10);
+  L("an Extra's TV, always 1"); CheckInt(s.tv, 1)
 END Stats;
 
 (* TV (p. 124): Armored, the signed Health and Endurance levels, the

@@ -231,7 +231,9 @@ callbacks are module-level procedures; no exceptions; no call chaining;
   Weaknesses, Perks and Flaws alone; `test/TestCalc.Mod` checks them
   against ova_fmt's fixtures (`test/data/`, copied from the Ada repo's
   `test-data/`, kept the same). A sample character the rules can't
-  reproduce is a finding for PLAN.md, not a test to loosen.
+  reproduce is a finding for PLAN.md and `CHARACTER-DIFFERENCES.md`
+  (every number of the book's samples the rules don't give, and why),
+  not a test to loosen.
   `OvaCharacter.Build` makes a sheet from a fixture, with the Phase 3a
   keys the samples carry (an attack made with Telekinesis or
   transformed, a sheet shown transformed); the book's two rulings,
@@ -249,7 +251,8 @@ callbacks are module-level procedures; no exceptions; no call chaining;
   file's `overrides:` lists is an override; any other that differs
   from the rules' is kept as one too, with a notice. `TestFiles` fixes
   how many each fixture gives (none but po_ova_fmt's Escaping,
-  Unsorted and Vehicle, which `files.sh` names too), so a new rule or
+  Unsorted and Vehicle, and the Sample NPCs Nazo and Shadowman, which
+  `files.sh` names too), so a new rule or
   key that changes them shows there; a saved copy must give none.
 - Unit tests print `ok   - <label>` / `FAIL - <label>` and end with
   `All checks passed.` or `<N> check(s) failed.`, exiting 1 on failure,

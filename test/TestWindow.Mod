@@ -10,7 +10,8 @@ MODULE TestWindow; (* OvaWindow: the first tab, driven as a user would, and its 
    every name shown; an override changes what is shown, saved, and
    computed from it, and clearing it undoes that. *)
 
-IMPORT Check, Fl, FlBrowsers, OvaAttackDialog, OvaCalc, OvaCharacter, OvaRules, OvaSave, OvaText, OvaTraitPanel,
+IMPORT Check, Fl, FlBrowsers, OvaAttackDialog, OvaCalc, OvaCharacter, OvaEntities, OvaRules, OvaSave, OvaText,
+  OvaTraitPanel,
   OvaWidgets, OvaWindow,
   Out, Ropes;
 
@@ -428,6 +429,22 @@ BEGIN
   OvaWindow.combatNotes.SetValue("Down to 10 HEALTH."); OvaWindow.combatNotes.DoCallback;
   Check.Check(Has(Saved(), "player: Sam") & Has(Saved(), "Down to 10 HEALTH."), "the player and Combat Notes saved");
 
+  (* ---- The NPC type (p. 123-124) ---- *)
+  c := OvaWindow.character;
+  OvaWindow.npcTypeIn.ItemLabel(0, s); OvaWindow.npcTypeIn.ItemLabel(2, want);
+  Check.Check((OvaWindow.npcTypeIn.Value() = 0) & (s = "none") & (want = "Secondary (p. 123)"),
+    "the NPC type: none, each type with its page");
+  OvaWindow.npcTypeIn.Pick(1 + OvaEntities.Secondary);
+  Check.Check(c.hasNpcType & (c.npcType = OvaEntities.Secondary) & (c.kind = OvaCalc.CompanionSheet)
+    & (OvaCalc.Value(c.health) < 40) & AllShown() & Has(Saved(), "npc-type: Secondary"),
+    "Secondary chosen: a Companion's sheet, shown, and saved");
+  OvaWindow.npcTypeIn.Pick(1 + OvaEntities.Extra);
+  Check.Check((c.kind = OvaCalc.ExtraSheet) & (OvaCalc.Value(c.tv) = 1) & AllShown() & Has(Saved(), "npc-type: Extra"),
+    "Extra chosen: TV 1");
+  OvaWindow.npcTypeIn.Pick(0);
+  Check.Check(~c.hasNpcType & (c.kind = OvaCalc.Character) & AllShown() & ~Has(Saved(), "npc-type"),
+    "none chosen: a character's sheet, no npc-type saved");
+
   (* ---- Files ---- *)
   chosen := Ropes.FromString(SavePath);
   OvaWindow.bar.Pick(OvaWindow.saveAsItem);
@@ -457,6 +474,12 @@ BEGIN
   OvaWindow.window.DoCallback;  (* what the window's close button does *)
   IF Fl.Check() THEN END;
   Check.Check((asked = 4) & ~OvaWindow.window.Shown(), "the close button asks too");
+
+  (* ---- A Sample NPC loaded ---- *)
+  tells := 0;
+  ok := Load("Jiro.yaml");
+  Check.Check(ok & (tells = 0) & (OvaWindow.npcTypeIn.Value() = 1 + OvaEntities.Secondary) & AllShown(),
+    "Jiro.yaml: his type shown, and his numbers the rules' for it, so nothing to say");
 
   OvaWindow.Close;
   Check.Check(Fl.OpenWidgets() = 0, "every widget is deleted");

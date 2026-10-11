@@ -23,8 +23,8 @@ MODULE OvaWindow; (* The main window: its menu bar, the sheet's first tab, and t
    preferences (UsePreferences), between runs. *)
 
 IMPORT Fl, FlButtons, FlBrowsers, FlDialogs, FlInputs, FlLayout, FlMenus, FlPreferences, OvaAttackDialog,
-  OvaBackground, OvaCalc, OvaCharacter, OvaLinkedDialog, OvaPaths, OvaRules, OvaSettings, OvaTraitPanel, OvaSave,
-  OvaText, OvaViewer, OvaWidgets, Ropes;
+  OvaBackground, OvaCalc, OvaCharacter, OvaEntities, OvaLinkedDialog, OvaPaths, OvaRules, OvaSettings, OvaTraitPanel,
+  OvaSave, OvaText, OvaViewer, OvaWidgets, Ropes;
 
 CONST
   Width = 1280; Height = 800; BarHeight = 25; TabHeight = 25;
@@ -82,6 +82,9 @@ VAR
   modified-: BOOLEAN;
 
   nameIn-, playerIn-, taglineIn-: FlInputs.Input;
+  (* The NPC type: item 0 none, then OvaEntities.Heroic, Secondary,
+     Extra, each at its constant + 1. *)
+  npcTypeIn-: FlMenus.Choice;
   abilities-, weaknesses-: OvaTraitPanel.TraitPanel;
   abilityEnd-: OvaWidgets.NumberBox;   (* the chosen Ability's END *)
   abilityMods-: FlButtons.Button;      (* its Perks and Flaws *)
@@ -341,7 +344,7 @@ BEGIN
     | OvaCalc.CostRange: OvaText.Add(r, "'s cost is outside its range, or not in steps of 5 (p. 87)")
     | OvaCalc.NoDamageIneffective: OvaText.Add(r, "No Damage with Ineffective (p. 88)")
     | OvaCalc.RedirectableAlone: OvaText.Add(r, "Redirectable without Ranged (p. 86)")
-    | OvaCalc.SpellRange: OvaText.Add(r, ": a spell's level, or its Magic's, isn't 1 to 5: no cost (p. 58)")
+    | OvaCalc.SpellRange: OvaText.Add(r, ": a spell's level isn't 1 to 5 (or -1 to -3, a Weakness), or its Magic's isn't 1 to 5: no cost (p. 58)")
     | OvaCalc.TableRange: OvaText.Add(r, "Tough, Vigorous or Endurance Reserve past +5, counted as +5")
     | OvaCalc.BaseZeroBroken: OvaText.Add(r, "The Character Total is beyond Base Zero's range (p. 21)")
     | OvaCalc.StartingBroken: OvaText.Add(r, "The Abilities are beyond the starting levels and the Weaknesses (p. 21)")
@@ -657,6 +660,28 @@ BEGIN
   i.SetWhen(Fl.WhenChanged); i.action := TextAction
 END TextInput;
 
+(* ---- The NPC type ---- *)
+
+(* The NPC type chosen: the sheet's kind, so its Health, Endurance and
+   TV, follow it (p. 123-124). *)
+PROCEDURE NpcTypeAction(w: Fl.Widget);
+  VAR i: INTEGER;
+BEGIN
+  i := npcTypeIn.Value();
+  IF i <= 0 THEN OvaCharacter.SetNpcType(character, FALSE, 0)
+  ELSE OvaCharacter.SetNpcType(character, TRUE, i - 1)
+  END;
+  Changed
+END NpcTypeAction;
+
+PROCEDURE ShowNpcType;
+BEGIN
+  IF character.hasNpcType THEN
+    IF npcTypeIn.SetValue(character.npcType + 1) THEN END
+  ELSIF npcTypeIn.SetValue(0) THEN
+  END
+END ShowNpcType;
+
 (* ---- The transformed form ---- *)
 
 (* Character > Limits...: OvaSettings, which tells Changed each change.
@@ -695,6 +720,7 @@ PROCEDURE ShowAll;
 BEGIN
   SetInput(nameIn, character.name); SetInput(playerIn, character.player);
   SetInput(taglineIn, character.tagline); SetInput(combatNotes, character.combatNotes);
+  ShowNpcType;
   abilities.Show(character, NIL, character); weaknesses.Show(character, NIL, character);
   ShowTransformed;
   ShowRows;
@@ -818,14 +844,22 @@ BEGIN
 END Label;
 
 PROCEDURE BuildSheetTab;
-  VAR y, x: INTEGER; b: Fl.Box;
+  VAR y, x, i: INTEGER; b: Fl.Box; label: ARRAY 64 OF CHAR; name: OvaText.String;
 BEGIN
   NEW(sheetTab); Fl.OpenGroup(sheetTab, 0, BarHeight + TabHeight, Width, Height - BarHeight - TabHeight, "Character");
   (* The left column: names, Abilities, Weaknesses, totals, warnings,
      Combat Notes. *)
   TextInput(nameIn, LeftX + 110, Top, 250, "Character Name");
   TextInput(playerIn, LeftX + 460, Top, 160, "Player Name");
-  TextInput(taglineIn, LeftX + 110, Top + 30, 510, "Tagline");
+  TextInput(taglineIn, LeftX + 110, Top + 30, 290, "Tagline");
+  NEW(npcTypeIn); FlMenus.OpenChoice(npcTypeIn, LeftX + 470, Top + 30, 150, Row, "NPC Type");
+  IF npcTypeIn.Add("none", 0, {}, NIL, {}) >= 0 THEN END;
+  FOR i := OvaEntities.Heroic TO OvaEntities.Extra DO
+    name := OvaText.Chars(OvaEntities.NpcTypeName(i));
+    OvaRules.PageLabel(name^, OvaRules.NpcTypesPage, label);
+    IF npcTypeIn.Add(label, 0, {}, NIL, {}) >= 0 THEN END
+  END;
+  npcTypeIn.action := NpcTypeAction;
   OpenTraitPanel(abilities, LeftX, OvaRules.Ability, "Abilities");
   OpenTraitPanel(weaknesses, LeftX + 315, OvaRules.Weakness, "Weaknesses");
   y := abilities.bottom + 5;
@@ -911,7 +945,7 @@ BEGIN
   OvaBackground.Close;
   window := NIL; bar := NIL; tabs := NIL; sheetTab := NIL; backgroundTab := NIL;
   abilities := NIL; weaknesses := NIL; rows := NIL; attackBox := NIL; warnings := NIL;
-  nameIn := NIL; playerIn := NIL; taglineIn := NIL; combatNotes := NIL; abilityEnd := NIL; abilityMods := NIL;
+  nameIn := NIL; playerIn := NIL; taglineIn := NIL; npcTypeIn := NIL; combatNotes := NIL; abilityEnd := NIL; abilityMods := NIL;
   addAttack := NIL
 END Close;
 

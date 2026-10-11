@@ -5,9 +5,11 @@ MODULE TestModel; (* OvaCharacter's editing: what the window changes, and Endura
    order traits and mods are kept in, removing and changing them,
    copying a list of mods, and each Endurance Use tied to the Ability
    or attack its detail names, which counts in that one's END, and
-   survives a save and a load with no notice. Needs no display. *)
+   survives a save and a load with no notice; the NPC type, which sets
+   the sheet's kind; an Ability's END of 0, not written unless
+   overridden. Needs no display. *)
 
-IMPORT Check, OvaCalc, OvaCharacter, OvaRules, OvaSave, OvaText, Out, Ropes;
+IMPORT Check, OvaCalc, OvaCharacter, OvaEntities, OvaRules, OvaSave, OvaText, Out, Ropes;
 
 CONST Saved = "../obj/files/model.yaml";
 
@@ -57,6 +59,10 @@ BEGIN
   END;
   RETURN r
 END Mods;
+
+PROCEDURE Has(r: Rope; s: ARRAY OF CHAR): BOOLEAN;
+BEGIN RETURN (r # NIL) & (Ropes.Find(r, s, 0) >= 0)
+END Has;
 
 PROCEDURE Is(r: Rope; s: ARRAY OF CHAR; label: ARRAY OF CHAR);
   VAR x: OvaText.String;
@@ -134,6 +140,49 @@ BEGIN
   Is(Mods(mods), "Accurate; Cancel; Requirement", "RemoveMod");
   Is(Mods(copy), "Accurate; Ranged; Cancel; Requirement", "CopyMods: a copy the list's changes don't reach");
   Check.Check((copy # m) & (copy.times = 2), "CopyMods: each mod copied");
+
+  (* ---- The NPC type (p. 123-124) ---- *)
+  c := OvaCharacter.New(); c.name := R("Typed");
+  OvaCharacter.InsertTrait(c.traits, OvaCharacter.NewTrait(Item("Tough"), OvaRules.Ability, 1, NIL, NIL));
+  OvaCharacter.Recompute(c);
+  Check.Check(~c.hasNpcType & (c.kind = OvaCalc.Character) & (OvaCalc.Value(c.health) = 50),
+    "no NPC type: a character's sheet, HEALTH 40 + Tough 1");
+  OvaCharacter.SetNpcType(c, TRUE, OvaEntities.Secondary); OvaCharacter.Recompute(c);
+  Check.Check((c.kind = OvaCalc.CompanionSheet) & (OvaCalc.Value(c.health) = 30) & (OvaCalc.Value(c.endurance) = 20),
+    "Secondary: a Companion's sheet, HEALTH 20 + Tough 1, ENDURANCE 20");
+  OvaCharacter.SetNpcType(c, TRUE, OvaEntities.Extra); OvaCharacter.Recompute(c);
+  Check.Check((c.kind = OvaCalc.ExtraSheet) & (OvaCalc.Value(c.health) = 20) & (OvaCalc.Value(c.tv) = 1),
+    "Extra: HEALTH 10 + Tough 1, TV 1");
+  OvaCharacter.SetNpcType(c, TRUE, OvaEntities.Heroic); OvaCharacter.Recompute(c);
+  Check.Check((c.kind = OvaCalc.Character) & (OvaCalc.Value(c.health) = 50), "Heroic: a character's sheet");
+  OvaCharacter.SetNpcType(c, TRUE, OvaEntities.Secondary);
+  c.hasCharacterHooks := TRUE; c.characterHooks := R("Hooks.");
+  OvaCharacter.Recompute(c);
+  Check.Check(Has(OvaSave.ToText(c), "npc-type: Secondary") & Has(OvaSave.ToText(c), "character-hooks: Hooks."),
+    "the type and the hooks saved");
+  ok := OvaSave.Save(c, Saved, msg) & OvaCharacter.Load(Saved, c2, msg);
+  Check.Check(ok & (OvaCharacter.notices.n = 0) & c2.hasNpcType & (c2.npcType = OvaEntities.Secondary)
+    & (c2.kind = OvaCalc.CompanionSheet) & Ropes.EqualString(c2.characterHooks, "Hooks."),
+    "loaded again: the type, so the sheet's kind, and the hooks; no notices");
+  OvaCharacter.SetNpcType(c, FALSE, 0); OvaCharacter.Recompute(c);
+  Check.Check(~c.hasNpcType & (c.kind = OvaCalc.Character) & ~Has(OvaSave.ToText(c), "npc-type"),
+    "the type taken off: a character's sheet, nothing saved");
+
+  (* ---- An Ability's END of 0 ---- *)
+  c := OvaCharacter.New(); c.name := R("Free"); c.hasCombat := FALSE;
+  t := OvaCharacter.NewTrait(Item("Attack"), OvaRules.Ability, 3, NIL, NIL);
+  OvaCharacter.InsertMod(t.mods, OvaCharacter.NewMod(Item("Armor Piercing"), FALSE, 1, 0));
+  OvaCharacter.InsertMod(t.mods, OvaCharacter.NewMod(Item("Ranged"), FALSE, 1, 0));
+  OvaCharacter.InsertMod(t.mods, OvaCharacter.NewMod(Item("Ineffective"), TRUE, 1, 0));
+  OvaCharacter.InsertMod(t.mods, OvaCharacter.NewMod(Item("Weapon"), TRUE, 1, 0));
+  OvaCharacter.InsertTrait(c.traits, t);
+  OvaCharacter.Recompute(c);
+  Check.Check(t.hasEnd & (OvaCalc.Value(t.end) = 0), "Perks and Flaws costing nothing: END 0");
+  Check.Check(~Has(OvaSave.ToText(c), "endurance"), "an END of 0 isn't written");
+  OvaCalc.Override(t.end, 0, FALSE, FALSE);
+  Check.Check(Has(OvaSave.ToText(c), "endurance: 0"), "unless it is an override");
+  OvaCalc.Clear(t.end); OvaCalc.Override(t.end, 5, FALSE, FALSE);
+  Check.Check(Has(OvaSave.ToText(c), "endurance: 5"), "an override of 5 is");
 
   Check.Summary
 END TestModel.

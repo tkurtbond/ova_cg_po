@@ -74,7 +74,22 @@ BEGIN
   RoundTrip("Sheet", 0);
   (* po_ova_fmt's own, for its formats: their numbers were never the
      rules', so they come back as overrides. *)
-  RoundTrip("Escaping", 5); RoundTrip("Unsorted", 8); RoundTrip("Vehicle", 5)
+  RoundTrip("Escaping", 5); RoundTrip("Unsorted", 8); RoundTrip("Vehicle", 5);
+  (* The Sample NPCs: a Secondary NPC's sheet is a Companion's
+     (npc-type:), so Dr. Tomori's and Jiro's numbers are the rules';
+     Nazo's and Shadowman's Defense are the book's own
+     (CHARACTER-DIFFERENCES.md). Acacia and Zurkrieg hold more than one
+     entity (Errors). *)
+  RoundTrip("Ancel", 0); RoundTrip("Dr-Tomori", 0); RoundTrip("Jiro", 0); RoundTrip("Nazo", 3);
+  RoundTrip("Saspar", 0); RoundTrip("Shadowman", 1);
+  (* The NPC Fragments: no combat: block, so nothing to compare. *)
+  RoundTrip("Beat-Cop", 0); RoundTrip("Cat-Burglar", 0); RoundTrip("Dragon", 0);
+  RoundTrip("Ebullient-Club-President", 0); RoundTrip("Ghosts", 0); RoundTrip("Goblin", 0);
+  RoundTrip("GPL-Agents", 0); RoundTrip("Indebted-Yakuza", 0); RoundTrip("Magical-Fairies", 0);
+  RoundTrip("Ninja", 0); RoundTrip("Oni", 0); RoundTrip("Sentry-Bots", 0); RoundTrip("Shady-Teacher", 0);
+  RoundTrip("Shinto-Priest", 0); RoundTrip("Snobbish-Upperclassman", 0); RoundTrip("Spider-Tank", 0);
+  RoundTrip("Thugs", 0); RoundTrip("Venomous-Killer", 0); RoundTrip("Weathered-Salaryman", 0);
+  RoundTrip("Weird-Exchange-Student", 0); RoundTrip("Wild-Beast", 0); RoundTrip("Zombies", 0)
 END Fixtures;
 
 (* A file that can't be loaded: msg must hold want. *)
@@ -100,6 +115,8 @@ BEGIN
   Refused("data/Broken.yaml", "level", "Broken.yaml");
   Refused("data/Fragment.yaml", "holds 2 characters", "Fragment.yaml");
   Refused("data/Options.yaml", "holds 2 characters", "Options.yaml");
+  Refused("data/Acacia.yaml", "holds 3 characters", "Acacia.yaml");
+  Refused("data/Zurkrieg.yaml", "holds 2 characters", "Zurkrieg.yaml");
   Refused("data/no-such-file.yaml", "no-such-file.yaml", "a missing file");
   c := OvaCharacter.New(); c.name := Ropes.FromString("Nobody");
   ok := OvaSave.Save(c, "../obj/no-such-dir/x.yaml", msg);

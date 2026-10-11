@@ -152,7 +152,11 @@ Weaknesses -1 to -3 (p. 18).
   | 5 | 0 | 2 | 5 | 10 | 20 |
 
   plus any cost of the Ability itself (Auren's Mana Shield, Barrier +2
-  at Magic 3: 10, written "10+" since Barrier can cost more).
+  at Magic 3: 10, written "10+" since Barrier can cost more). A spell
+  at -1 to -3 casts a Weakness, as Witchcraft's curses do, at the same
+  costs by the Weakness's size: Acacia's Frail -2, Slow -2 and Weak -3
+  at Witchcraft 3 cost 10, 10 and 20 (p. 134; added with the Sample
+  NPCs).
 - Situational modifiers (Reckless Offense and the rest, p. 108) don't
   change a cost and aren't modelled.
 
@@ -178,7 +182,9 @@ Weaknesses -1 to -3 (p. 18).
   (p. 65: the same table) - 10 per level of Languid (p. 73). A
   Companion starts at 20 and 20 instead of 40 (p. 52; Arasuni,
   Fenrir), Tough and Vigorous added the same way; Minions 10 and 10
-  (p. 58).
+  (p. 58). An NPC's `npc-type` (p. 123) sets its sheet: a Heroic NPC's
+  is a character's, a Secondary NPC's a Companion's (20 and 20, TV 4
+  less), an Extra's 10 and 10 with a TV of 1 (p. 124).
   Health is not floored (no rule says so); Tough, Vigorous and
   Endurance Reserve summed past +5 (a form's added to the base's)
   count as +5, with a warning. A Vehicle's start at 40 and 40 (p. 64:
@@ -194,7 +200,7 @@ Weaknesses -1 to -3 (p. 18).
   Healer and Magic (Arcane, Witchcraft) are marked to start with, as
   the book's examples and the only ones the samples count; Companion
   and Minions can't be (their TVs are their own). A Companion's TV is
-  4 less, at least 1 (a Secondary NPC). Every sample checks: Raine 7 +
+  4 less, at least 1 (a Secondary NPC); an Extra's is 1. Every sample checks: Raine 7 +
   5 + 4 + Vigorous 2 = 18; Ai 2 + 5 + 5 - Frail 2 = 10; Auren 5 + 4 +
   4 + Armored 1 + Vigorous 2 + Magic 3/2 = 18.
   - **"Without Perks and Flaws" means without the ones that add each
@@ -346,7 +352,9 @@ Character (Limits..., Transformed form), Rulebook (Open, Choose PDF...,
 Viewer...).
 
 1. **First tab, "Character" (the sheet's right half)**:
-   - Character Name and Player Name inputs, and a tagline;
+   - Character Name and Player Name inputs, a tagline, and the NPC
+     Type (none, Heroic, Secondary, Extra), which sets the sheet's
+     starting Health and Endurance and its TV;
    - **Abilities** and **Weaknesses**, side by side as on the sheet:
      each a browser of lines (`+3 Attack (Kaze Satsujinsha)`), and
      under it a `Choice` of every name, a `Spinner` for the level (+1
@@ -372,7 +380,8 @@ Viewer...).
 2. **Second tab, "Background" (the sheet's left half)**: Background, the Character
    Portrait (an image file chosen with `FlDialogs.NativeFileChooser`,
    shown scaled with `FlImages`; its path is saved), Appearance,
-   Personality and Other Notes, each a `FlText.TextEditor`; and the
+   Personality, Character Hooks and Other Notes, each a
+   `FlText.TextEditor`; and the
    sheet's fluff fields (Concept, Age, Gender, Height, Weight, Hair,
    Eyes, Association, Hobbies, Favorite Food, Allies, Enemies, Love
    Interests; p. 20) in a `FlLayout.Grid`. Added in Phase 6, so that
@@ -1166,6 +1175,37 @@ committed in their own repos, with the user's go-ahead.
    - From `make clean`: `make test`, `test-headless` and `test-sway`
      pass; valgrind clean on Xvfb and sway (no errors in any of the
      11 programs, nothing of pofltk's left; 2026-10-10).
+
+10. **The Sample NPCs**: ova_fmt's `npc-type` and `character-hooks`,
+   its Sample NPCs and NPC Fragments as fixtures, and the differences
+   from the book they show. [done]
+   - `OvaEntities` copied again, with po_ova_fmt's port of the Ada
+     ova_fmt's commits of 2026-10-10; the 30 new fixtures and five
+     re-synced ones copied from po_ova_fmt's `test/data/`.
+   - `OvaCharacter`: `characterHooks`, and `npcType`, which sets the
+     sheet's kind (`SetNpcType`): none and Heroic `OvaCalc.Character`,
+     Secondary `CompanionSheet`, Extra the new `ExtraSheet` (10 and
+     10, TV 1). `OvaSave` writes both; `OvaWindow` has an NPC Type
+     `Choice` beside the tagline, each type with its page
+     (`OvaRules.PageLabel`, `NpcTypesPage`); `OvaBackground` a Character
+     Hooks editor after Personality.
+   - An Ability's END of 0 isn't saved unless it is an override, as
+     the fixtures write none: Unsorted's copy wrote `endurance: 0`,
+     which po_ova_fmt now prints ("0 Endurance").
+   - A file's single DEFENSE, where Barrier gives a second, is saved
+     single (`omitBarrier`), as the Sample NPCs print it (Shadowman).
+   - Witchcraft's Weakness spells cost by their size ("Spells", above).
+     The spell dialog still offers Abilities at +1 to +5 only.
+   - `CHARACTER-DIFFERENCES.md`: every number of the book's samples the
+     rules don't give, and why. `TestFiles` loads 28 new fixtures with
+     the notices it lists (Nazo 3, Shadowman 1, the rest none) and
+     refuses Acacia and Zurkrieg (several entities); `files.sh` takes
+     the marks out of Nazo's and Shadowman's copies.
+   - Shown to fail with eight bugs planted (Secondary as a character,
+     an Extra's TV, `npc-type` and `character-hooks` not saved or not
+     read, END 0 written, `omitBarrier` ignored, the Choice's items
+     off by one): each failed between 2 and 50 checks. Valgrind clean
+     on Xvfb.
 
 ## Testing
 

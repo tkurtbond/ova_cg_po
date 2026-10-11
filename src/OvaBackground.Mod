@@ -1,7 +1,8 @@
 MODULE OvaBackground; (* The window's second tab: the sheet's left half, the fluff, and the notes *)
 
 (* PLAN.md, "The window", the second tab: the Summary; Background,
-   Appearance, Personality and Other Notes, each an FlText editor; the
+   Appearance, Personality, Character Hooks and Other Notes, each an
+   FlText editor; the
    Character Portrait, an image file whose path is saved relative to
    the YAML file; the fluff fields (p. 20) in a grid; and the headed
    notes ova_fmt prints as callouts (`notes:`), so everything a file
@@ -21,8 +22,8 @@ CONST
   Row = 25;
   LeftX = 10; RightX = 650; ColumnW = 620;
   (* The prose sections, ProseBuffer.which. *)
-  Background* = 0; Appearance* = 1; Personality* = 2; OtherNotes* = 3;
-  NProse = 4;
+  Background* = 0; Appearance* = 1; Personality* = 2; CharacterHooks* = 3; OtherNotes* = 4;
+  NProse = 5;
   PortraitW = 200; PortraitH = 250;
   FluffRows = 7;
   NFluff = OvaCharacter.NFluff;
@@ -92,6 +93,7 @@ BEGIN
     Background: has := c.hasBackground; r := c.background
   | Appearance: has := c.hasAppearance; r := c.appearance
   | Personality: has := c.hasPersonality; r := c.personality
+  | CharacterHooks: has := c.hasCharacterHooks; r := c.characterHooks
   | OtherNotes: has := c.hasOtherNotes; r := c.otherNotes
   END
 END ProseOf;
@@ -109,6 +111,7 @@ BEGIN
     Background: OvaCharacter.SetText(c.hasBackground, c.background, r)
   | Appearance: OvaCharacter.SetText(c.hasAppearance, c.appearance, r)
   | Personality: OvaCharacter.SetText(c.hasPersonality, c.personality, r)
+  | CharacterHooks: OvaCharacter.SetText(c.hasCharacterHooks, c.characterHooks, r)
   | OtherNotes: OvaCharacter.SetText(c.hasOtherNotes, c.otherNotes, r)
   END;
   Changed
@@ -332,7 +335,7 @@ PROCEDURE Build*(tab: Fl.Group; x, y, w, h: INTEGER);
   VAR yy, ph, i: INTEGER; b: FlButtons.Button;
 BEGIN
   Fl.OpenGroup(tab, x, y, w, h, "Background");
-  (* The left column: the summary and the four prose sections. *)
+  (* The left column: the summary and the five prose sections. *)
   yy := y + Top;
   NEW(summaryIn); FlInputs.OpenInput(summaryIn, LeftX + 80, yy, ColumnW - 80, Row, "Summary");
   summaryIn.SetWhen(Fl.WhenChanged); summaryIn.action := TextAction;
@@ -341,6 +344,7 @@ BEGIN
   ProseEditor(Background, yy, ph, "Background"); yy := yy + ph + 25;
   ProseEditor(Appearance, yy, ph, "Appearance"); yy := yy + ph + 25;
   ProseEditor(Personality, yy, ph, "Personality"); yy := yy + ph + 25;
+  ProseEditor(CharacterHooks, yy, ph, "Character Hooks"); yy := yy + ph + 25;
   ProseEditor(OtherNotes, yy, ph, "Other Notes");
 
   (* The right column: the portrait, the fluff, the notes. *)

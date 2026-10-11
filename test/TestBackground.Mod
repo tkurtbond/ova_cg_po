@@ -87,6 +87,7 @@ BEGIN
     & BufferIs(Prose(OvaBackground.Background), c.background)
     & BufferIs(Prose(OvaBackground.Appearance), c.appearance)
     & BufferIs(Prose(OvaBackground.Personality), c.personality)
+    & BufferIs(Prose(OvaBackground.CharacterHooks), c.characterHooks)
     & BufferIs(Prose(OvaBackground.OtherNotes), c.otherNotes)
     & InputIs(OvaBackground.portraitPath, c.portrait);
   FOR i := 0 TO OvaCharacter.NFluff - 1 DO ok := ok & InputIs(OvaBackground.fluffIn[i], c.fluff[i]) END;
@@ -176,12 +177,14 @@ BEGIN
 
   (* ---- Shown from a file ---- *)
   ok := Load("Sheet.yaml"); c := OvaWindow.character;
-  Check.Check(ok & AllShown(), "Sheet.yaml: the summary, the four sections, the fluff and the portrait's path shown");
+  Check.Check(ok & AllShown(), "Sheet.yaml: the summary, the prose sections, the fluff and the portrait's path shown");
   Check.Check(c.hasBackground & c.hasAppearance & c.hasPersonality & c.hasOtherNotes & c.hasSummary
     & c.hasFluffField[OvaEntities.Concept], "and it has each");
   Check.Check(InputIs(OvaBackground.portraitPath, R("images/hana.png")) & (OvaBackground.image = NIL)
     & PortraitSays("The image can't be read.") & OvaBackground.removePortrait.Active(),
     "its portrait, not there: the path, and why there's no image");
+  ok := Load("Jiro.yaml");
+  Check.Check(ok & AllShown() & OvaWindow.character.hasCharacterHooks, "Jiro.yaml: his Character Hooks shown");
   ok := Load("Raine.yaml");
   Check.Check(ok & (NoteCount() > 0) & NotesShown(), "Raine.yaml: the notes' headers listed");
   OvaBackground.notes.GetText(1, s);
@@ -205,6 +208,8 @@ BEGIN
   Check.Check(~c.hasAppearance & (c.appearance = NIL) & ~Has(Saved(), "appearance:"), "emptied: not saved");
   buf := Prose(OvaBackground.OtherNotes); buf.SetText("Owes two favors now.");
   Check.Check(Has(Saved(), "other-notes: Owes two favors now."), "Other Notes saved");
+  buf := Prose(OvaBackground.CharacterHooks); buf.SetText("Needs a courier.");
+  Check.Check(c.hasCharacterHooks & Has(Saved(), "character-hooks: Needs a courier."), "Character Hooks saved");
   Type(OvaBackground.summaryIn, "A schoolgirl and a storm.");
   Check.Check(Ropes.EqualString(c.summary, "A schoolgirl and a storm.") & Has(Saved(), "summary: A schoolgirl and a storm."),
     "the summary typed and saved");

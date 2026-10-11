@@ -59,6 +59,12 @@ Don't save, Cancel), and so does the window's close button.
 
 ### The Character tab
 
+**NPC Type**, beside the Tagline, is none for a player's character, or
+Heroic, Secondary or Extra for an NPC (p. 123): it sets where Health
+and Endurance start (40, 20 or 10) and the TV's last step (4 less for
+a Secondary NPC, always 1 for an Extra), and is saved with the
+character.
+
 **Abilities and Weaknesses.** Each list shows a trait's level, name
 and detail, and the rulebook page its name is on. To add one, choose
 its name from the menu under the list (each name shows its page), set
@@ -128,7 +134,8 @@ them back. They are saved with the character.
 
 ### The Background tab
 
-The Summary; the Background, Appearance, Personality and Other Notes;
+The Summary; the Background, Appearance, Personality, Character Hooks
+and Other Notes;
 the Character Portrait, an image chosen with **Choose...** (its path
 is saved relative to the character's file, and **Remove** takes it
 off); the sheet's fluff (Concept, Age, Birthday and the rest); and the
