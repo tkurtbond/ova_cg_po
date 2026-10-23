@@ -418,7 +418,8 @@ drawing size is set when it's shown.
    Remove; a new note goes last).
 3. **Fifth tab, "Markdown"** (Phase 14, "The Markdown sheet" below):
    the character's sheet as `ova_fmt_po -M` makes it, in an
-   `FlText.TextDisplay`, with **Copy** and **Save Markdown...**.
+   `FlText.TextDisplay`, with **Copy** and **Save Markdown...**, and
+   an **Inline** check button for `ova_fmt_po -i`'s paragraph instead.
 
 ### The Markdown sheet
 
@@ -450,6 +451,13 @@ makes of the saved file, override marks (`\*`) included, and
   once written, as `OvaSave.SaveAll` does; through `Platform`, not
   `OvaOut`, whose first write error stays for the rest of a run. Saving
   the sheet doesn't mark the character changed.
+- **Inline** (asked for by the user, 2026-10-23): a check button that
+  shows the character in ova_fmt_po's inline format (`-i`, its
+  `OvaInline`, copied) instead: one paragraph, an inline stat block
+  like an adventure's cast list. `OvaMarkdown.Inline` makes it as
+  `Sheet` does; Copy and Save Markdown... take what is shown, and Save
+  suggests `NAME-inline.md`. It stays checked from character to
+  character until the window is closed.
 
 ### Page numbers beside names
 
@@ -773,9 +781,9 @@ committed in their own repos, with the user's go-ahead.
 | `OvaTraitPanel` | a list of Abilities or Weaknesses and its editor: the character's, a form's, a partner's |
 | `OvaSettings` | Character > Limits...: the rules that limit a character, in its `options:` |
 | `OvaLinkedDialog` | an Ability's linked content: a Transformation's form, a Magic's spells, a Companion's or Vehicle's sheet |
-| `OvaMarkdown` | the character's Markdown sheet, through ova_fmt_po's `OvaCommon`; saving it to a file |
-| `OvaMarkdownTab` | the Markdown tab: the sheet shown, Copy, Save Markdown... |
-| `OvaText`, `OvaOut`, `OvaConfig`, `OvaCommon` | ova_fmt_po's, copied |
+| `OvaMarkdown` | the character's Markdown sheet or inline paragraph, through ova_fmt_po's `OvaCommon` and `OvaInline`; saving it to a file |
+| `OvaMarkdownTab` | the Markdown tab: the sheet or paragraph shown, Inline, Copy, Save Markdown... |
+| `OvaText`, `OvaOut`, `OvaConfig`, `OvaCommon`, `OvaInline` | ova_fmt_po's, copied |
 
 `OvaRules`, `OvaCalc`, `OvaCharacter`, `OvaSave`, `OvaMarkdown`,
 `OvaSpawn`, `OvaViewer` and `OvaPaths` import no pofltk: they are
@@ -1434,6 +1442,18 @@ tested with no display.
      old file. Both now delete the file first and `files.sh` fails a
      missing sheet; the plant then failed 55 checks.
    - Screenshot under Xvfb (Ai): the tab, its buttons and the sheet.
+   - The inline format (asked for by the user, 2026-10-23): ova_fmt_po's
+     `OvaInline` copied with `OvaConfig` and `OvaCommon`;
+     `OvaMarkdown.Inline`; the tab's **Inline** check button.
+     `TestFiles` also saves each fixture's paragraphs as
+     `obj/files/NAME.inline.md`, and `files.sh` compares them with
+     `ova_fmt_po -i` (override marks compared after joining each
+     paragraph's lines, since unmarking shifts the fill).
+     `TestMarkdown` (now 18 checks): Inline unchecked at first; checked,
+     the paragraph shown, kept current after a rename, saved as
+     `NAME-inline.md`; unchecked, the sheet again. Shown to fail with a
+     corrupted or missing `.inline.md` (`files.sh`) and an
+     `InlineAction` that does nothing (2 of `TestMarkdown`'s).
 15. **A resizable window** (asked for by the user, 2026-10-11: stretch
    proportionately when resized, not stay a static size; "The window").
    [done]

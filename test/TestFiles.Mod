@@ -10,7 +10,9 @@ MODULE TestFiles; (* OvaCharacter and OvaSave: loading, saving, and loading agai
    a failed save, and a character with text plain YAML can't hold.
    Each fixture's Markdown sheet (OvaMarkdown), one character's after
    another, is saved beside its copy, as NAME.md, which test/files.sh
-   compares with ova_fmt_po -M's of the copy. Needs no display. *)
+   compares with ova_fmt_po -M's of the copy; and its inline paragraphs
+   (OvaMarkdown.Inline), as NAME.inline.md, for ova_fmt_po -i's. Needs
+   no display. *)
 
 IMPORT Check, Fyaml, OvaCalc, OvaCharacter, OvaEntities, OvaMarkdown, OvaSave, OvaText, Out, Platform, Ropes, Strings;
 
@@ -40,7 +42,8 @@ END ShowNotices;
 (* Loads name, every character in it, saves them, loads the copy;
    want: the notices expected. *)
 PROCEDURE RoundTrip(name: ARRAY OF CHAR; want: INTEGER);
-  VAR path, saved, md: ARRAY 128 OF CHAR; c, c2: OvaCharacter.Characters; msg, text, text2, sheet: Ropes.Rope;
+  VAR path, saved, md, imd: ARRAY 128 OF CHAR; c, c2: OvaCharacter.Characters;
+    msg, text, text2, sheet, inline: Ropes.Rope;
     loaded, n, i: INTEGER; ok: BOOLEAN; m: OvaText.String;
 BEGIN
   Path(DataDir, name, path); Path(SavedDir, name, saved);
@@ -53,13 +56,17 @@ BEGIN
   IF (n # want) OR (n > 0) THEN ShowNotices END;
   text := OvaSave.AllToText(c);
   L(name, "saved"); Check.Check(OvaSave.SaveAll(c, saved, msg), label);
-  sheet := NIL; ok := TRUE;
+  sheet := NIL; inline := NIL; ok := TRUE;
   FOR i := 0 TO SHORT(LEN(c^)) - 1 DO
-    text2 := OvaMarkdown.Sheet(c[i]); ok := ok & (text2 # NIL); sheet := Ropes.Cat(sheet, text2)
+    text2 := OvaMarkdown.Sheet(c[i]); ok := ok & (text2 # NIL); sheet := Ropes.Cat(sheet, text2);
+    text2 := OvaMarkdown.Inline(c[i]); ok := ok & (text2 # NIL); inline := Ropes.Cat(inline, text2)
   END;
-  COPY(SavedDir, md); Strings.Append(name, md); Strings.Append(".md", md);
-  IF Platform.Unlink(md) = 0 THEN END;  (* so files.sh never compares a file from before *)
+  COPY(SavedDir, md); Strings.Append(name, md); COPY(md, imd);
+  Strings.Append(".md", md); Strings.Append(".inline.md", imd);
+  (* so files.sh never compares a file from before *)
+  IF Platform.Unlink(md) = 0 THEN END; IF Platform.Unlink(imd) = 0 THEN END;
   L(name, "its Markdown sheet saved"); Check.Check(ok & OvaMarkdown.Save(sheet, md, msg), label);
+  L(name, "its inline paragraphs saved"); Check.Check(OvaMarkdown.Save(inline, imd, msg), label);
   ok := OvaCharacter.LoadAll(saved, c2, msg);
   L(name, "the copy loaded"); Check.Check(ok, label);
   IF ok THEN

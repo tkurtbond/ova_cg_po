@@ -2,7 +2,9 @@ MODULE OvaMarkdownTab; (* The window's last tab: the character's sheet in Markdo
 
 (* PLAN.md, "The Markdown sheet". The sheet OvaMarkdown makes, shown as
    text the user can select, with Copy, which puts all of it on the
-   clipboard, and Save Markdown..., which writes it to a file.
+   clipboard, and Save Markdown..., which writes it to a file. Inline,
+   checked, shows the inline paragraph instead (OvaMarkdown.Inline), and
+   Copy and Save Markdown... take that.
 
    OvaWindow owns the character: it builds this tab inside its Tabs
    (Build) and shows the character here again after each change
@@ -23,6 +25,8 @@ VAR
   display-: FlText.TextDisplay;
   buffer: FlText.TextBuffer;
   copy-, save-: FlButtons.Button;
+  inline-: FlButtons.CheckButton;  (* checked: the inline paragraph *)
+  character: OvaCharacter.Character;  (* the character shown *)
   (* The character's name, for the file chooser's suggestion; NIL:
      none. *)
   name: Rope;
@@ -53,13 +57,20 @@ BEGIN
   RETURN ok
 END DialogPath;
 
-(* Shows c's sheet. *)
+(* Shows c's sheet, or its inline paragraph if Inline is checked. *)
 PROCEDURE Show*(c: OvaCharacter.Character);
   VAR s: OvaText.String;
 BEGIN
-  sheet := OvaMarkdown.Sheet(c); name := c.name;
+  character := c;
+  IF inline.Value() THEN sheet := OvaMarkdown.Inline(c) ELSE sheet := OvaMarkdown.Sheet(c) END;
+  name := c.name;
   s := OvaText.Chars(sheet); buffer.SetText(s^)
 END Show;
+
+(* Inline: the character shown again, the other way. *)
+PROCEDURE InlineAction(w: Fl.Widget);
+BEGIN IF character # NIL THEN Show(character) END
+END InlineAction;
 
 (* Copy: the whole sheet on the clipboard. *)
 PROCEDURE CopyAction(w: Fl.Widget);
@@ -68,11 +79,15 @@ BEGIN s := OvaText.Chars(sheet); Fl.Copy(s^, Fl.Clipboard)
 END CopyAction;
 
 (* Save Markdown...: the sheet in a file the user chooses, the
-   character's name suggested. *)
+   character's name suggested: NAME.md, or NAME-inline.md for the
+   inline paragraph. *)
 PROCEDURE SaveAction(w: Fl.Widget);
   VAR p, msg, suggested: Rope; s: OvaText.String;
 BEGIN
-  IF name # NIL THEN suggested := Ropes.Cat(name, Ropes.FromString(".md")) ELSE suggested := NIL END;
+  IF name = NIL THEN suggested := NIL
+  ELSIF inline.Value() THEN suggested := Ropes.Cat(name, Ropes.FromString("-inline.md"))
+  ELSE suggested := Ropes.Cat(name, Ropes.FromString(".md"))
+  END;
   IF choosePath(suggested, p) THEN
     s := OvaText.Chars(p);
     IF ~OvaMarkdown.Save(sheet, s^, msg) THEN tell(msg) END
@@ -89,6 +104,9 @@ BEGIN
   copy.action := CopyAction; copy.SetTooltip("Put the whole sheet on the clipboard");
   NEW(save); FlButtons.OpenButton(save, LeftX + 85, y + Top, 150, Row, "Save Markdown...");
   save.action := SaveAction;
+  NEW(inline); FlButtons.OpenCheckButton(inline, LeftX + 245, y + Top, 100, Row, "Inline");
+  inline.action := InlineAction;
+  inline.SetTooltip("Show the character as one paragraph, as an adventure's cast lists it");
   NEW(buffer); FlText.OpenBuffer(buffer);
   NEW(display); FlText.OpenTextDisplay(display, LeftX, y + Top + Row + 10, ColumnW, h - Top - Row - 20, "");
   display.SetBuffer(buffer); display.SetTextFont(Fl.Courier);
@@ -100,10 +118,12 @@ END Build;
 PROCEDURE Close*;
 BEGIN
   IF buffer # NIL THEN buffer.Close END;
-  buffer := NIL; display := NIL; copy := NIL; save := NIL; sheet := NIL; name := NIL
+  buffer := NIL; display := NIL; copy := NIL; save := NIL; inline := NIL; sheet := NIL; name := NIL;
+  character := NIL
 END Close;
 
 BEGIN
-  sheet := NIL; name := NIL; buffer := NIL; display := NIL; copy := NIL; save := NIL;
+  sheet := NIL; name := NIL; buffer := NIL; display := NIL; copy := NIL; save := NIL; inline := NIL;
+  character := NIL;
   tell := DialogTell; choosePath := DialogPath
 END OvaMarkdownTab.

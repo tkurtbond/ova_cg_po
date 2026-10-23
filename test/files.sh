@@ -16,7 +16,8 @@
 #
 # Each fixture's Markdown sheet, as the generator's Markdown tab makes
 # it (obj/files/NAME.md, which TestFiles writes), must be exactly what
-# ova_fmt_po -M makes of its saved copy.
+# ova_fmt_po -M makes of its saved copy, and its inline paragraphs
+# (obj/files/NAME.inline.md) what ova_fmt_po -i makes of it.
 #
 # usage: test/files.sh OVA_FMT_PO
 set -u
@@ -30,21 +31,29 @@ fi
 # not before another (a bold "**DX 4**" keeps its stars), or the first
 # of three after one (a mark inside bold: "**DX 4***").
 unmark() { sed -E 's/\\\*//g; s/([0-9+])\*(\*\*)/\1\2/g; s/([0-9+])\*([^*]|$)/\1\2/g'; }
+# The same for -i, whose paragraphs are filled: a mark takes a column,
+# so each paragraph is joined onto one line first.
+unmark_inline() { awk 'BEGIN { RS = ""; ORS = "\n\n" } { gsub(/\n/, " "); print }' | unmark; }
 failed=0; n=0
 for saved in obj/files/*.yaml; do
   name=$(basename "$saved" .yaml)
   orig=test/data/$name.yaml
   [ -f "$orig" ] || continue
   n=$((n + 1))
-  label="$name: the Markdown sheet is ova_fmt_po -M's of its copy"
-  if [ ! -f obj/files/$name.md ]; then
-    echo "FAIL - $label (no obj/files/$name.md)"; failed=$((failed + 1))
-  elif diff <("$fmt" -M "$saved" 2>&1; echo "status ${PIPESTATUS[0]}") \
-          <(cat obj/files/$name.md; echo "status 0") > obj/files/$name.md.diff; then
-    echo "ok   - $label"; rm -f obj/files/$name.md.diff
-  else
-    echo "FAIL - $label (obj/files/$name.md.diff)"; failed=$((failed + 1))
-  fi
+  for ext in md inline.md; do
+    case $ext in
+      md) opt=-M; label="$name: the Markdown sheet is ova_fmt_po -M's of its copy" ;;
+      *) opt=-i; label="$name: the inline paragraphs are ova_fmt_po -i's of its copy"; n=$((n + 1)) ;;
+    esac
+    if [ ! -f obj/files/$name.$ext ]; then
+      echo "FAIL - $label (no obj/files/$name.$ext)"; failed=$((failed + 1))
+    elif diff <("$fmt" $opt "$saved" 2>&1; echo "status ${PIPESTATUS[0]}") \
+            <(cat obj/files/$name.$ext; echo "status 0") > obj/files/$name.$ext.diff; then
+      echo "ok   - $label"; rm -f obj/files/$name.$ext.diff
+    else
+      echo "FAIL - $label (obj/files/$name.$ext.diff)"; failed=$((failed + 1))
+    fi
+  done
   case $name in
     # Its copy gains Incorporeal Form's Defense, which the file left out
     # (TestFiles checks it).
@@ -52,11 +61,12 @@ for saved in obj/files/*.yaml; do
     Escaping|Unsorted|Vehicle|Acacia|Nazo|defense-best-differs) filter=unmark; but=", but for its overrides' marks" ;;
     *) filter=cat; but= ;;
   esac
-  for opt in "" -H -G -M -g -m -O; do
+  for opt in "" -H -G -M -g -m -O -i; do
     n=$((n + 1))
+    f=$filter; [ "$opt" = -i ] && [ "$f" = unmark ] && f=unmark_inline
     label="$name ${opt:-(terse)} formats the same as the fixture$but"
-    if diff <("$fmt" $opt "$orig" 2>&1 | $filter; echo "status ${PIPESTATUS[0]}") \
-            <("$fmt" $opt "$saved" 2>&1 | $filter; echo "status ${PIPESTATUS[0]}") \
+    if diff <("$fmt" $opt "$orig" 2>&1 | $f; echo "status ${PIPESTATUS[0]}") \
+            <("$fmt" $opt "$saved" 2>&1 | $f; echo "status ${PIPESTATUS[0]}") \
          > obj/files/$name$opt.diff; then
       echo "ok   - $label"; rm -f obj/files/$name$opt.diff
     else

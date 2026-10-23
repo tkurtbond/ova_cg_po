@@ -1,13 +1,14 @@
-MODULE OvaMarkdown; (* A character's sheet in Markdown: ova_fmt_po's -M *)
+MODULE OvaMarkdown; (* A character's sheet in Markdown: ova_fmt_po's -M, or its -i inline paragraph *)
 
 (* PLAN.md, "The Markdown sheet". The character as it would be saved,
    read back as ova_fmt_po reads it (OvaSave.ToEntity), and formatted
    by ova_fmt_po's own OvaCommon, copied, as `ova_fmt_po -M` formats
    the saved file: so the sheet is the same text, and test/files.sh
-   checks that it is. OvaOut keeps the output in a rope instead of
-   writing it. *)
+   checks that it is. Inline is the same for ova_fmt_po's inline format
+   (-i), by its OvaInline, copied too. OvaOut keeps the output in a
+   rope instead of writing it. *)
 
-IMPORT OvaCharacter, OvaCommon, OvaConfig, OvaEntities, OvaOut, OvaSave, OvaText, Platform, Ropes, SYSTEM;
+IMPORT OvaCharacter, OvaCommon, OvaConfig, OvaEntities, OvaInline, OvaOut, OvaSave, OvaText, Platform, Ropes, SYSTEM;
 
 TYPE Rope = Ropes.Rope;
 
@@ -15,17 +16,29 @@ VAR
   fd: Platform.FileHandle;      (* Save's file, for PutChunk *)
   writeError: Platform.ErrorCode;
 
-(* c's sheet; NIL if c couldn't be read back (a programmer's error). *)
-PROCEDURE Sheet*(c: OvaCharacter.Character): Rope;
+(* c in the format f, OvaConfig.Markdown or OvaConfig.Inline; NIL if c
+   couldn't be read back (a programmer's error). *)
+PROCEDURE Format(c: OvaCharacter.Character; f: INTEGER): Rope;
   VAR e: OvaEntities.Entity;
 BEGIN
   e := OvaSave.ToEntity(c);
   IF e = NIL THEN RETURN NIL END;
-  OvaConfig.format := OvaConfig.Markdown;
+  OvaConfig.format := f;
   OvaOut.ToRope;
-  OvaCommon.ProcessEntity(e, 1);
+  IF f = OvaConfig.Inline THEN OvaInline.ProcessEntity(e, 1) ELSE OvaCommon.ProcessEntity(e, 1) END;
   RETURN OvaOut.TakeRope()
+END Format;
+
+(* c's sheet, ova_fmt_po -M's; NIL if c couldn't be read back. *)
+PROCEDURE Sheet*(c: OvaCharacter.Character): Rope;
+BEGIN RETURN Format(c, OvaConfig.Markdown)
 END Sheet;
+
+(* c as an inline paragraph, ova_fmt_po -i's; NIL if c couldn't be read
+   back. *)
+PROCEDURE Inline*(c: OvaCharacter.Character): Rope;
+BEGIN RETURN Format(c, OvaConfig.Inline)
+END Inline;
 
 (* One leaf of the text Save writes: a Ropes.ChunkVisitor, so a
    module-level procedure. *)

@@ -6,7 +6,9 @@ MODULE TestMarkdown; (* OvaMarkdownTab: the character's Markdown sheet, kept cur
    file opened); Copy puts it on the clipboard, read back by pasting it
    into an input of this test's own; Save Markdown... writes it where
    the chooser says, suggesting the character's name, and says why when
-   it can't. That the sheet is ova_fmt_po -M's is test/files.sh's. *)
+   it can't. Inline, checked, shows the inline paragraph instead, kept
+   current the same way, and Save Markdown... takes it. That the sheet
+   is ova_fmt_po -M's, and the paragraph -i's, is test/files.sh's. *)
 
 IMPORT Check, Fl, FlInputs, FlText, OvaBackground, OvaMarkdown, OvaMarkdownTab, OvaRules, OvaText, OvaWidgets,
   OvaWindow, Out, Platform, Ropes;
@@ -52,12 +54,15 @@ PROCEDURE Has(r: Rope; s: ARRAY OF CHAR): BOOLEAN;
 BEGIN RETURN Ropes.Find(r, s, 0) >= 0
 END Has;
 
-(* Whether the tab shows the sheet of the character shown, as
-   OvaMarkdown makes it, in its display. *)
+(* Whether the tab shows the sheet of the character shown, or its
+   inline paragraph if Inline is checked, as OvaMarkdown makes it, in
+   its display. *)
 PROCEDURE Shown(): BOOLEAN;
   VAR b: FlText.TextBuffer; t: OvaText.String; want: Rope;
 BEGIN
-  want := OvaMarkdown.Sheet(OvaWindow.character);
+  IF OvaMarkdownTab.inline.Value() THEN want := OvaMarkdown.Inline(OvaWindow.character)
+  ELSE want := OvaMarkdown.Sheet(OvaWindow.character)
+  END;
   b := OvaMarkdownTab.display.Buffer(); NEW(t, b.Length() + 1); b.GetText(t^);
   RETURN (want # NIL) & Ropes.Equal(OvaMarkdownTab.sheet, want) & Ropes.EqualString(want, t^)
 END Shown;
@@ -78,6 +83,11 @@ BEGIN
   Pick(OvaWindow.abilities, name); OvaWindow.abilities.spinner.SetValue(level);
   OvaWindow.abilities.text.SetValue(""); OvaWindow.abilities.add.DoCallback
 END AddAbility;
+
+(* Checks or unchecks Inline, as a click does. *)
+PROCEDURE SetInline(on: BOOLEAN);
+BEGIN OvaMarkdownTab.inline.SetValue(on); OvaMarkdownTab.inline.DoCallback
+END SetInline;
 
 (* Deletes the file at p, if there is one. *)
 PROCEDURE Remove(p: ARRAY OF CHAR);
@@ -131,6 +141,22 @@ BEGIN
   OvaMarkdownTab.save.DoCallback;
   Check.Check((suggested = NIL) & Ropes.ReadFile(SavePath, back) & Ropes.Equal(back, OvaMarkdownTab.sheet),
     "a character with no name: nothing suggested, the sheet saved");
+
+  (* ---- Inline ---- *)
+  ok := OvaWindow.Load(R("data/Ai.yaml"));
+  Check.Check(ok & ~OvaMarkdownTab.inline.Value() & Shown(), "Inline starts unchecked: the sheet");
+  SetInline(TRUE);
+  Check.Check(Shown() & Has(OvaMarkdownTab.sheet, "**Ai.** An amnesiac") & ~Has(OvaMarkdownTab.sheet, "# Ai"),
+    "Inline checked: the inline paragraph");
+  OvaWindow.nameIn.SetValue("Aiko"); OvaWindow.nameIn.DoCallback;
+  Check.Check(Shown() & Has(OvaMarkdownTab.sheet, "**Aiko.**"), "Inline: kept current");
+  Remove(SavePath); chosen := R(SavePath);
+  OvaMarkdownTab.save.DoCallback;
+  Check.Check(Ropes.EqualString(suggested, "Aiko-inline.md") & Ropes.ReadFile(SavePath, back)
+    & Ropes.Equal(back, OvaMarkdownTab.sheet), "Inline: Save Markdown... suggests NAME-inline.md, saves the paragraph");
+  Remove(SavePath);
+  SetInline(FALSE);
+  Check.Check(Shown() & Has(OvaMarkdownTab.sheet, "# Aiko"), "Inline unchecked: the sheet again");
 
   OvaWindow.Close;
   Check.Check(Fl.OpenWidgets() = 0, "every widget is deleted");

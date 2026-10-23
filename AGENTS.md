@@ -102,9 +102,10 @@ make print-VAR       # show a makefile variable
   `TESTS`.
 - **Don't run `make install` with the default `PREFIX` unless asked.**
 - **`src/OvaEntities.Mod`, `OvaText.Mod`, `OvaOut.Mod`,
-  `OvaConfig.Mod` and `OvaCommon.Mod` are ova_fmt_po's, copied**, so
-  the generator reads exactly what ova_fmt_po reads, and its Markdown
-  sheet is exactly what `ova_fmt_po -M` writes.
+  `OvaConfig.Mod`, `OvaCommon.Mod` and `OvaInline.Mod` are
+  ova_fmt_po's, copied**, so the generator reads exactly what
+  ova_fmt_po reads, and its Markdown sheet and inline paragraph are
+  exactly what `ova_fmt_po -M` and `ova_fmt_po -i` write.
   Change them there (and in the Ada ova_fmt first, for a new key), then
   copy them again; never edit the copies.
 

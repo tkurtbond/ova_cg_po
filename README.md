@@ -188,6 +188,13 @@ elsewhere; **Save Markdown...** writes it to a file (it suggests the
 character's name, with `.md`). Saving the sheet doesn't save the
 character.
 
+Check **Inline** to show the character instead as `ova_fmt_po -i`
+does: one Markdown paragraph, an inline stat block like an adventure's
+cast list (name, prose, abilities and weaknesses, attacks, Defense,
+Health, Endurance and TV), with a paragraph for each linked Ability.
+Copy and Save Markdown... then take the paragraph; Save Markdown...
+suggests the name with `-inline.md`.
+
 ### The rulebook
 
 The program holds no rules text. Every name shows its page in the
