@@ -29,6 +29,7 @@ CONST
   CompanionSheet* = 1;  (* 20 and 20 (p. 52); TV 4 less, at least 1, a Secondary NPC's (p. 123-124) *)
   MinionSheet* = 2;     (* 10 and 10 (p. 58) *)
   ExtraSheet* = 3;      (* 10 and 10 (p. 123); TV always 1, an Extra's (p. 124) *)
+  BossSheet* = 4;       (* 40 and 40, a character's (p. 123); it alone may have Boss Abilities *)
 
   (* Warning codes. Each names what it is about in its trait, attack,
      mod or spell; NIL for the sheet as a whole. *)
@@ -44,10 +45,12 @@ CONST
   StartingBroken* = 9;  (* Abilities beyond the starting levels and the Weaknesses' (p. 21) *)
   CeilingBroken* = 10;  (* Abilities beyond the Power Ceiling (p. 21) *)
   OverFive* = 11;       (* attack, or NIL for Defense: Abilities give a roll more than +5 (p. 21) *)
+  NotBoss* = 12;        (* trait: a Boss Ability on a sheet that isn't a Boss's (p. 123) *)
 
   CombinedLimit = 5;    (* Combined Effectiveness: at most +5 to a roll *)
   CharacterBase = 40; CompanionBase = 20; MinionBase = 10;
   CompanionTV = 4;      (* taken off a Secondary NPC's TV *)
+  BossTV = 5;           (* added for each Boss Ability (p. 124) *)
   MaxLevel = 5; MinWeakness = -3;
   CostStep = 5;
 
@@ -524,6 +527,7 @@ BEGIN
      OR (t.kind = OvaRules.Weakness) & ((t.level > -1) OR (t.level < MinWeakness)) THEN
     Warn(s, LevelRange, t, NIL, NIL, NIL)
   END;
+  IF Has(t, OvaRules.BossOnly) & (s.kind # BossSheet) THEN Warn(s, NotBoss, t, NIL, NIL, NIL) END;
   t.hasEnd := (t.mods # NIL) OR (t.use # 0);
   IF t.hasEnd THEN Set(t.end, EndCost(t.mods, t.use)) ELSE Set(t.end, 0) END;
   CheckMods(s, t.mods, t, NIL);
@@ -576,7 +580,7 @@ PROCEDURE ComputeHealth(s: Sheet);
 BEGIN
   form := s.transformed;
   CASE s.kind OF
-    Character: base := CharacterBase
+    Character, BossSheet: base := CharacterBase
   | CompanionSheet: base := CompanionBase
   | MinionSheet, ExtraSheet: base := MinionBase
   END;
@@ -602,7 +606,8 @@ END HalfTVLevel;
 (* TV (p. 124): the best ROLL, Defense and DX, without the Perks and
    Flaws that add to them each time (Attack.tvRoll, tvDX), + Armored +
    the signed levels that change Health and Endurance + half of each
-   marked Ability's; a Companion's 4 less, at least 1. With no attack,
+   marked Ability's + 5 for each Boss Ability; a Companion's 4 less, at
+   least 1. With no attack,
    the plain one: 2 + Agile + Combat Expert - Clumsy, 1 + Attack +
    Strong - Weak. *)
 PROCEDURE ComputeTV(s: Sheet);
@@ -632,6 +637,7 @@ BEGIN
   t := s.traits;
   WHILE t # NIL DO
     INC(tv, HalfTVLevel(t));
+    IF Has(t, OvaRules.BossOnly) THEN INC(tv, BossTV) END;
     IF form THEN f := t.form; WHILE f # NIL DO INC(tv, HalfTVLevel(f)); f := f.next END END;
     t := t.next
   END;
@@ -661,7 +667,8 @@ BEGIN IF n >= 0 THEN RETURN (n + 1) DIV 2 ELSE RETURN -((1 - n) DIV 2) END
 END HalfUp;
 
 (* The totals of the character's own Traits (not a form's, which
-   Transformation's level pays for, p. 63), then the limits on them. *)
+   Transformation's level pays for, p. 63; not a Boss Ability, which is
+   applied and removed as needed, p. 123), then the limits on them. *)
 PROCEDURE ComputeTotals(s: Sheet);
   VAR t: Trait; half: BOOLEAN; lv, pts, abilities, abilityPoints, weaknesses, spent, measure: INTEGER;
 BEGIN
@@ -669,7 +676,8 @@ BEGIN
   abilities := 0; abilityPoints := 0; weaknesses := 0; s.weaknessPoints := 0;
   t := s.traits;
   WHILE t # NIL DO
-    lv := t.level; pts := Scaled(ABS(lv));
+    IF Has(t, OvaRules.BossOnly) THEN lv := 0 ELSE lv := t.level END;
+    pts := Scaled(ABS(lv));
     IF half & Has(t, OvaRules.HalfCost) THEN lv := HalfUp(lv); pts := HalfUp(pts) END;
     t.points := pts;
     IF t.kind = OvaRules.Ability THEN INC(abilities, lv); INC(abilityPoints, pts)

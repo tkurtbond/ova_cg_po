@@ -587,6 +587,30 @@ BEGIN
 END Overrides;
 
 (* The limits (p. 21) and the totals they check. *)
+(* A Boss (p. 123-124): a character's Health and Endurance; 5 TV for each
+   Boss Ability, whose level no total counts. *)
+PROCEDURE Boss;
+  VAR s: OvaCalc.Sheet; tv: INTEGER;
+BEGIN
+  sample := "boss";
+  s := NewSheet(OvaCalc.BossSheet);
+  Add(s.traits, "Attack", 2);
+  OvaCalc.Compute(s);
+  tv := OvaCalc.Value(s.tv);
+  L("HEALTH"); CheckInt(s.health, 40); L("ENDURANCE"); CheckInt(s.endurance, 40);
+  Add(s.traits, "Health Reserve", 1); Add(s.traits, "Scale Advantage", 1);
+  OvaCalc.Compute(s);
+  L("TV: 5 for each"); Is(OvaCalc.Value(s.tv), tv + 10);
+  L("a Boss Ability's level in no total"); CheckInt(s.abilityLevels, 2);
+  L("nor its points"); CheckInt(s.abilityPoints, 2);
+  L("HEALTH isn't doubled"); CheckInt(s.health, 40);
+  L("no warnings"); Is(Warnings(s), 0);
+  s := NewSheet(OvaCalc.Character);
+  Add(s.traits, "Escape Plan", 1);
+  OvaCalc.Compute(s);
+  L("a Boss Ability off a Boss's sheet"); Check.Check(WarnedAny(s, OvaCalc.NotBoss), label)
+END Boss;
+
 PROCEDURE Limits;
   VAR s: OvaCalc.Sheet; know, inept: OvaCalc.Trait; a, b: OvaCalc.Attack;
 BEGIN
@@ -678,6 +702,6 @@ END Limits;
 
 BEGIN
   Samples12;
-  Plain; Rolls; Damage; Endurance; Spells; Stats; ThreatValue; Transformation; Overrides; Limits;
+  Plain; Rolls; Damage; Endurance; Spells; Stats; ThreatValue; Transformation; Overrides; Limits; Boss;
   Check.Summary
 END TestCalc.

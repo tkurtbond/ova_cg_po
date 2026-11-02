@@ -211,6 +211,57 @@ PROCEDURE Has(r: Rope; s: ARRAY OF CHAR): BOOLEAN;
 BEGIN RETURN Ropes.Find(r, s, 0) >= 0
 END Has;
 
+PROCEDURE NotBossWarned(c: OvaCharacter.Character): BOOLEAN;
+  VAR w: OvaCalc.Warning;
+BEGIN
+  w := c.warnings; WHILE (w # NIL) & (w.code # OvaCalc.NotBoss) DO w := w.next END;
+  RETURN w # NIL
+END NotBossWarned;
+
+(* The Boss Abilities in the Abilities' Choice: there for a Boss alone,
+   after a divider. Leaves the type none and no Boss Ability. *)
+PROCEDURE BossAbilities;
+  VAR p: OvaTraitPanel.TraitPanel; c: OvaCharacter.Character; n, tv, total, lines: INTEGER;
+    label, last: ARRAY 64 OF CHAR; it: OvaRules.Item;
+BEGIN
+  p := OvaWindow.abilities; c := OvaWindow.character;
+  n := OvaRules.Count(OvaRules.Ability); lines := p.browser.Count();
+  Check.Check(~p.withBoss & (p.choice.Length() = n + 1) & (FlMenus.MenuDivider * p.choice.ItemFlags(n - 1) = {}),
+    "no type: the Abilities alone, no divider");
+  OvaWindow.npcTypeIn.ItemLabel(1 + OvaEntities.Boss, label);
+  OvaWindow.npcTypeIn.Pick(1 + OvaEntities.Boss);
+  Check.Check((label = "Boss (p. 123)") & (c.kind = OvaCalc.BossSheet) & AllShown() & Has(Saved(), "npc-type: Boss"),
+    "Boss chosen: its own sheet, shown, and saved");
+  p.choice.ItemLabel(n, label); p.choice.ItemLabel(n + 3, last);
+  Check.Check(p.withBoss & (p.choice.Length() = n + 5) & ChoiceLabelled(p)
+    & (label = "Health Reserve (p. 123)") & (last = "Escape Plan (p. 123)"),
+    "a Boss: the Boss Abilities after the others, each with its page");
+  Check.Check((FlMenus.MenuDivider * p.choice.ItemFlags(n - 1) # {}) & (FlMenus.MenuDivider * p.choice.ItemFlags(n - 2) = {})
+    & (FlMenus.MenuDivider * p.choice.ItemFlags(n) = {}), "the divider, under the last of the others");
+  Check.Check(~OvaWindow.weaknesses.withBoss & (OvaWindow.weaknesses.choice.Length() = OvaRules.Count(OvaRules.Weakness) + 1),
+    "the Weaknesses offer nothing new");
+  tv := OvaCalc.Value(c.tv); total := OvaCalc.Value(c.abilityLevels);
+  IF p.choice.SetValue(n + 2) THEN END; p.choice.DoCallback;
+  it := p.Item();
+  Check.Check((it # NIL) & (it.name = "Scale Advantage") & (p.help.page = 123) & ~p.spinner.Active()
+    & (p.spinner.Value() = 1), "a Boss Ability chosen: its page, the level 1 and off");
+  p.text.SetValue("Attack"); p.add.DoCallback; Settle;
+  Check.Check((p.browser.Count() = lines + 1) & (OvaCalc.Value(c.tv) = tv + 5) & (OvaCalc.Value(c.abilityLevels) = total)
+    & Has(Saved(), "Scale Advantage") & ListShown(p) & AllShown(), "added: 5 TV, no levels, saved, shown");
+  Pick(p, "Attack");
+  Check.Check(p.spinner.Active(), "another name: the level on again");
+  SelectLine(p, LineWith(p.browser, "Scale Advantage"));
+  OvaWindow.npcTypeIn.Pick(0);
+  Check.Check(~p.withBoss & (p.choice.Length() = n + 1) & (FlMenus.MenuDivider * p.choice.ItemFlags(n - 1) = {})
+    & NotBossWarned(c) & Has(Saved(), "Scale Advantage") & (LineWith(OvaWindow.warnings, "p. 123") > 0),
+    "no longer a Boss: not offered, kept, and warned of");
+  SelectLine(p, LineWith(p.browser, "Scale Advantage"));
+  Check.Check((p.choice.Value() = -1) & (p.Item() = NIL) & p.spinner.Active(), "its line selected: nothing chosen, and nothing fails");
+  p.remove.DoCallback; Settle;
+  Check.Check((p.browser.Count() = lines) & ~NotBossWarned(c) & ~Has(Saved(), "Scale Advantage")
+    & (LineWith(OvaWindow.warnings, "p. 123") = 0), "removed: the warning gone")
+END BossAbilities;
+
 PROCEDURE Title(VAR s: ARRAY OF CHAR);
 BEGIN OvaWindow.window.GetLabel(s)
 END Title;
@@ -499,6 +550,7 @@ BEGIN
   OvaWindow.npcTypeIn.Pick(0);
   Check.Check(~c.hasNpcType & (c.kind = OvaCalc.Character) & AllShown() & ~Has(Saved(), "npc-type"),
     "none chosen: a character's sheet, no npc-type saved");
+  BossAbilities;
 
   (* ---- Files ---- *)
   chosen := Ropes.FromString(SavePath);

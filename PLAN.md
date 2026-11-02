@@ -188,7 +188,8 @@ Weaknesses -1 to -3 (p. 18).
   Fenrir), Tough and Vigorous added the same way; Minions 10 and 10
   (p. 58). An NPC's `npc-type` (p. 123) sets its sheet: a Heroic NPC's
   is a character's, a Secondary NPC's a Companion's (20 and 20, TV 4
-  less), an Extra's 10 and 10 with a TV of 1 (p. 124).
+  less), an Extra's 10 and 10 with a TV of 1 (p. 124), and a Boss's a
+  character's, 40 and 40 (p. 123). See "Boss NPCs".
   Health is not floored (no rule says so); Tough, Vigorous and
   Endurance Reserve summed past +5 (a form's added to the base's)
   count as +5, with a warning. A Vehicle's start at 40 and 40 (p. 64:
@@ -260,6 +261,28 @@ The running totals (levels of Abilities, of Weaknesses, the Character
 Total; under Scaled Cost the Abilities' points and the net points) are
 shown; a broken limit turns
 its total red and says why, but never stops the user: the GM decides.
+
+### Boss NPCs
+
+A Boss (p. 123) has a character's 40 and 40, and four Boss Abilities, in
+the book's order: Health Reserve, Extra Actions, Scale Advantage (the
+book's Scale Advantages, one entry for each Ability, whose name goes in
+the detail) and Escape Plan. Decided here, as the book leaves open how a
+sheet records them:
+
+- They are Abilities, in `OvaRules` with `BossOnly`, but not among the
+  56: `Count` and `Get` don't see them, `Find` does. A list that offers
+  them goes through `OfferCount`, `Offered` and `OfferIndex`.
+- Only a Boss's own Abilities offer them: not its forms, partners or
+  spell lists.
+- The format needs a `level`, and they have none, so they are saved as
+  `level: 1` and the Spinner is 1 and off while one is chosen.
+- They count only in the TV, 5 each (p. 124), for the book's "applied
+  and removed as needed": no levels, points, Character Total or limits.
+  Scale Advantage changes no Attack Roll or DX here, and Health Reserve
+  no HEALTH: both are decided in play.
+- A sheet that stops being a Boss keeps them, still 5 TV each, with the
+  warning `NotBoss`: changing a Choice shouldn't delete anything.
 
 ## Data tables
 
@@ -377,7 +400,7 @@ drawing size is set when it's shown.
    right half)**; Attacks has the combat box and the numbers below it,
    Character the rest:
    - Character Name and Player Name inputs, a tagline, and the NPC
-     Type (none, Heroic, Secondary, Extra), which sets the sheet's
+     Type (none, Heroic, Secondary, Extra, Boss), which sets the sheet's
      starting Health and Endurance and its TV;
    - **Abilities** and **Weaknesses**, side by side as on the sheet:
      each a browser of lines (`+3 Attack (Kaze Satsujinsha)`; under
@@ -385,6 +408,7 @@ drawing size is set when it's shown.
      under it a `Choice` of every name, a `Spinner` for the level (+1
      to +5, or -1 to -3), a detail `Input`, and Add, Change, Remove and
      **?** buttons. **?** opens the rulebook at the chosen name's page.
+     A Boss's Abilities offer the Boss Abilities too ("Boss NPCs").
      An Ability with linked content (Transformation, Companion, Magic's
      spells, Vehicle) activates a button under the Abilities, labelled
      for it (Form..., Companion..., Spells..., Vehicle...), that opens

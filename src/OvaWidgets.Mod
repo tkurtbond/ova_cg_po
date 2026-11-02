@@ -14,7 +14,8 @@ MODULE OvaWidgets; (* What the window and its dialogs share: the number boxes an
    A Panel is a list and its editor, the shape PLAN.md gives the
    Abilities and Weaknesses and the attack dialog's Perks and Flaws: a
    browser of lines, under it a Choice of every name of one kind
-   (OvaRules.Label: "Attack (p. 50)"), a Spinner, a text field, and
+   (OvaRules.Label: "Attack (p. 50)"), for a Boss the Boss Abilities
+   after a divider, a Spinner, a text field, and
    Add, Change, Remove and ? buttons. What the lines are, and what the
    buttons do to the model, are its extension's (its methods). *)
 
@@ -57,6 +58,7 @@ TYPE
   Panel* = POINTER TO PanelDesc;
   PanelDesc* = RECORD
     kind-: INTEGER;  (* the Choice's: OvaRules.Ability, Weakness, Perk or Flaw *)
+    withBoss-: BOOLEAN;  (* the Choice offers the Boss Abilities too *)
     browser-: FlBrowsers.HoldBrowser;
     choice-: FlMenus.Choice;
     spinner-: FlValuators.Spinner;
@@ -189,7 +191,9 @@ PROCEDURE (p: Panel) Item*(): OvaRules.Item;
   VAR i: INTEGER;
 BEGIN
   i := p.choice.Value();
-  IF (i >= 0) & (i < OvaRules.Count(p.kind)) THEN RETURN OvaRules.Get(p.kind, i) ELSE RETURN NIL END
+  IF (i >= 0) & (i < OvaRules.OfferCount(p.kind, p.withBoss)) THEN RETURN OvaRules.Offered(p.kind, i, p.withBoss)
+  ELSE RETURN NIL
+  END
 END Item;
 
 (* After the Choice changes: the ? button turns to the chosen name's
@@ -208,19 +212,43 @@ PROCEDURE (p: Panel) Changed*;
 BEGIN
 END Changed;
 
-(* Chooses it in the Choice (none for NIL, an item not of the panel's
-   kind), and sets the ? button. *)
+(* Chooses it in the Choice (none for NIL, an item the Choice doesn't
+   offer), and sets the ? button. *)
 PROCEDURE (p: Panel) Choose*(it: OvaRules.Item);
-  VAR i, n: INTEGER;
+  VAR n: INTEGER;
 BEGIN
   n := -1;
-  IF (it # NIL) & (it.kind = p.kind) THEN
-    i := 0; WHILE OvaRules.Get(p.kind, i) # it DO INC(i) END;
-    n := i
-  END;
+  IF it # NIL THEN n := OvaRules.OfferIndex(it, p.kind, p.withBoss) END;
   IF p.choice.SetValue(n) THEN END;
   p.Chosen
 END Choose;
+
+(* The Choice filled with the names p offers: a divider under the last
+   of its kind's, then the Boss Abilities, if withBoss. *)
+PROCEDURE FillChoice(p: Panel);
+  VAR i, last: INTEGER; label: ARRAY 64 OF CHAR; flags: SET;
+BEGIN
+  last := OvaRules.Count(p.kind) - 1;
+  FOR i := 0 TO OvaRules.OfferCount(p.kind, p.withBoss) - 1 DO
+    OvaRules.Label(OvaRules.Offered(p.kind, i, p.withBoss), label);
+    IF p.withBoss & (i = last) THEN flags := FlMenus.MenuDivider ELSE flags := {} END;
+    IF p.choice.Add(label, 0, {}, NIL, flags) >= 0 THEN END
+  END
+END FillChoice;
+
+(* Offers the Boss Abilities, or stops: what is chosen stays, if it
+   still can. *)
+PROCEDURE (p: Panel) OfferBoss*(on: BOOLEAN);
+  VAR it: OvaRules.Item;
+BEGIN
+  IF on # p.withBoss THEN
+    it := p.Item();
+    p.withBoss := on;
+    p.choice.Clear;
+    FillChoice(p);
+    p.Choose(it)
+  END
+END OfferBoss;
 
 (* The browser filled again, its line line selected (0: none) and the
    controls loaded from it. *)
@@ -279,9 +307,9 @@ END ButtonAction;
    names, its Spinner labelled spinLabel, its text field textLabel. *)
 PROCEDURE OpenPanel*(p: Panel; x, y, w, h, kind: INTEGER; title-, spinLabel-, textLabel-: ARRAY OF CHAR);
   CONST Row = 25; Gap = 5; LabelW = 50;
-  VAR i, yy: INTEGER; label: ARRAY 64 OF CHAR; b: FlButtons.Button; widths: ARRAY 2 OF INTEGER;
+  VAR yy: INTEGER; b: FlButtons.Button; widths: ARRAY 2 OF INTEGER;
 BEGIN
-  p.kind := kind;
+  p.kind := kind; p.withBoss := FALSE;
   NEW(p.browser); FlBrowsers.OpenHoldBrowser(p.browser, x, y + 20, w, h - 20, title);
   p.browser.SetAlign(Fl.AlignTopLeft);
   p.browser.SetFormatChar(0X);  (* names are text, never format codes *)
@@ -290,10 +318,7 @@ BEGIN
   p.browser.action := BrowserAction;
   yy := y + h + Gap;
   NEW(p.choice); FlMenus.OpenChoice(p.choice, x, yy, w - 30, Row, "");
-  FOR i := 0 TO OvaRules.Count(kind) - 1 DO
-    OvaRules.Label(OvaRules.Get(kind, i), label);
-    IF p.choice.Add(label, 0, {}, NIL, {}) >= 0 THEN END
-  END;
+  FillChoice(p);
   p.choice.action := ChoiceAction;
   NEW(p.help); OpenHelpButton(p.help, x + w - 25, yy, 0);
   yy := yy + Row + Gap;

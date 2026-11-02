@@ -389,7 +389,37 @@ BEGIN
     & (Linked("Attack") = OvaRules.NoLink), "linked content")
 END TestFlags;
 
+(* The Boss Abilities (p. 123): Abilities, found by name, but offered
+   only to a list that asks for them, after every other. *)
+PROCEDURE TestBoss;
+  VAR i, n: INTEGER; ok: BOOLEAN; it: OvaRules.Item;
 BEGIN
-  TestQuickList; TestPages; TestRepeats; TestFind; TestLabels; TestTables; TestFlags;
+  n := OvaRules.Count(OvaRules.Ability);
+  ok := OvaRules.BossCount() = 4;
+  it := OvaRules.GetBoss(0); ok := ok & (it.name = "Health Reserve");
+  it := OvaRules.GetBoss(1); ok := ok & (it.name = "Extra Actions");
+  it := OvaRules.GetBoss(2); ok := ok & (it.name = "Scale Advantage");
+  it := OvaRules.GetBoss(3); ok := ok & (it.name = "Escape Plan");
+  Check.Check(ok, "the four Boss Abilities, in the book's order");
+  ok := TRUE;
+  FOR i := 0 TO 3 DO
+    it := OvaRules.GetBoss(i);
+    ok := ok & (it.kind = OvaRules.Ability) & (it.page = 123) & (OvaRules.BossOnly IN it.flags)
+      & (OvaRules.Find(it.name) = it) & (OvaRules.OfferIndex(it, OvaRules.Ability, FALSE) = -1)
+      & (OvaRules.OfferIndex(it, OvaRules.Ability, TRUE) = n + i)
+      & (OvaRules.Offered(OvaRules.Ability, n + i, TRUE) = it)
+  END;
+  Check.Check(ok, "each: an Ability on p. 123, found by name, offered last and only to a Boss's list");
+  FOR i := 0 TO n - 1 DO
+    it := OvaRules.Get(OvaRules.Ability, i);
+    ok := ok & ~(OvaRules.BossOnly IN it.flags) & (OvaRules.OfferIndex(it, OvaRules.Ability, TRUE) = i)
+  END;
+  Check.Check(ok, "the other Abilities: none is a Boss Ability, their places the same");
+  Check.Check((OvaRules.OfferCount(OvaRules.Ability, FALSE) = n) & (OvaRules.OfferCount(OvaRules.Ability, TRUE) = n + 4)
+    & (OvaRules.OfferCount(OvaRules.Weakness, TRUE) = OvaRules.Count(OvaRules.Weakness)), "only Abilities offer them")
+END TestBoss;
+
+BEGIN
+  TestQuickList; TestPages; TestRepeats; TestFind; TestLabels; TestTables; TestFlags; TestBoss;
   Check.Summary
 END TestRules.

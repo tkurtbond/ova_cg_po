@@ -277,16 +277,13 @@ BEGIN
   END
 END SpellItem;
 
-(* Chooses it in the Choice; none for NIL, or an item of the other kind
+(* Chooses it in the Choice; none for NIL, or an item it doesn't offer
    (a spell the Magic can't cast, from a file). *)
 PROCEDURE ChooseSpellItem(it: OvaRules.Item);
-  VAR i, n: INTEGER;
+  VAR n: INTEGER;
 BEGIN
   n := -1;
-  IF (it # NIL) & (it.kind = castKind) THEN
-    i := 0; WHILE OvaRules.Get(castKind, i) # it DO INC(i) END;
-    n := i
-  END;
+  IF it # NIL THEN n := OvaRules.OfferIndex(it, castKind, FALSE) END;
   IF spellAbility.SetValue(n) THEN END;
   IF it # NIL THEN spellHelp.page := it.page ELSE spellHelp.page := 0 END
 END ChooseSpellItem;

@@ -20,9 +20,9 @@ MODULE OvaRules; (* The rulebook's names, pages and numbers: no descriptions *)
 IMPORT Strings;
 
 CONST
-  (* Where the NPC types, Heroic, Secondary and Extra (ova_fmt's
-     npc-type:), are described: their Health and Endurance; TV's step
-     for them is on p. 124. *)
+  (* Where the NPC types, Heroic, Secondary, Extra and Boss (ova_fmt's
+     npc-type:), and the Boss Abilities are described: their Health and
+     Endurance; TV's step for them is on p. 124. *)
   NpcTypesPage* = 123;
 
   (* Kinds *)
@@ -56,6 +56,7 @@ CONST
   CastsWeaknesses* = 19; (* its spells cast Weaknesses, -1 to -3, at Arcane's costs: Witchcraft (p. 58) *)
   ThirdDefense* = 20;    (* another alternate Defense Roll, 2 + its level, written after
                             Barrier's: Incorporeal Form, its dice as the Defense Roll (p. 55) *)
+  BossOnly* = 21;        (* a Boss Ability: +5 TV (p. 124), no level in the totals (p. 123) *)
 
   (* What linked content an Ability has (Item.linked) *)
   NoLink* = 0; Spells* = 1; Form* = 2; Partner* = 3; Machine* = 4;
@@ -88,6 +89,7 @@ CONST
   ThreatValuePage* = 124;
 
   MaxItems = 200;
+  NBossAbilities = 4;
 
 TYPE
   Name* = ARRAY NameLength OF CHAR;
@@ -107,6 +109,10 @@ VAR
   items: ARRAY MaxItems OF Item;
   nItems: INTEGER;
   first, count: ARRAY 4 OF INTEGER;  (* each kind's span of items *)
+  (* The Boss Abilities: of kind Ability, but outside its span, so that
+     only a Boss's list offers them. *)
+  boss: ARRAY NBossAbilities OF Item;
+  nBoss: INTEGER;
   (* Other names an item is found by: the Quick List's abbreviation, and
      the name without its parenthesis. *)
   aliases: ARRAY 4 OF RECORD alias: Name; item: Item END;
@@ -192,6 +198,15 @@ BEGIN
   ASSERT(i < nItems);
   COPY(alias, aliases[nAliases].alias); aliases[nAliases].item := items[i]; INC(nAliases)
 END Alias;
+
+(* A Boss Ability: an Ability, kept out of the kind's span (Count, Get). *)
+PROCEDURE B(name: ARRAY OF CHAR);
+  VAR it: Item;
+BEGIN
+  it := New(name, Ability, NpcTypesPage, {BossOnly});
+  DEC(count[Ability]);
+  boss[nBoss] := it; INC(nBoss)
+END B;
 
 PROCEDURE Abilities;
 BEGIN
@@ -381,6 +396,15 @@ BEGIN
   PF("Weapon", Flaw, 89, -5, 1, {})
 END PerksAndFlaws;
 
+(* In the book's order (p. 123). *)
+PROCEDURE BossAbilities;
+BEGIN
+  B("Health Reserve");
+  B("Extra Actions");
+  B("Scale Advantage");
+  B("Escape Plan")
+END BossAbilities;
+
 (* ---- Finding items ---- *)
 
 (* How many items of a kind there are. *)
@@ -392,6 +416,41 @@ END Count;
 PROCEDURE Get*(kind, i: INTEGER): Item;
 BEGIN ASSERT((i >= 0) & (i < count[kind])); RETURN items[first[kind] + i]
 END Get;
+
+(* How many Boss Abilities there are. *)
+PROCEDURE BossCount*(): INTEGER;
+BEGIN RETURN nBoss
+END BossCount;
+
+(* The i'th Boss Ability, 0 <= i < BossCount(), in the book's order. *)
+PROCEDURE GetBoss*(i: INTEGER): Item;
+BEGIN ASSERT((i >= 0) & (i < nBoss)); RETURN boss[i]
+END GetBoss;
+
+(* How many names a list of kind offers: with withBoss, a list of
+   Abilities offers the Boss Abilities too, at its end. *)
+PROCEDURE OfferCount*(kind: INTEGER; withBoss: BOOLEAN): INTEGER;
+BEGIN
+  IF withBoss & (kind = Ability) THEN RETURN count[kind] + nBoss ELSE RETURN count[kind] END
+END OfferCount;
+
+(* The i'th name such a list offers, 0 <= i < OfferCount(kind, withBoss). *)
+PROCEDURE Offered*(kind, i: INTEGER; withBoss: BOOLEAN): Item;
+BEGIN
+  ASSERT((i >= 0) & (i < OfferCount(kind, withBoss)));
+  IF i < count[kind] THEN RETURN Get(kind, i) ELSE RETURN GetBoss(i - count[kind]) END
+END Offered;
+
+(* it's place in such a list; -1 if the list doesn't offer it. *)
+PROCEDURE OfferIndex*(it: Item; kind: INTEGER; withBoss: BOOLEAN): INTEGER;
+  VAR i, n: INTEGER;
+BEGIN
+  n := OfferCount(kind, withBoss);
+  FOR i := 0 TO n - 1 DO
+    IF Offered(kind, i, withBoss) = it THEN RETURN i END
+  END;
+  RETURN -1
+END OfferIndex;
 
 (* The item named name, ignoring case, or by an alias ("Vehicle" for
    "Vehicle (Mecha)"); NIL if there is none. Names are unique across the
@@ -487,9 +546,9 @@ BEGIN
 END SpellRow;
 
 BEGIN
-  nItems := 0; nAliases := 0;
+  nItems := 0; nAliases := 0; nBoss := 0;
   count[Ability] := 0; count[Weakness] := 0; count[Perk] := 0; count[Flaw] := 0;
-  Abilities; Weaknesses; PerksAndFlaws;
+  Abilities; Weaknesses; PerksAndFlaws; BossAbilities;
   SpellRow(1, 20, 30, 40, 50, 60);
   SpellRow(2, 10, 20, 30, 40, 50);
   SpellRow(3, 5, 10, 20, 30, 40);

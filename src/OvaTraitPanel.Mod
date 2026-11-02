@@ -11,7 +11,11 @@ MODULE OvaTraitPanel; (* A list of Abilities or Weaknesses and its editor: a cha
    After each change the panel recomputes top, the character the list
    belongs to, so what is shown is OvaCalc's; then calls changed, the
    window's or the dialog's. selected tells which trait the user
-   chose (NIL after Remove), for the controls that act on one. *)
+   chose (NIL after Remove), for the controls that act on one.
+
+   A Boss's own Abilities (not a form's, not a partner's) offer the Boss
+   Abilities, which have no level: the file's level: is always 1, and
+   the Spinner is off while one is chosen. *)
 
 IMPORT OvaCalc, OvaCharacter, OvaRules, OvaText, OvaWidgets, Ropes;
 
@@ -80,12 +84,31 @@ BEGIN
   p.browser.Redraw
 END Fit;
 
+(* After the Choice changes: a Boss Ability's Spinner is 1, and off. *)
+PROCEDURE (p: TraitPanel) Chosen*;
+  VAR it: OvaRules.Item;
+BEGIN
+  p.Chosen^;
+  it := p.Item();
+  IF (it # NIL) & (OvaRules.BossOnly IN it.flags) THEN
+    p.spinner.SetValue(1); p.spinner.Deactivate
+  ELSE p.spinner.Activate
+  END
+END Chosen;
+
+(* Whether the list is a Boss's own Abilities. *)
+PROCEDURE (p: TraitPanel) OffersBoss(): BOOLEAN;
+BEGIN
+  RETURN (p.kind = OvaRules.Ability) & (p.sheet # NIL) & (p.owner = NIL) & (p.sheet.kind = OvaCalc.BossSheet)
+END OffersBoss;
+
 PROCEDURE (p: TraitPanel) Fill*;
   VAR t: OvaCalc.Trait; x: OvaCharacter.Trait; line: Rope; s: OvaText.String; page: ARRAY 16 OF CHAR;
     points: BOOLEAN;
 BEGIN
   p.n := 0;
   IF p.sheet = NIL THEN RETURN END;
+  p.OfferBoss(p.OffersBoss());
   points := p.ShowsPoints();
   p.Fit;
   t := p.List();

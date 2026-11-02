@@ -153,6 +153,12 @@ BEGIN
   OvaCharacter.SetNpcType(c, TRUE, OvaEntities.Extra); OvaCharacter.Recompute(c);
   Check.Check((c.kind = OvaCalc.ExtraSheet) & (OvaCalc.Value(c.health) = 20) & (OvaCalc.Value(c.tv) = 1),
     "Extra: HEALTH 10 + Tough 1, TV 1");
+  OvaCharacter.SetNpcType(c, TRUE, OvaEntities.Boss); OvaCharacter.Recompute(c);
+  Check.Check((c.kind = OvaCalc.BossSheet) & (OvaCalc.Value(c.health) = 50) & (OvaCalc.Value(c.endurance) = 40)
+    & Has(OvaSave.ToText(c), "npc-type: Boss"), "Boss: HEALTH 40 + Tough 1, ENDURANCE 40, saved");
+  ok := OvaSave.Save(c, Saved, msg) & OvaCharacter.Load(Saved, c2, msg);
+  Check.Check(ok & (OvaCharacter.notices.n = 0) & c2.hasNpcType & (c2.npcType = OvaEntities.Boss)
+    & (c2.kind = OvaCalc.BossSheet), "loaded again: a Boss's sheet; no notices");
   OvaCharacter.SetNpcType(c, TRUE, OvaEntities.Heroic); OvaCharacter.Recompute(c);
   Check.Check((c.kind = OvaCalc.Character) & (OvaCalc.Value(c.health) = 50), "Heroic: a character's sheet");
   OvaCharacter.SetNpcType(c, TRUE, OvaEntities.Secondary);

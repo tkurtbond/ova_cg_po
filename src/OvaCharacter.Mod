@@ -201,12 +201,13 @@ BEGIN
 END InitCharacter;
 
 (* The sheet kind of an NPC type (p. 123-124): a Heroic NPC's is a
-   character's, a Secondary's a Companion's, an Extra's its own; no type
-   is a character's. *)
+   character's, a Secondary's a Companion's, an Extra's and a Boss's
+   their own; no type is a character's. *)
 PROCEDURE KindOf(has: BOOLEAN; npcType: INTEGER): INTEGER;
 BEGIN
   IF ~has OR (npcType = OvaEntities.Heroic) THEN RETURN OvaCalc.Character
   ELSIF npcType = OvaEntities.Secondary THEN RETURN OvaCalc.CompanionSheet
+  ELSIF npcType = OvaEntities.Boss THEN RETURN OvaCalc.BossSheet
   ELSE RETURN OvaCalc.ExtraSheet
   END
 END KindOf;
@@ -215,7 +216,7 @@ END KindOf;
    after. *)
 PROCEDURE SetNpcType*(c: Character; has: BOOLEAN; npcType: INTEGER);
 BEGIN
-  ASSERT(~has OR (npcType >= OvaEntities.Heroic) & (npcType <= OvaEntities.Extra));
+  ASSERT(~has OR (npcType >= OvaEntities.Heroic) & (npcType <= OvaEntities.Boss));
   c.hasNpcType := has;
   IF has THEN c.npcType := npcType ELSE c.npcType := OvaEntities.Heroic END;
   c.kind := KindOf(has, npcType)

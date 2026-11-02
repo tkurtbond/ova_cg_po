@@ -89,10 +89,16 @@ question about unsaved changes covers all of them.
 ### The Character tab
 
 **NPC Type**, beside the Tagline, is none for a player's character, or
-Heroic, Secondary or Extra for an NPC (p. 123): it sets where Health
-and Endurance start (40, 20 or 10) and the TV's last step (4 less for
-a Secondary NPC, always 1 for an Extra), and is saved with the
-character.
+Heroic, Secondary, Extra or Boss for an NPC (p. 123): it sets where Health
+and Endurance start (40, 20 or 10; a Boss has a character's 40) and the
+TV's last step (4 less for a Secondary NPC, always 1 for an Extra), and
+is saved with the character.
+
+A Boss's Abilities offer the four Boss Abilities (p. 123) as well, below
+a divider at the end of the list. Each adds 5 to the TV (p. 124), and,
+since a Boss applies and removes them as needed, none counts in the
+levels or points; its level stays 1. A sheet that stops being a Boss keeps
+them, with a warning, until they are removed.
 
 **Abilities and Weaknesses.** Each list shows a trait's level, name
 and detail, its points when Scaled Cost is on, and the rulebook page

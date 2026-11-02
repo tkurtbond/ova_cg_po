@@ -397,6 +397,7 @@ BEGIN
     | OvaCalc.OverFive:
         IF w.attack = NIL THEN OvaText.Add(r, "DEFENSE: ") END;
         OvaText.Add(r, "Abilities give the roll more than +5 (p. 21)")
+    | OvaCalc.NotBoss: OvaText.Add(r, ": only a Boss has Boss Abilities (p. 123)")
     END;
     s := OvaText.Chars(r); warnings.Add(s^);
     w := w.next
@@ -744,7 +745,7 @@ END TextInput;
 (* ---- The NPC type ---- *)
 
 (* The NPC type chosen: the sheet's kind, so its Health, Endurance and
-   TV, follow it (p. 123-124). *)
+   TV, and the Abilities offered, follow it (p. 123-124). *)
 PROCEDURE NpcTypeAction(w: Fl.Widget);
   VAR i: INTEGER;
 BEGIN
@@ -752,7 +753,8 @@ BEGIN
   IF i <= 0 THEN OvaCharacter.SetNpcType(character, FALSE, 0)
   ELSE OvaCharacter.SetNpcType(character, TRUE, i - 1)
   END;
-  Changed
+  Changed;
+  abilities.Refresh(abilities.browser.Value())  (* a Boss's offers the Boss Abilities *)
 END NpcTypeAction;
 
 PROCEDURE ShowNpcType;
@@ -1096,7 +1098,7 @@ BEGIN
   TextInput(taglineIn, LeftX + 110, Top + 30, 290, "Tagline");
   NEW(npcTypeIn); FlMenus.OpenChoice(npcTypeIn, LeftX + 470, Top + 30, 150, Row, "NPC Type");
   IF npcTypeIn.Add("none", 0, {}, NIL, {}) >= 0 THEN END;
-  FOR i := OvaEntities.Heroic TO OvaEntities.Extra DO
+  FOR i := OvaEntities.Heroic TO OvaEntities.Boss DO
     name := OvaText.Chars(OvaEntities.NpcTypeName(i));
     OvaRules.PageLabel(name^, OvaRules.NpcTypesPage, label);
     IF npcTypeIn.Add(label, 0, {}, NIL, {}) >= 0 THEN END
