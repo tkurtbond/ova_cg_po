@@ -58,7 +58,7 @@ for saved in obj/files/*.yaml; do
     # Its copy gains Incorporeal Form's Defense, which the file left out
     # (TestFiles checks it).
     defense-two) continue ;;
-    Escaping|Unsorted|Vehicle|Acacia|Nazo|defense-best-differs) filter=unmark; but=", but for its overrides' marks" ;;
+    Escaping|Unsorted|Vehicle|Acacia|Nazo|Group|defense-best-differs) filter=unmark; but=", but for its overrides' marks" ;;
     *) filter=cat; but= ;;
   esac
   for opt in "" -H -G -M -g -m -O -i; do

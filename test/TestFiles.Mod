@@ -111,8 +111,8 @@ BEGIN
   RoundTrip("Thugs", 0); RoundTrip("Venomous-Killer", 0); RoundTrip("Weathered-Salaryman", 0);
   RoundTrip("Weird-Exchange-Student", 0); RoundTrip("Wild-Beast", 0); RoundTrip("Zombies", 0);
   (* ova_fmt_po's two of two Fragments each, and the generator's own of
-     two YAML documents. *)
-  RoundTrip("Fragment", 0); RoundTrip("Options", 0); RoundTrip("two-documents", 0)
+     two YAML documents.  Group's made-up numbers aren't the rules'. *)
+  RoundTrip("Fragment", 0); RoundTrip("Group", 27); RoundTrip("Options", 0); RoundTrip("two-documents", 0)
 END Fixtures;
 
 (* Whether r holds s. *)
@@ -304,8 +304,25 @@ BEGIN
     "then one that can: written, all of it")
 END MarkdownSave;
 
+(* count: is kept for the save and the inline paragraphs, though the
+   window doesn't show it; a count of 1 is the same as none. *)
+PROCEDURE Count;
+  VAR path: ARRAY 128 OF CHAR; c: OvaCharacter.Characters; msg, text: Ropes.Rope; ok: BOOLEAN;
+BEGIN
+  Path(DataDir, "Group", path);
+  ok := OvaCharacter.LoadAll(path, c, msg);
+  Check.Check(ok & (LEN(c^) = 8), "Group: count: its eight load");
+  IF ok THEN
+    text := OvaSave.AllToText(c);
+    Check.Check((c[0].count = 3) & Holds(text, "  count: 3"), "Group: Guards keep a count of 3, and save it");
+    Check.Check((c[4].count = 1) & ~Holds(text, "  count: 1\n"), "Group: a count of 1 isn't saved");
+    Check.Check(Holds(OvaMarkdown.Inline(c[0]), "(three Extras)"), "Group: the inline lead counts them")
+  END
+END Count;
+
 BEGIN
   Fixtures;
+  Count;
   MarkdownSave;
   Errors;
   Defenses;

@@ -46,6 +46,7 @@ TYPE
     (* npc-type: OvaEntities.Heroic, Secondary or Extra; it sets the
        sheet's kind (SetNpcType). *)
     hasNpcType-: BOOLEAN; npcType-: INTEGER;
+    count*: INTEGER;  (* count:, how many it stands for; kept for the save *)
     notes*: Note;
     hasFluff*: BOOLEAN;
     hasFluffField*: ARRAY NFluff OF BOOLEAN;
@@ -190,6 +191,7 @@ BEGIN
   c.tagline := NIL; c.summary := NIL; c.background := NIL; c.appearance := NIL;
   c.personality := NIL; c.characterHooks := NIL; c.otherNotes := NIL;
   c.hasNpcType := FALSE; c.npcType := OvaEntities.Heroic;
+  c.count := 1;
   c.notes := NIL;
   c.hasFluff := FALSE;
   FOR i := 0 TO NFluff - 1 DO c.hasFluffField[i] := FALSE; c.fluff[i] := NIL END;
@@ -309,6 +311,7 @@ BEGIN
   c.hasPersonality := e.hasPersonality; c.personality := e.personality;
   c.hasCharacterHooks := e.hasCharacterHooks; c.characterHooks := e.characterHooks;
   SetNpcType(c, e.hasNpcType, e.npcType);
+  c.count := e.count;
   c.hasOtherNotes := e.hasOtherNotes; c.otherNotes := e.otherNotes;
   c.isFragment := e.isFragment;
   FOR i := 0 TO e.abilities.n - 1 DO

@@ -761,6 +761,14 @@ files; then ova_fmt_po ports it, its golden files regenerated from the
 new Ada binary (`make golden`), its `test/data/` copied over. Both are
 committed in their own repos, with the user's go-ahead.
 
+**`count:`** (the user, 2026-11-02; the Ada version's PLAN.md has the
+format): one stat block standing for a group. The generator keeps it
+(`OvaCharacter`'s `count`, saved when over 1), so the Markdown tab's
+Inline paragraph shows it, but the window has no field for it: changing
+it means editing the YAML. `TestFiles`' `Count` and `Group.yaml`'s round
+trip check it; that fixture's made-up numbers aren't the rules', so it
+loads with 27 notices.
+
 ## Modules
 
 | Module | Contents |

@@ -307,6 +307,7 @@ BEGIN
   Pair(m, "name", Text(c.name));
   IF c.isFragment THEN Pair(m, "fragment", Bool(TRUE)) END;
   IF c.hasNpcType THEN Pair(m, "npc-type", Text(OvaEntities.NpcTypeName(c.npcType))) END;
+  IF c.count > 1 THEN Pair(m, "count", Int(c.count)) END;
   TextPair(m, "player", c.hasPlayer, c.player);
   TextPair(m, "portrait", c.hasPortrait, c.portrait);
   TextPair(m, "tagline", c.hasTagline, c.tagline);
