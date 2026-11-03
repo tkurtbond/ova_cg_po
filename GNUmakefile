@@ -25,13 +25,18 @@ POCFLAGS := -OC
 FYAML_LIBS := $(shell pkg-config --libs libfyaml)
 LINK := $(foreach f,$(FYAML_LIBS),-link $(f))
 
-# The libraries, each installed by its own repo into its own directory
-# under POC_OBERON_LIBRARIES: argparser and ropes (make -f
-# pocGNUmakefile install in ArgParser and Ropes), polibfyaml and pofltk
-# (make install).  None of their sources is copied here.
-POC_OBERON_LIBRARIES ?= /usr/local/sw/versions/oberon/poc/lib
+# The libraries, each installed by its own repo into POCLIBDIR: argparser
+# and ropes (make -f pocGNUmakefile install in ArgParser and Ropes),
+# polibfyaml and pofltk (make install).  None of their sources is copied
+# here.  POCLIBDIR doesn't follow PREFIX, which says where this program
+# installs.
+POCLIBDIR ?= $(HOME)/.local/lib/poc
 SHAREDLIBS := argparser ropes polibfyaml pofltk
-LIBPATH := $(foreach l,$(SHAREDLIBS),-library-path $(POC_OBERON_LIBRARIES)/$(l))
+LIBPATH := -library-path $(abspath $(POCLIBDIR))
+
+# The libraries this build takes are the ones in $(POCLIBDIR).  A library
+# on POC_LIBRARY_PATH would stop the build if another poc wrote it.
+unexport POC_LIBRARY_PATH
 IMPORTS := -import-path src $(LIBPATH)
 
 OBJ := obj
@@ -41,7 +46,7 @@ MAIN    := OvaCg
 
 # Every source and library a program is built from, for make's
 # dependencies: a reinstalled library rebuilds the programs.
-SHAREDLIBMANIFESTS := $(foreach l,$(SHAREDLIBS),$(wildcard $(POC_OBERON_LIBRARIES)/$(l)/*/OC/$(l).library))
+SHAREDLIBMANIFESTS := $(foreach l,$(SHAREDLIBS),$(wildcard $(POCLIBDIR)/*/OC/$(l).library))
 PROGSRC := $(wildcard src/*.Mod src/*.c)
 
 # Test support modules, and test programs (test/<name>.Mod, main
@@ -59,7 +64,7 @@ RUNTIME  ?= 3
 # Only building needs the libraries, so the cleaning targets don't check
 # for them.
 ifneq ($(if $(MAKECMDGOALS),$(filter-out clean uninstall print-%,$(MAKECMDGOALS)),all),)
-$(foreach l,$(SHAREDLIBS),$(if $(wildcard $(POC_OBERON_LIBRARIES)/$(l)/*/OC/$(l).library),,$(error the $(l) library is not in $(POC_OBERON_LIBRARIES)/$(l); install it from its repo (AGENTS.md))))
+$(foreach l,$(SHAREDLIBS),$(if $(wildcard $(POCLIBDIR)/*/OC/$(l).library),,$(error the $(l) library is not in $(POCLIBDIR); install it from its repo (AGENTS.md))))
 endif
 
 .PHONY: all tests test check-pages test-viewers test-gui test-headless test-sway valgrind valgrind-headless valgrind-sway \

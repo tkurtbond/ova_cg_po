@@ -24,8 +24,8 @@ file says otherwise.
 | The YAML format | the Ada ova_fmt: `~/Repos/RPG/Tools/ova_fmt/PLAN.md` and `test-data/*.yaml` |
 | The poc ova_fmt (loader, build, tests to copy) | `~/Repos/RPG/Tools/ova_fmt_po/` |
 | The Ada ova_fmt (gets the new keys first) | `~/Repos/RPG/Tools/ova_fmt/` |
-| pofltk (FLTK 1.4 binding) | `~/Repos/Oberon/pofltk/` (`README.md`, `AGENTS.md`, `examples/`, `doc/fltk-issues.md`); poc library `pofltk` in `$POC_OBERON_LIBRARIES/pofltk` |
-| polibfyaml, Ropes, ArgParser | `~/Repos/Oberon/polibfyaml`, `~/Repos/Oberon/Ropes`, `~/Repos/Oberon/ArgParser`; poc libraries under `$POC_OBERON_LIBRARIES` (default `/usr/local/sw/versions/oberon/poc/lib`) |
+| pofltk (FLTK 1.4 binding) | `~/Repos/Oberon/pofltk/` (`README.md`, `AGENTS.md`, `examples/`, `doc/fltk-issues.md`); poc library `pofltk` in `$POCLIBDIR` |
+| polibfyaml, Ropes, ArgParser | `~/Repos/Oberon/polibfyaml`, `~/Repos/Oberon/Ropes`, `~/Repos/Oberon/ArgParser`; poc libraries in `$POCLIBDIR` (default `~/.local/lib/poc`) |
 | poc | `/usr/bin/poc` (0.5.0); source and docs in `~/Repos/Oberon/Peaseblossom-main` (`doc/users-guide.md`, `doc/reference-guide.md`; the runtime, with `Platform.System`, in `rtl/llvm/`) |
 
 Read the pofltk, polibfyaml, Ropes and ArgParser `AGENTS.md` files
@@ -89,9 +89,11 @@ make print-VAR       # show a makefile variable
 
 - **Everything is compiled with `-OC`**, because polibfyaml and pofltk
   require it.
-- Link with the library paths of `argparser`, `ropes`, `polibfyaml` and
-  `pofltk` and `-link -lfyaml`; pofltk's manifest adds its own C++ and
-  FLTK flags.
+- Link with `-library-path $(POCLIBDIR)`, which holds `argparser`,
+  `ropes`, `polibfyaml` and `pofltk`, and `-link -lfyaml`; pofltk's
+  manifest adds its own C++ and FLTK flags. The makefile unexports
+  `POC_LIBRARY_PATH`, so `POCLIBDIR` is the only place it takes a
+  library from.
 - **Don't copy library modules** (`Ropes`, `ArgParser`, polibfyaml's,
   pofltk's) into this repo. A change one of them needs is made in its
   own repo, tested and installed there, with the user's go-ahead. After

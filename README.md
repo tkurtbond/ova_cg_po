@@ -218,8 +218,8 @@ You need:
   clang, which poc runs.
 - FLTK 1.4 and libfyaml.
 - The poc libraries `argparser`, `ropes`, `polibfyaml` and `pofltk`,
-  each installed by its own repo into its own directory under
-  `POC_OBERON_LIBRARIES` (default `/usr/local/sw/versions/oberon/poc/lib`).
+  each installed by its own repo into `POCLIBDIR` (default
+  `~/.local/lib/poc`).
   Install them again after upgrading poc, which refuses a library
   another version built.
 - For `make test`: ova_fmt_po, built, at `OVA_FMT_PO` (default
