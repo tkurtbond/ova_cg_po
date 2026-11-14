@@ -126,7 +126,9 @@ make print-VAR       # show a makefile variable
   `obj/fake-viewer.log` and runs until ended; `test/fake-gdbus.sh`
   answers okular's calls from `obj/gdbus.scenario` and logs them in
   `obj/gdbus.log`. Only `make test-viewers` runs the real viewers.
-- GUI tests drive themselves as pofltk's do: `DoCallback`, events sent
+- GUI tests drive themselves as pofltk's do, with pofltk's `FlTest`
+  (`Fill`, `SelectLine`, `LineWith`, `Choose`, `Turn`, `Change`,
+  `Settle`, `Expose`) and `DoCallback` for buttons, events sent
   to windows never shown, timers that answer dialogs, and deleting
   every window before the end. Look at a window by capturing it
   (`xvfb-run`, `import -window root`), not by showing it.
@@ -182,7 +184,7 @@ callbacks are module-level procedures; no exceptions; no call chaining;
 - **Labels FLTK keeps are copied by pofltk**, so a local string may die
   with its procedure.
 - **This needs pofltk 0.2.0** (`Fl.PofltkApiVersion` 200; PLAN.md,
-  Phase 16). Add a choice's items with `AddText`, which shows the text
+  Phase 16), and its tests 0.3.0 (300), for `FlTest`. Add a choice's items with `AddText`, which shows the text
   as it is (`&`, `@` and `/` too); `Add` is for the menu bar's paths
   and shortcuts. `ItemLabel` gives `&` and `@` doubled. Read text with
   `Text()`, which has no length limit, and call `Choose`,

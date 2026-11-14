@@ -8,7 +8,7 @@ MODULE TestLimits; (* Character > Limits..., the totals in red, and the preferen
    Rulebook menu's choices, kept in a preferences file in obj/ and read
    back. *)
 
-IMPORT Check, Fl, FlButtons, FlPreferences, FlValuators, OvaCharacter, OvaRules, OvaSave, OvaSettings, OvaText,
+IMPORT Check, Fl, FlMenus, FlPreferences, FlValuators, FlTest, OvaCharacter, OvaRules, OvaSave, OvaSettings, OvaText,
   OvaViewer, OvaWidgets, OvaWindow, Out, Ropes, Strings;
 
 CONST
@@ -75,35 +75,21 @@ PROCEDURE RedsAre(want: ARRAY OF CHAR): BOOLEAN;
 BEGIN Reds(s); RETURN s = want
 END RedsAre;
 
-(* Sets check box b, as the user clicks it. *)
-PROCEDURE Turn(b: FlButtons.CheckButton; on: BOOLEAN);
-BEGIN b.SetValue(on); b.DoCallback
-END Turn;
-
-(* Sets spinner s to v, as the user types it. *)
-PROCEDURE Spin(s: FlValuators.Spinner; v: INTEGER);
-BEGIN s.SetValue(v); s.DoCallback
-END Spin;
-
-(* Chooses name in p's Choice, as the user does. *)
-PROCEDURE Pick(p: OvaWidgets.Panel; name: ARRAY OF CHAR);
-  VAR it: OvaRules.Item; i: INTEGER;
-BEGIN
-  it := OvaRules.Find(name); ASSERT(it # NIL);
-  i := 0; WHILE OvaRules.Get(p.kind, i) # it DO INC(i) END;
-  p.choice.Choose(i);
-  p.choice.DoCallback
+(* Chooses name in Choice or panel Choice m by its label, as the user does. *)
+PROCEDURE Pick(m: FlMenus.Menu; name: ARRAY OF CHAR);
+  VAR label: ARRAY 64 OF CHAR;
+BEGIN OvaRules.LabelOf(name, label); IF ~FlTest.Choose(m, label) THEN HALT(98) END
 END Pick;
 
 PROCEDURE AddAbility(name: ARRAY OF CHAR; level: INTEGER);
 BEGIN
-  Pick(OvaWindow.abilities, name); OvaWindow.abilities.spinner.SetValue(level);
+  Pick(OvaWindow.abilities.choice, name); OvaWindow.abilities.spinner.SetValue(level);
   OvaWindow.abilities.text.SetValue(""); OvaWindow.abilities.add.DoCallback
 END AddAbility;
 
 PROCEDURE AddWeakness(name: ARRAY OF CHAR; level: INTEGER);
 BEGIN
-  Pick(OvaWindow.weaknesses, name); OvaWindow.weaknesses.spinner.SetValue(level);
+  Pick(OvaWindow.weaknesses.choice, name); OvaWindow.weaknesses.spinner.SetValue(level);
   OvaWindow.weaknesses.text.SetValue(""); OvaWindow.weaknesses.add.DoCallback
 END AddWeakness;
 
@@ -170,7 +156,7 @@ BEGIN
   tells := 0; pdfAsks := 0; pdfAnswer := NIL; textAnswer := NIL;
   OvaWindow.Build;
   OvaWindow.tell := Tell; OvaWindow.ask := Ask; OvaWindow.choosePdf := ChoosePdf; OvaWindow.askText := AskText;
-  OvaWindow.window.Show; OvaWindow.window.WaitForExpose; Fl.HandlePending;
+  FlTest.Expose(OvaWindow.window);
   OvaWindow.bar.ItemLabel(OvaWindow.limitsItem, s);
   Check.Check(s = "&Limits...", "Character > Limits...");
 
@@ -185,59 +171,59 @@ BEGIN
     "their numbers p. 21's example, inactive; half cost inactive with none of its rules");
   Check.Check((c.total.value = 3) & RedsAre("----") & ~Modified(), "Attack +3: a total of 3, nothing red");
 
-  Turn(OvaSettings.baseZero, TRUE);
+  FlTest.Turn(OvaSettings.baseZero, TRUE);
   Check.Check(c.options.baseZero & (c.options.baseZeroRange = 5) & c.hasOptions & OvaSettings.baseZeroRange.Active()
     & OvaSettings.halfCost.Active() & Modified() & Has(Saved(), "base-zero: 5") & RedsAre("----"),
     "Base Zero on: its range 5, saved, the title marked; 3 within it");
-  Spin(OvaSettings.baseZeroRange, 2);
+  FlTest.Change(OvaSettings.baseZeroRange, 2);
   Check.Check((c.options.baseZeroRange = 2) & RedsAre("-T--") & Warned("Base Zero") & Has(Saved(), "base-zero: 2"),
     "range 2: the Total red, and the warning");
-  Spin(OvaSettings.baseZeroRange, 3);
+  FlTest.Change(OvaSettings.baseZeroRange, 3);
   Check.Check(RedsAre("----") & ~Warned("Base Zero"), "range 3: not red");
-  Turn(OvaSettings.scaledCost, TRUE);
+  FlTest.Turn(OvaSettings.scaledCost, TRUE);
   Check.Check(c.options.scaledCost & (c.points.value = 4) & OvaWindow.numbers[9].Visible() & RedsAre("--P-")
     & Has(Saved(), "scaled-cost: true"), "Scaled Cost: 4 points, shown, beyond 3: the points red, not the Total");
   Check.Check((c.abilityPoints.value = 4) & OvaWindow.numbers[11].Visible(), "and the Abilities' 4 points shown");
-  Turn(OvaSettings.powerCeiling, TRUE); Spin(OvaSettings.ceiling, 3);
+  FlTest.Turn(OvaSettings.powerCeiling, TRUE); FlTest.Change(OvaSettings.ceiling, 3);
   Check.Check(RedsAre("--Pa") & Warned("Power Ceiling"),
     "Power Ceiling 3 on Scaled Cost: the Abilities' points red, not their levels");
-  Spin(OvaSettings.ceiling, 15); Turn(OvaSettings.powerCeiling, FALSE);
-  Turn(OvaSettings.scaledCost, FALSE); Turn(OvaSettings.baseZero, FALSE);
+  FlTest.Change(OvaSettings.ceiling, 15); FlTest.Turn(OvaSettings.powerCeiling, FALSE);
+  FlTest.Turn(OvaSettings.scaledCost, FALSE); FlTest.Turn(OvaSettings.baseZero, FALSE);
   Check.Check(~c.options.baseZero & ~OvaSettings.baseZeroRange.Active() & ~OvaSettings.halfCost.Active()
     & (Value(OvaSettings.baseZeroRange) = 3) & RedsAre("----") & ~Has(Saved(), "base-zero"),
     "Base Zero off: its number kept, inactive, not saved");
 
-  Turn(OvaSettings.powerCeiling, TRUE);
+  FlTest.Turn(OvaSettings.powerCeiling, TRUE);
   Check.Check(c.options.powerCeiling & (c.options.ceiling = 15) & RedsAre("----") & Has(Saved(), "power-ceiling: 15"),
     "Power Ceiling 15: 3 under it");
-  Spin(OvaSettings.ceiling, 2);
+  FlTest.Change(OvaSettings.ceiling, 2);
   Check.Check(RedsAre("A---") & Warned("Power Ceiling"), "Power Ceiling 2: the Abilities red, and the warning");
-  Turn(OvaSettings.powerCeiling, FALSE);
-  Turn(OvaSettings.startingLevels, TRUE);
+  FlTest.Turn(OvaSettings.powerCeiling, FALSE);
+  FlTest.Turn(OvaSettings.startingLevels, TRUE);
   Check.Check(c.options.startingLevels & (c.options.starting = 5) & RedsAre("----") & Has(Saved(), "starting-levels: 5"),
     "5 starting levels: 3 within them");
-  Spin(OvaSettings.starting, 2);
+  FlTest.Change(OvaSettings.starting, 2);
   Check.Check(RedsAre("A---") & Warned("starting levels"), "2 starting levels: the Abilities red");
-  Turn(OvaSettings.startingLevels, FALSE);
+  FlTest.Turn(OvaSettings.startingLevels, FALSE);
 
   AddAbility("Knowledge", 3);
-  Turn(OvaSettings.powerCeiling, TRUE); Turn(OvaSettings.halfCost, TRUE);
+  FlTest.Turn(OvaSettings.powerCeiling, TRUE); FlTest.Turn(OvaSettings.halfCost, TRUE);
   Check.Check(c.options.halfCostKnowledge & (c.abilityLevels.value = 5) & Has(Saved(), "half-cost-knowledge: true"),
     "half cost: Knowledge +3 counts 2 (p. 57)");
-  Turn(OvaSettings.powerCeiling, FALSE);
+  FlTest.Turn(OvaSettings.powerCeiling, FALSE);
   Check.Check(c.options.halfCostKnowledge & ~OvaSettings.halfCost.Active() & (c.abilityLevels.value = 6),
     "with none of its rules: kept, inactive, and Knowledge counts 3");
-  Turn(OvaSettings.combined, TRUE);
+  FlTest.Turn(OvaSettings.combined, TRUE);
   Check.Check(c.options.combinedEffectiveness & Has(Saved(), "combined-effectiveness: true"),
     "Combined Effectiveness on, saved");
   Check.Check(Listed(OvaWindow.abilities, "+3 Attack", "", "Attack"), "no points in the lists without Scaled Cost");
-  Turn(OvaSettings.scaledCost, TRUE);
+  FlTest.Turn(OvaSettings.scaledCost, TRUE);
   Check.Check(Listed(OvaWindow.abilities, "+3 Attack", "4 pts", "Attack")
     & Listed(OvaWindow.abilities, "+3 Knowledge", "2 pts", "Knowledge"),
     "Scaled Cost: each Ability's points listed, Knowledge +3's halved");
   AddWeakness("Weak", -1);
   Check.Check(Listed(OvaWindow.weaknesses, "-1 Weak", "1 pt", "Weak"), "and each Weakness's");
-  Turn(OvaSettings.scaledCost, FALSE);
+  FlTest.Turn(OvaSettings.scaledCost, FALSE);
   Check.Check(Listed(OvaWindow.abilities, "+3 Attack", "", "Attack") & Listed(OvaWindow.weaknesses, "-1 Weak", "", "Weak"),
     "Scaled Cost off: the points gone from the lists");
 
@@ -247,14 +233,14 @@ BEGIN
     & (c.abilityLevels.value = 6) & ~Modified(), "Cancel: no limits again, nothing saved, the title unmarked");
 
   Fresh;
-  Turn(OvaSettings.baseZero, TRUE); Spin(OvaSettings.baseZeroRange, 1);
+  FlTest.Turn(OvaSettings.baseZero, TRUE); FlTest.Change(OvaSettings.baseZeroRange, 1);
   OvaSettings.ok.DoCallback;
   Check.Check((OvaSettings.dialog = NIL) & c.options.baseZero & Has(Saved(), "base-zero: 1") & Modified()
     & RedsAre("-T--"), "OK: kept, saved, the title marked, the Total red");
   OvaWindow.bar.Pick(OvaWindow.limitsItem);
   Check.Check(OvaSettings.baseZero.Value() & (Value(OvaSettings.baseZeroRange) = 1) & OvaSettings.baseZeroRange.Active(),
     "opened again: as left");
-  Turn(OvaSettings.baseZero, FALSE);
+  FlTest.Turn(OvaSettings.baseZero, FALSE);
   OvaSettings.dialog.DoCallback;  (* the window's close button *)
   Check.Check((OvaSettings.dialog = NIL) & c.options.baseZero & RedsAre("-T--") & Modified(),
     "closed by its close button: as Cancel, the title still marked from before");
@@ -262,9 +248,9 @@ BEGIN
   OvaWindow.bar.Pick(OvaWindow.newItem); c := OvaWindow.character;
   c.hasOptions := TRUE;  (* as a file with an empty options: block loads *)
   OvaWindow.bar.Pick(OvaWindow.limitsItem);
-  Turn(OvaSettings.baseZero, TRUE); Turn(OvaSettings.baseZero, FALSE);
+  FlTest.Turn(OvaSettings.baseZero, TRUE); FlTest.Turn(OvaSettings.baseZero, FALSE);
   Check.Check(c.hasOptions & Has(Saved(), "options:"), "an empty options: block, changed and changed back: kept");
-  Turn(OvaSettings.combined, TRUE); Turn(OvaSettings.combined, FALSE); Turn(OvaSettings.baseZero, TRUE);
+  FlTest.Turn(OvaSettings.combined, TRUE); FlTest.Turn(OvaSettings.combined, FALSE); FlTest.Turn(OvaSettings.baseZero, TRUE);
   OvaSettings.ok.DoCallback;
   ok := OvaWindow.Load(R("data/Sheet.yaml"));
   OvaWindow.bar.Pick(OvaWindow.limitsItem);

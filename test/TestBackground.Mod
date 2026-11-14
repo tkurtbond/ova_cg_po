@@ -8,7 +8,7 @@ MODULE TestBackground; (* OvaBackground: the second tab, driven as a user would,
    saved. The portrait is an image this test writes, saved as a path
    relative to the YAML file, and rebased when Save As moves the file. *)
 
-IMPORT Check, Fl, FlImages, FlInputs, FlText, OvaBackground, OvaCharacter, OvaEntities, OvaPaths, OvaSave,
+IMPORT Check, Fl, FlImages, FlInputs, FlText, FlTest, OvaBackground, OvaCharacter, OvaEntities, OvaPaths, OvaSave,
   OvaText, OvaWindow, Out, Ropes;
 
 CONST
@@ -146,11 +146,6 @@ PROCEDURE Load(name: ARRAY OF CHAR): BOOLEAN;
 BEGIN r := Ropes.FromString("data/"); OvaText.Add(r, name); RETURN OvaWindow.Load(r)
 END Load;
 
-(* Types text into input i, as the user does: its callback runs. *)
-PROCEDURE Type(i: FlInputs.Input; text: ARRAY OF CHAR);
-BEGIN i.SetValue(text); i.DoCallback
-END Type;
-
 PROCEDURE R(s: ARRAY OF CHAR): Rope;
 BEGIN RETURN Ropes.FromString(s)
 END R;
@@ -170,7 +165,7 @@ BEGIN
 
   Check.Check(OvaWindow.tabs.Value() = OvaWindow.sheetTab, "the Character tab first");
   OvaWindow.tabs.SetValue(OvaWindow.backgroundTab);
-  OvaWindow.window.Show; OvaWindow.window.WaitForExpose; Fl.HandlePending;
+  FlTest.Expose(OvaWindow.window);
   Check.Check(OvaBackground.prose[OvaBackground.Background].Visible(), "the Background tab, shown");
   Check.Check(AllShown() & NotesShown() & PortraitSays("No portrait.") & (OvaBackground.image = NIL)
     & ~OvaBackground.removePortrait.Active(), "a new character: every field empty, no portrait");
@@ -210,18 +205,18 @@ BEGIN
   Check.Check(Has(Saved(), "other-notes: Owes two favors now."), "Other Notes saved");
   buf := Prose(OvaBackground.CharacterHooks); buf.SetText("Needs a courier.");
   Check.Check(c.hasCharacterHooks & Has(Saved(), "character-hooks: Needs a courier."), "Character Hooks saved");
-  Type(OvaBackground.summaryIn, "A schoolgirl and a storm.");
+  FlTest.Fill(OvaBackground.summaryIn, "A schoolgirl and a storm.");
   Check.Check(Ropes.EqualString(c.summary, "A schoolgirl and a storm.") & Has(Saved(), "summary: A schoolgirl and a storm."),
     "the summary typed and saved");
 
   (* ---- The fluff ---- *)
-  Type(OvaBackground.fluffIn[OvaEntities.Hair], "Black");
+  FlTest.Fill(OvaBackground.fluffIn[OvaEntities.Hair], "Black");
   Check.Check(c.hasFluffField[OvaEntities.Hair] & Has(Saved(), "hair: Black"), "Hair typed: saved in fluff:");
-  Type(OvaBackground.fluffIn[OvaEntities.FavoriteFood], "Melon bread");
+  FlTest.Fill(OvaBackground.fluffIn[OvaEntities.FavoriteFood], "Melon bread");
   Check.Check(Has(Saved(), "favorite-food: Melon bread"), "Favorite Food: its key, favorite-food");
-  FOR i := 0 TO OvaCharacter.NFluff - 1 DO Type(OvaBackground.fluffIn[i], " ") END;
+  FOR i := 0 TO OvaCharacter.NFluff - 1 DO FlTest.Fill(OvaBackground.fluffIn[i], " ") END;
   Check.Check(~c.hasFluff & ~Has(Saved(), "fluff:"), "every field emptied: no fluff: block");
-  Type(OvaBackground.fluffIn[OvaEntities.Age], "15");
+  FlTest.Fill(OvaBackground.fluffIn[OvaEntities.Age], "15");
   Check.Check(c.hasFluff & Has(Saved(), "fluff:") & Has(Saved(), "age: 15"), "one field again: the block again");
   Check.Check(AllShown(), "and every field still shows the character's");
 
@@ -286,7 +281,7 @@ BEGIN
   OvaBackground.choosePortrait.DoCallback;
   Check.Check(Ropes.Equal(c.portrait, OvaPaths.Absolute(R(ImagePath), NIL)) & ImageShown(),
     "no file yet: the image's absolute path");
-  OvaWindow.nameIn.SetValue("Someone"); OvaWindow.nameIn.DoCallback;
+  FlTest.Fill(OvaWindow.nameIn, "Someone");
   OvaWindow.bar.Pick(OvaWindow.saveItem);
   Check.Check(Ropes.EqualString(c.portrait, "../face.png") & ~OvaWindow.modified & ImageShown(),
     "the first save: made relative");

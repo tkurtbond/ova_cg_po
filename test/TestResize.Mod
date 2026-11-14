@@ -9,7 +9,7 @@ MODULE TestResize; (* OvaWindow: resized, everything in it stretched to the wind
    box, keeping its proportions. A row made again after a resize (an
    attack removed) is stretched too. *)
 
-IMPORT Check, Fl, FlImages, OvaBackground, OvaWidgets, OvaWindow, Platform, Ropes;
+IMPORT Check, Fl, FlImages, FlTest, OvaBackground, OvaWidgets, OvaWindow, Platform, Ropes;
 
 CONST
   ImagePath = "../obj/resize-face.png";
@@ -43,12 +43,6 @@ END Tell;
 PROCEDURE ChooseImage(VAR p: Rope): BOOLEAN;
 BEGIN p := chosenImage; RETURN p # NIL
 END ChooseImage;
-
-(* Lets FLTK run what it put off: timers. *)
-PROCEDURE Settle;
-  VAR i: INTEGER;
-BEGIN FOR i := 1 TO 5 DO Fl.Wait(0.01D0) END
-END Settle;
 
 PROCEDURE Round(x: REAL): INTEGER;
 BEGIN RETURN SHORT(ENTIER(x + 0.5))
@@ -91,7 +85,7 @@ END PortraitFits;
 (* Resizes the window to w by h, and lets it fit what FLTK doesn't
    stretch. *)
 PROCEDURE Resize(w, h: INTEGER);
-BEGIN OvaWindow.window.Size(w, h); Settle
+BEGIN OvaWindow.window.Size(w, h); FlTest.Settle
 END Resize;
 
 BEGIN
@@ -133,7 +127,7 @@ BEGIN
   Check.Check(PortraitFits() & (OvaBackground.image.H() > PortraitH), "the portrait fits its larger box");
 
   (* A row made again, after a resize. *)
-  OvaWindow.rows.remove.DoCallback; Settle;
+  OvaWindow.rows.remove.DoCallback; FlTest.Settle;
   Check.Check(RowsFit() & (OvaWindow.rows.nextRow = NIL) & (OvaWindow.rows.W() > RowW),
     "an attack removed: the row left, stretched");
 

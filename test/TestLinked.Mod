@@ -6,7 +6,7 @@ MODULE TestLinked; (* OvaLinkedDialog: a Transformation's form, a Magic's spells
    model, in the numbers computed from it, and in what is saved; and
    the window's Character > Transformed form. *)
 
-IMPORT Check, Fl, FlBrowsers, FlMenus, OvaAttackDialog, OvaCalc, OvaCharacter, OvaLinkedDialog, OvaRules,
+IMPORT Check, Fl, FlBrowsers, FlMenus, FlTest, OvaAttackDialog, OvaCalc, OvaCharacter, OvaLinkedDialog, OvaRules,
   OvaSave, OvaText, OvaTraitPanel, OvaWidgets, OvaWindow, Out, Ropes;
 
 TYPE Rope = Ropes.Rope;
@@ -51,49 +51,16 @@ PROCEDURE Load(name: ARRAY OF CHAR): BOOLEAN;
 BEGIN r := R("data/"); OvaText.Add(r, name); RETURN OvaWindow.Load(r)
 END Load;
 
-(* The last line of browser b holding text; 0 if none. *)
-PROCEDURE LineWith(b: FlBrowsers.Browser; text: ARRAY OF CHAR): INTEGER;
-  VAR i: INTEGER; line: ARRAY 256 OF CHAR;
-BEGIN
-  i := b.Count();
-  WHILE i > 0 DO
-    b.GetText(i, line);
-    IF Ropes.Find(Ropes.FromString(line), text, 0) >= 0 THEN RETURN i END;
-    DEC(i)
-  END;
-  RETURN 0
-END LineWith;
-
-(* Selects b's line holding text, as a click does. *)
-PROCEDURE Click(b: FlBrowsers.Browser; text: ARRAY OF CHAR);
-BEGIN b.SetSelected(LineWith(b, text), TRUE); b.DoCallback
-END Click;
-
-(* Chooses name in p's Choice, as the user does. *)
-PROCEDURE Pick(p: OvaWidgets.Panel; name: ARRAY OF CHAR);
-  VAR it: OvaRules.Item; i: INTEGER;
-BEGIN
-  it := OvaRules.Find(name); ASSERT(it # NIL);
-  i := 0; WHILE OvaRules.Get(p.kind, i) # it DO INC(i) END;
-  p.choice.Choose(i);
-  p.choice.DoCallback
+(* Chooses name in Choice or panel Choice m by its label, as the user does. *)
+PROCEDURE Pick(m: FlMenus.Menu; name: ARRAY OF CHAR);
+  VAR label: ARRAY 64 OF CHAR;
+BEGIN OvaRules.LabelOf(name, label); IF ~FlTest.Choose(m, label) THEN HALT(98) END
 END Pick;
 
-(* Chooses Ability name in Choice ch, which lists them all. *)
-(* Chooses name, an Ability or a Weakness, in a Choice of its kind's
-   names. *)
-PROCEDURE PickAbility(ch: FlMenus.Choice; name: ARRAY OF CHAR);
-  VAR it: OvaRules.Item; i: INTEGER;
-BEGIN
-  it := OvaRules.Find(name); ASSERT(it # NIL);
-  i := 0; WHILE OvaRules.Get(it.kind, i) # it DO INC(i) END;
-  ch.Choose(i);
-  ch.DoCallback
-END PickAbility;
-
-PROCEDURE Type(b: OvaWidgets.NumberBox; text: ARRAY OF CHAR);
-BEGIN b.entry.SetValue(text); b.entry.DoCallback
-END Type;
+(* Selects b's first line holding text, as a click does. *)
+PROCEDURE Click(b: FlBrowsers.Browser; text: ARRAY OF CHAR);
+BEGIN FlTest.SelectLine(b, FlTest.LineWith(b, text))
+END Click;
 
 (* Selects the window's Ability holding name, and opens its linked
    content. *)
@@ -191,7 +158,7 @@ BEGIN
   tells := 0;
   OvaWindow.Build;
   OvaWindow.tell := Tell; OvaWindow.ask := Ask; OvaWidgets.openPage := NoPage;
-  OvaWindow.window.Show; OvaWindow.window.WaitForExpose; Fl.HandlePending;
+  FlTest.Expose(OvaWindow.window);
 
   (* ---- The button ---- *)
   ok := Load("Fukiko.yaml"); c := OvaWindow.character;
@@ -215,7 +182,7 @@ BEGIN
   Check.Check((s = "The form's Abilities and Weaknesses come to +8 levels; Transformation +4 pays for 8 (p. 63).")
     & (OvaLinkedDialog.info.LabelColor() = Fl.ForegroundColor), "its levels against what Transformation +4 pays for");
   before := c.health.value;
-  Pick(OvaLinkedDialog.abilities, "Tough");
+  Pick(OvaLinkedDialog.abilities.choice, "Tough");
   OvaLinkedDialog.abilities.spinner.SetValue(1);
   OvaLinkedDialog.abilities.add.DoCallback;
   Check.Check((Named(t.form, "Tough") # NIL) & Listed(OvaLinkedDialog.abilities, t.form) & Modified(),
@@ -256,20 +223,20 @@ BEGIN
     "its Abilities and Weaknesses, with pages");
   Check.Check(~OvaLinkedDialog.addAttack.Active() & ~OvaLinkedDialog.numbers[2].Active() & PartnerShown(p),
     "no combat stats: its attacks and numbers inactive, but computed: a Companion's 20 less Frail");
-  OvaLinkedDialog.partnerName.SetValue("Azyrus II"); OvaLinkedDialog.partnerName.DoCallback;
+  FlTest.Fill(OvaLinkedDialog.partnerName, "Azyrus II");
   Check.Check(Ropes.EqualString(p.name, "Azyrus II") & Has(Saved(), "name: Azyrus II"), "renamed, and saved");
-  OvaLinkedDialog.partnerName.SetValue(" "); OvaLinkedDialog.partnerName.DoCallback;
+  FlTest.Fill(OvaLinkedDialog.partnerName, " ");
   Check.Check(Ropes.EqualString(p.name, "Companion"), "a blank name: Companion, since the file needs one");
-  OvaLinkedDialog.combat.SetValue(TRUE); OvaLinkedDialog.combat.DoCallback;
+  FlTest.Turn(OvaLinkedDialog.combat, TRUE);
   Check.Check(p.hasCombat & OvaLinkedDialog.addAttack.Active() & OvaLinkedDialog.numbers[2].Active()
     & ~OvaLinkedDialog.numbers[1].Active() & ~OvaLinkedDialog.numbers[4].Active()
     & ~OvaLinkedDialog.numbers[6].Active(),
     "combat stats on: its attacks and numbers, Barrier's, Incorporeal Form's and Reserve's not, having none");
   before := p.health.value;
-  Pick(OvaLinkedDialog.abilities, "Tough");
+  Pick(OvaLinkedDialog.abilities.choice, "Tough");
   OvaLinkedDialog.abilities.add.DoCallback;
   Check.Check((p.health.value = before + 10) & PartnerShown(p), "a Companion's Tough +1: its HEALTH 10 more, shown");
-  Type(OvaLinkedDialog.numbers[2], "35");
+  FlTest.Fill(OvaLinkedDialog.numbers[2].entry, "35");
   Check.Check(p.health.overridden & (OvaCalc.Value(p.health) = 35) & PartnerShown(p), "its HEALTH overridden");
   text := Saved();
   Check.Check(Has(text, "health: 35") & Has(text, "- health"), "and saved, in its combat block, listed in overrides");
@@ -290,7 +257,7 @@ BEGIN
   (* ---- A Magic's spells ---- *)
   ok := Load("Auren.yaml"); c := OvaWindow.character;
   t := Named(c.traits, "Magic, Arcane");
-  OvaWindow.abilities.browser.GetText(LineWith(OvaWindow.abilities.browser, "Magic, Arcane"), s);
+  OvaWindow.abilities.browser.GetText(FlTest.LineWith(OvaWindow.abilities.browser, "Magic, Arcane"), s);
   OpenLinked("Magic, Arcane");
   OvaWindow.abilityLinked.GetLabel(label);
   Check.Check((label = "Spells...") & (OvaLinkedDialog.mode = OvaRules.Spells) & (OvaLinkedDialog.spells.Count() = SpellCount(t))
@@ -302,7 +269,7 @@ BEGIN
     & (OvaLinkedDialog.spellLevel.Minimum() = 1) & (OvaLinkedDialog.spellLevel.Maximum() = 5),
     "Arcane's spells: Abilities, +1 to +5");
   n := SpellCount(t);
-  OvaLinkedDialog.spellName.SetValue("Glow"); PickAbility(OvaLinkedDialog.spellAbility, "Healer");
+  OvaLinkedDialog.spellName.SetValue("Glow"); Pick(OvaLinkedDialog.spellAbility, "Healer");
   Check.Check(OvaLinkedDialog.spellHelp.page = 54, "the Ability chosen: ? at its page");
   OvaLinkedDialog.spellLevel.SetValue(1);
   OvaLinkedDialog.addSpell.DoCallback;
@@ -316,7 +283,7 @@ BEGIN
   OvaLinkedDialog.changeSpell.DoCallback;
   OvaLinkedDialog.spells.GetText(n + 1, s); Columns("Glow", "Healer +2 (p. 54)", "END 10", want);
   Check.Check(s = want, "Change: level 2, END 10");
-  Type(OvaLinkedDialog.spellEnd, "15");
+  FlTest.Fill(OvaLinkedDialog.spellEnd.entry, "15");
   OvaLinkedDialog.spells.GetText(n + 1, s); Columns("Glow", "Healer +2 (p. 54)", "END 15", want);
   Check.Check((s = want) & OvaLinkedDialog.spellEnd.Active(), "its END overridden: 15, listed");
   tells := 0;
@@ -333,9 +300,9 @@ BEGIN
   (* A change to an Ability of another kind drops what the file couldn't
      hold. *)
   Click(OvaWindow.abilities.browser, "Magic, Arcane");
-  Pick(OvaWindow.abilities, "Magic, Witchcraft"); OvaWindow.abilities.change.DoCallback;
+  Pick(OvaWindow.abilities.choice, "Magic, Witchcraft"); OvaWindow.abilities.change.DoCallback;
   Check.Check(SpellCount(t) = n, "Magic, Arcane to Magic, Witchcraft: the spells kept");
-  Pick(OvaWindow.abilities, "Flight"); OvaWindow.abilities.change.DoCallback;
+  Pick(OvaWindow.abilities.choice, "Flight"); OvaWindow.abilities.change.DoCallback;
   Check.Check((t.spells = NIL) & ~Has(Saved(), "spells:"), "to Flight: the spells dropped");
 
   (* ---- Witchcraft's curses: Weaknesses (p. 58) ---- *)
@@ -347,7 +314,7 @@ BEGIN
     & (OvaLinkedDialog.spellLevel.Minimum() = -3) & (OvaLinkedDialog.spellLevel.Maximum() = -1)
     & (OvaLinkedDialog.spellLevel.Value() = -1) & (OvaLinkedDialog.spells.Count() = 0),
     "Cora's Witchcraft: its spells are Weaknesses, -1 to -3, none yet");
-  OvaLinkedDialog.spellName.SetValue("Hex"); PickAbility(OvaLinkedDialog.spellAbility, "Frail");
+  OvaLinkedDialog.spellName.SetValue("Hex"); Pick(OvaLinkedDialog.spellAbility, "Frail");
   Check.Check(OvaLinkedDialog.spellHelp.page = 71, "the Weakness chosen: ? at its page, Frail's 71");
   OvaLinkedDialog.spellLevel.SetValue(-2);
   OvaLinkedDialog.addSpell.DoCallback;
@@ -368,7 +335,7 @@ BEGIN
 
   (* ---- A new Companion, and a Vehicle ---- *)
   OvaWindow.bar.Pick(OvaWindow.newItem); c := OvaWindow.character;
-  Pick(OvaWindow.abilities, "Companion");
+  Pick(OvaWindow.abilities.choice, "Companion");
   OvaWindow.abilities.text.SetValue("Rex");
   OvaWindow.abilities.add.DoCallback;
   t := Named(c.traits, "Companion");
@@ -381,7 +348,7 @@ BEGIN
   Check.Check((p.health.value = 20) & (p.endurance.value = 20) & PartnerShown(p), "a Companion's 20 and 20 (p. 52)");
   Check.Check(Has(Saved(), "companion:") & Has(Saved(), "name: Rex"), "saved as companion:");
   OvaLinkedDialog.close.DoCallback;
-  Pick(OvaWindow.abilities, "Vehicle (Mecha)");
+  Pick(OvaWindow.abilities.choice, "Vehicle (Mecha)");
   OvaWindow.abilities.text.SetValue("");
   OvaWindow.abilities.add.DoCallback;
   OpenLinked("Vehicle (Mecha)");

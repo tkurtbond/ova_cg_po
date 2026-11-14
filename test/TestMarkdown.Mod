@@ -10,7 +10,7 @@ MODULE TestMarkdown; (* OvaMarkdownTab: the character's Markdown sheet, kept cur
    current the same way, and Save Markdown... takes it. That the sheet
    is ova_fmt_po -M's, and the paragraph -i's, is test/files.sh's. *)
 
-IMPORT Check, Fl, FlInputs, FlText, OvaBackground, OvaMarkdown, OvaMarkdownTab, OvaRules, OvaText, OvaWidgets,
+IMPORT Check, Fl, FlMenus, FlInputs, FlText, FlTest, OvaBackground, OvaMarkdown, OvaMarkdownTab, OvaRules, OvaText,
   OvaWindow, Out, Platform, Ropes;
 
 CONST
@@ -69,24 +69,21 @@ END Shown;
 
 (* ---- Doing ---- *)
 
-PROCEDURE Pick(p: OvaWidgets.Panel; name: ARRAY OF CHAR);
-  VAR it: OvaRules.Item; i: INTEGER;
-BEGIN
-  it := OvaRules.Find(name); ASSERT(it # NIL);
-  i := 0; WHILE OvaRules.Get(p.kind, i) # it DO INC(i) END;
-  p.choice.Choose(i);
-  p.choice.DoCallback
+(* Chooses name in Choice or panel Choice m by its label, as the user does. *)
+PROCEDURE Pick(m: FlMenus.Menu; name: ARRAY OF CHAR);
+  VAR label: ARRAY 64 OF CHAR;
+BEGIN OvaRules.LabelOf(name, label); IF ~FlTest.Choose(m, label) THEN HALT(98) END
 END Pick;
 
 PROCEDURE AddAbility(name: ARRAY OF CHAR; level: INTEGER);
 BEGIN
-  Pick(OvaWindow.abilities, name); OvaWindow.abilities.spinner.SetValue(level);
+  Pick(OvaWindow.abilities.choice, name); OvaWindow.abilities.spinner.SetValue(level);
   OvaWindow.abilities.text.SetValue(""); OvaWindow.abilities.add.DoCallback
 END AddAbility;
 
 (* Checks or unchecks Inline, as a click does. *)
 PROCEDURE SetInline(on: BOOLEAN);
-BEGIN OvaMarkdownTab.inline.SetValue(on); OvaMarkdownTab.inline.DoCallback
+BEGIN FlTest.Turn(OvaMarkdownTab.inline, on)
 END SetInline;
 
 (* Deletes the file at p, if there is one. *)
@@ -105,7 +102,7 @@ BEGIN
   Check.Check(Shown(), "a new character's sheet");
 
   (* ---- Kept current ---- *)
-  OvaWindow.nameIn.SetValue("Kiri"); OvaWindow.nameIn.DoCallback;
+  FlTest.Fill(OvaWindow.nameIn, "Kiri");
   Check.Check(Shown() & Has(OvaMarkdownTab.sheet, "# Kiri"), "a name typed: the sheet's title");
   AddAbility("Attack", 3);
   Check.Check(Shown() & Has(OvaMarkdownTab.sheet, "Attack +3"), "an Ability added: listed");
@@ -148,7 +145,7 @@ BEGIN
   SetInline(TRUE);
   Check.Check(Shown() & Has(OvaMarkdownTab.sheet, "**Ai.** An amnesiac") & ~Has(OvaMarkdownTab.sheet, "# Ai"),
     "Inline checked: the inline paragraph");
-  OvaWindow.nameIn.SetValue("Aiko"); OvaWindow.nameIn.DoCallback;
+  FlTest.Fill(OvaWindow.nameIn, "Aiko");
   Check.Check(Shown() & Has(OvaMarkdownTab.sheet, "**Aiko.**"), "Inline: kept current");
   Remove(SavePath); chosen := R(SavePath);
   OvaMarkdownTab.save.DoCallback;

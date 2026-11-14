@@ -2,18 +2,17 @@ MODULE TestWindow; (* OvaWindow: the first tab, driven as a user would, and its 
 
 (* Needs a display: run by make test-gui, under make test-headless or
    make test-sway (AGENTS.md: never on the desktop). Widgets are driven
-   directly, as pofltk's tests do: a value set, then DoCallback; a menu
-   item picked. What would wait for the user (a message, a question, a
+   as pofltk's tests drive them, with FlTest: a field filled, a line
+   selected, a Choice's item chosen by its label; a button's callback
+   run; a menu item picked. What would wait for the user (a message, a question, a
    file chooser, the rulebook) is answered by the procedures here.
 
    PLAN.md, Phase 5: the model, the numbers shown, and the page beside
    every name shown; an override changes what is shown, saved, and
    computed from it, and clearing it undoes that. *)
 
-IMPORT Check, Fl, FlBrowsers, FlMenus, OvaAttackDialog, OvaBackground, OvaCalc, OvaCharacter, OvaEntities, OvaRules, OvaSave, OvaText,
-  OvaTraitPanel,
-  OvaWidgets, OvaWindow,
-  Out, Ropes;
+IMPORT Check, Fl, FlMenus, FlTest, OvaAttackDialog, OvaBackground, OvaCalc, OvaCharacter, OvaEntities, OvaRules,
+  OvaSave, OvaText, OvaTraitPanel, OvaWidgets, OvaWindow, Out, Ropes;
 
 CONST SavePath = "../obj/window.yaml";
 
@@ -60,19 +59,6 @@ BEGIN page := p
 END OpenPage;
 
 (* ---- Driving and looking ---- *)
-
-PROCEDURE ShowIt;
-BEGIN
-  OvaWindow.window.Show;
-  OvaWindow.window.WaitForExpose;
-  Fl.HandlePending
-END ShowIt;
-
-(* Lets FLTK run what it put off: timers. *)
-PROCEDURE Settle;
-  VAR i: INTEGER;
-BEGIN FOR i := 1 TO 5 DO Fl.Wait(0.01D0) END
-END Settle;
 
 (* a, b and c joined by tabs, as a browser's columns; c "" for two. *)
 PROCEDURE Columns(a, b, c: ARRAY OF CHAR; VAR s: ARRAY OF CHAR);
@@ -157,38 +143,11 @@ BEGIN
   RETURN ok
 END ChoiceLabelled;
 
-(* Types text into box b and leaves it. *)
-PROCEDURE Type(b: OvaWidgets.NumberBox; text: ARRAY OF CHAR);
-BEGIN b.entry.SetValue(text); b.entry.DoCallback
-END Type;
-
-(* Chooses name in p's Choice, as the user does. *)
-PROCEDURE Pick(p: OvaWidgets.Panel; name: ARRAY OF CHAR);
-  VAR it: OvaRules.Item; i: INTEGER;
-BEGIN
-  it := OvaRules.Find(name); ASSERT(it # NIL);
-  i := 0; WHILE OvaRules.Get(p.kind, i) # it DO INC(i) END;
-  p.choice.Choose(i);
-  p.choice.DoCallback
+(* Chooses name in Choice or panel Choice m by its label, as the user does. *)
+PROCEDURE Pick(m: FlMenus.Menu; name: ARRAY OF CHAR);
+  VAR label: ARRAY 64 OF CHAR;
+BEGIN OvaRules.LabelOf(name, label); IF ~FlTest.Choose(m, label) THEN HALT(98) END
 END Pick;
-
-(* Selects p's line, as a click does. *)
-PROCEDURE SelectLine(p: OvaWidgets.Panel; line: INTEGER);
-BEGIN p.browser.SetSelected(line, TRUE); p.browser.DoCallback
-END SelectLine;
-
-(* The last line of browser b holding text; 0 if none. *)
-PROCEDURE LineWith(b: FlBrowsers.Browser; text: ARRAY OF CHAR): INTEGER;
-  VAR i: INTEGER; line: ARRAY 256 OF CHAR;
-BEGIN
-  i := b.Count();
-  WHILE i > 0 DO
-    b.GetText(i, line);
-    IF Ropes.Find(Ropes.FromString(line), text, 0) >= 0 THEN RETURN i END;
-    DEC(i)
-  END;
-  RETURN 0
-END LineWith;
 
 PROCEDURE Selected(p: OvaWidgets.Panel; VAR s: ARRAY OF CHAR);
 BEGIN IF p.browser.Value() > 0 THEN p.browser.GetText(p.browser.Value(), s) ELSE s[0] := 0X END
@@ -245,21 +204,21 @@ BEGIN
   it := p.Item();
   Check.Check((it # NIL) & (it.name = "Scale Advantage") & (p.help.page = 123) & ~p.spinner.Active()
     & (p.spinner.Value() = 1), "a Boss Ability chosen: its page, the level 1 and off");
-  p.text.SetValue("Attack"); p.add.DoCallback; Settle;
+  p.text.SetValue("Attack"); p.add.DoCallback; FlTest.Settle;
   Check.Check((p.browser.Count() = lines + 1) & (OvaCalc.Value(c.tv) = tv + 5) & (OvaCalc.Value(c.abilityLevels) = total)
     & Has(Saved(), "Scale Advantage") & ListShown(p) & AllShown(), "added: 5 TV, no levels, saved, shown");
-  Pick(p, "Attack");
+  Pick(p.choice, "Attack");
   Check.Check(p.spinner.Active(), "another name: the level on again");
-  SelectLine(p, LineWith(p.browser, "Scale Advantage"));
+  FlTest.SelectLine(p.browser, FlTest.LineWith(p.browser, "Scale Advantage"));
   OvaWindow.npcTypeIn.Pick(0);
   Check.Check(~p.withBoss & (p.choice.Length() = n + 1) & (FlMenus.MenuDivider * p.choice.ItemFlags(n - 1) = {})
-    & NotBossWarned(c) & Has(Saved(), "Scale Advantage") & (LineWith(OvaWindow.warnings, "p. 123") > 0),
+    & NotBossWarned(c) & Has(Saved(), "Scale Advantage") & (FlTest.LineWith(OvaWindow.warnings, "p. 123") > 0),
     "no longer a Boss: not offered, kept, and warned of");
-  SelectLine(p, LineWith(p.browser, "Scale Advantage"));
+  FlTest.SelectLine(p.browser, FlTest.LineWith(p.browser, "Scale Advantage"));
   Check.Check((p.choice.Value() = -1) & (p.Item() = NIL) & p.spinner.Active(), "its line selected: nothing chosen, and nothing fails");
-  p.remove.DoCallback; Settle;
+  p.remove.DoCallback; FlTest.Settle;
   Check.Check((p.browser.Count() = lines) & ~NotBossWarned(c) & ~Has(Saved(), "Scale Advantage")
-    & (LineWith(OvaWindow.warnings, "p. 123") = 0), "removed: the warning gone")
+    & (FlTest.LineWith(OvaWindow.warnings, "p. 123") = 0), "removed: the warning gone")
 END BossAbilities;
 
 PROCEDURE Title(VAR s: ARRAY OF CHAR);
@@ -343,7 +302,7 @@ BEGIN
     "every name in the Choices has its page: Attack (p. 50)");
   OvaWindow.bar.Pick(OvaWindow.rulebookItem);
   Check.Check(page = 1, "Rulebook > Open opens it at page 1");
-  ShowIt;
+  FlTest.Expose(OvaWindow.window);
 
   (* ---- A character loaded ---- *)
   ok := Load("Ai.yaml");
@@ -366,7 +325,7 @@ BEGIN
   c := OvaWindow.character;
   n := c.health.value;
   Check.Check(~c.health.overridden & ~Has(Saved(), "overrides"), "Ai has no overrides");
-  Type(OvaWindow.numbers[2], "55");
+  FlTest.Fill(OvaWindow.numbers[2].entry, "55");
   Check.Check(c.health.overridden & (OvaCalc.Value(c.health) = 55) & (c.health.value = n),
     "an override: HEALTH 55, the computed number kept");
   Check.Check(AllShown(), "and shown, beside the computed number");
@@ -374,20 +333,20 @@ BEGIN
   Title(s);
   Check.Check(s = "OVA Character Generator - Ai.yaml *", "and the title says so");
   Check.Check(Has(Saved(), "health: 55") & Has(Saved(), "overrides"), "saved: health 55, in overrides");
-  Type(OvaWindow.numbers[2], "");
+  FlTest.Fill(OvaWindow.numbers[2].entry, "");
   Check.Check(~c.health.overridden & (OvaCalc.Value(c.health) = n) & AllShown(),
     "an empty box: the computed number again");
   Check.Check(~Has(Saved(), "overrides"), "and no override saved");
-  Type(OvaWindow.numbers[2], "55");
+  FlTest.Fill(OvaWindow.numbers[2].entry, "55");
   tells := 0;
-  Type(OvaWindow.numbers[2], "lots");
+  FlTest.Fill(OvaWindow.numbers[2].entry, "lots");
   Check.Check((tells = 1) & ~c.health.overridden & AllShown(), "text that isn't a number: said so, and the box emptied");
-  Type(r.dx, "1/2");
+  FlTest.Fill(r.dx.entry, "1/2");
   Check.Check(r.attack.dx.overridden & OvaCalc.Half(r.attack.dx) & AllShown(), "a DX may be 1/2");
   tells := 0;
-  Type(OvaWindow.numbers[2], "1/2");
+  FlTest.Fill(OvaWindow.numbers[2].entry, "1/2");
   Check.Check((tells = 1) & ~c.health.overridden, "HEALTH may not");
-  Type(r.dx, "");
+  FlTest.Fill(r.dx.entry, "");
 
   (* An override counts in what is computed from it: Braun's TV comes
      from his ROLL, overridden to -2. *)
@@ -395,10 +354,10 @@ BEGIN
   c := OvaWindow.character; r := OvaWindow.rows;
   Check.Check(ok & r.attack.roll.overridden & (OvaCalc.Value(r.attack.roll) = -2) & (OvaCalc.Value(c.tv) = 0),
     "Braun: ROLL -2, overridden, and TV 0");
-  Type(r.roll, "");
+  FlTest.Fill(r.roll.entry, "");
   Check.Check(~r.attack.roll.overridden & (OvaCalc.Value(c.tv) # 0) & AllShown(),
     "ROLL's override cleared: TV computed from the rules' ROLL");
-  Type(r.roll, "-2");
+  FlTest.Fill(r.roll.entry, "-2");
   Check.Check((OvaCalc.Value(c.tv) = 0) & AllShown(), "and set again: TV 0 again");
 
   (* A name the rulebook's lists don't have: "p. ?", and a warning that
@@ -406,11 +365,11 @@ BEGIN
   t := OvaCharacter.NewTrait(NIL, OvaRules.Ability, 1, Ropes.FromString("Magic, Testing"), NIL);
   OvaCharacter.InsertTrait(c.traits, t);
   OvaWindow.Adopt(OvaCharacter.One(c), NIL);
-  i := LineWith(OvaWindow.abilities.browser, "Magic, Testing");
+  i := FlTest.LineWith(OvaWindow.abilities.browser, "Magic, Testing");
   IF i > 0 THEN OvaWindow.abilities.browser.GetText(i, s) ELSE s[0] := 0X END;
   Columns("+1 Magic, Testing", "p. ?", "", want);
   Check.Check((s = want) & ListShown(OvaWindow.abilities), "an unknown name: listed with p. ?");
-  i := LineWith(OvaWindow.warnings, "Magic, Testing");
+  i := FlTest.LineWith(OvaWindow.warnings, "Magic, Testing");
   IF i > 0 THEN OvaWindow.warnings.GetText(i, s) ELSE s[0] := 0X END;
   Check.Check(s = "Magic, Testing (p. ?) isn't in the rulebook's lists", "and a warning, with p. ?");
 
@@ -421,7 +380,7 @@ BEGIN
   (* ---- Abilities and Weaknesses ---- *)
   ok := Load("Ai.yaml"); c := OvaWindow.character;
   before := c.abilityLevels.value;
-  Pick(OvaWindow.abilities, "Flight");
+  Pick(OvaWindow.abilities.choice, "Flight");
   Check.Check(OvaWindow.abilities.help.page = 54, "choosing Flight turns ? to its page, 54");
   OvaWindow.abilities.help.DoCallback;
   Check.Check(page = 54, "and ? opens the rulebook there");
@@ -443,29 +402,29 @@ BEGIN
   OvaWindow.abilities.remove.DoCallback;
   Check.Check(OvaWindow.abilities.browser.Count() = n, "Remove with nothing selected removes nothing");
 
-  Pick(OvaWindow.weaknesses, "Endurance Use");
+  Pick(OvaWindow.weaknesses.choice, "Endurance Use");
   OvaWindow.weaknesses.spinner.SetValue(-2);
   OvaWindow.weaknesses.text.SetValue("Telekinesis");
   OvaWindow.weaknesses.add.DoCallback;
   Selected(OvaWindow.weaknesses, s); Columns("-2 Endurance Use (Telekinesis)", "p. 70", "", want);
   Check.Check((s = want) & ListShown(OvaWindow.weaknesses), "a Weakness added: Endurance Use -2 on Telekinesis");
   t := TraitNamed("Telekinesis");
-  SelectLine(OvaWindow.abilities, LineWith(OvaWindow.abilities.browser, "Telekinesis"));
+  FlTest.SelectLine(OvaWindow.abilities.browser, FlTest.LineWith(OvaWindow.abilities.browser, "Telekinesis"));
   OvaWindow.abilityEnd.shown.Value(s);
   Check.Check((s = "10") & OvaWindow.abilityEnd.Active() & Shows(OvaWindow.abilityEnd, t.end),
     "Telekinesis selected: its END, 10, shown, with its box");
   Check.Check(OvaWindow.abilities.help.page = 62, "and ? at its page, 62");
-  Type(OvaWindow.abilityEnd, "15");
+  FlTest.Fill(OvaWindow.abilityEnd.entry, "15");
   Check.Check(t.end.overridden & (OvaCalc.Value(t.end) = 15) & Shows(OvaWindow.abilityEnd, t.end),
     "its END overridden");
-  Type(OvaWindow.abilityEnd, "");
+  FlTest.Fill(OvaWindow.abilityEnd.entry, "");
 
   (* ---- An Ability's Perks and Flaws ---- *)
   OvaWindow.abilityMods.DoCallback;
   Check.Check(OvaAttackDialog.dialog # NIL, "Perks and Flaws... opens the dialog");
   Check.Check(ChoiceLabelled(OvaAttackDialog.perks) & ChoiceLabelled(OvaAttackDialog.flaws),
     "every Perk and Flaw in its Choice has its page");
-  Pick(OvaAttackDialog.perks, "Area Effect");
+  Pick(OvaAttackDialog.perks.choice, "Area Effect");
   OvaAttackDialog.perks.add.DoCallback;
   n := OvaCalc.Value(t.end);
   Check.Check((t.mods # NIL) & (n > 10) & Shows(OvaAttackDialog.end, t.end),
@@ -474,7 +433,7 @@ BEGIN
   Check.Check((OvaAttackDialog.dialog = NIL) & (t.mods = NIL) & (OvaCalc.Value(t.end) = 10)
     & Shows(OvaWindow.abilityEnd, t.end), "Cancel: the Perk taken out again");
   OvaWindow.abilityMods.DoCallback;
-  Pick(OvaAttackDialog.perks, "Area Effect");
+  Pick(OvaAttackDialog.perks.choice, "Area Effect");
   OvaAttackDialog.perks.add.DoCallback;
   OvaAttackDialog.Ok;
   Check.Check((OvaAttackDialog.dialog = NIL) & (OvaCalc.Value(t.end) = n) & Shows(OvaWindow.abilityEnd, t.end)
@@ -485,12 +444,12 @@ BEGIN
   OvaWindow.addAttack.DoCallback;
   Check.Check(OvaAttackDialog.dialog # NIL, "Add attack... opens the dialog");
   OvaAttackDialog.nameIn.SetValue("Wind Lance");
-  Pick(OvaAttackDialog.perks, "Accurate");
+  Pick(OvaAttackDialog.perks.choice, "Accurate");
   OvaAttackDialog.perks.spinner.SetValue(2);
   OvaAttackDialog.perks.add.DoCallback;
   Selected(OvaAttackDialog.perks, s); Columns("Accurate x2", "+10", "p. 83", want);
   Check.Check(s = want, "a Perk listed: its count, cost and page");
-  Pick(OvaAttackDialog.flaws, "Cancel");
+  Pick(OvaAttackDialog.flaws.choice, "Cancel");
   OvaAttackDialog.flaws.text.Value(s);
   Check.Check(s = "-20", "Cancel's cost offered: its least, -20");
   OvaAttackDialog.flaws.text.SetValue("-15");
@@ -512,7 +471,7 @@ BEGIN
   Check.Check(Has(text, "Wind Lance") & Has(text, "counts-as: 2") & Has(text, "cost: -15"),
     "saved with its Perks and Flaws");
   r.edit.DoCallback;
-  SelectLine(OvaAttackDialog.perks, 1);
+  FlTest.SelectLine(OvaAttackDialog.perks.browser, 1);
   OvaAttackDialog.perks.remove.DoCallback;
   Check.Check((OvaAttackDialog.perks.browser.Count() = 0) & ~Has(Saved(), "counts-as: 2"), "Edit: a Perk removed");
   OvaAttackDialog.Cancel;
@@ -527,12 +486,12 @@ BEGIN
   Check.Check((tells = 1) & (OvaAttackDialog.dialog # NIL), "OK with no name: said so, and the dialog stays");
   OvaAttackDialog.Cancel;
   r := LastRow(); r.remove.DoCallback;
-  Settle;
+  FlTest.Settle;
   Check.Check((RowCount() = n) & ~Has(Saved(), "Wind Lance") & AllShown(), "Remove: the row and the attack gone");
 
   (* ---- Names and notes ---- *)
-  OvaWindow.playerIn.SetValue("Sam"); OvaWindow.playerIn.DoCallback;
-  OvaWindow.combatNotes.SetValue("Down to 10 HEALTH."); OvaWindow.combatNotes.DoCallback;
+  FlTest.Fill(OvaWindow.playerIn, "Sam");
+  FlTest.Fill(OvaWindow.combatNotes, "Down to 10 HEALTH.");
   Check.Check(Has(Saved(), "player: Sam") & Has(Saved(), "Down to 10 HEALTH."), "the player and Combat Notes saved");
 
   (* ---- The NPC type (p. 123-124) ---- *)
@@ -565,7 +524,7 @@ BEGIN
   OvaWindow.bar.Pick(OvaWindow.newItem);
   Check.Check((asked = 0) & (OvaWindow.character.name = NIL) & (OvaWindow.abilities.browser.Count() = 0)
     & (RowCount() = 0) & AllShown(), "New: nothing unsaved, nothing asked, an empty sheet");
-  OvaWindow.nameIn.SetValue("Someone"); OvaWindow.nameIn.DoCallback;
+  FlTest.Fill(OvaWindow.nameIn, "Someone");
   Check.Check(Ropes.EqualString(OvaWindow.character.name, "Someone") & OvaWindow.modified, "a name typed");
   answer := OvaWindow.Cancel;
   OvaWindow.bar.Pick(OvaWindow.newItem);
@@ -577,7 +536,7 @@ BEGIN
   OvaWindow.bar.Pick(OvaWindow.quitItem);
   Fl.HandlePending;
   Check.Check((asked = 3) & ~OvaWindow.window.Shown(), "Don't save: the window goes, which ends Fl.Run");
-  ShowIt;
+  FlTest.Expose(OvaWindow.window);
   OvaWindow.window.DoCallback;  (* what the window's close button does *)
   Fl.HandlePending;
   Check.Check((asked = 4) & ~OvaWindow.window.Shown(), "the close button asks too");
@@ -609,7 +568,7 @@ BEGIN
     "Character > Previous Character: the second");
   OvaWindow.bar.Pick(OvaWindow.nextItem);
   Check.Check((OvaWindow.current = 2) & ShownNow("High Fructo Cezar"), "Next Character: the third again");
-  OvaWindow.nameIn.SetValue("Cezar"); OvaWindow.nameIn.DoCallback; Title(s);
+  FlTest.Fill(OvaWindow.nameIn, "Cezar"); Title(s);
   Check.Check(Listed("1. Acacia|2. Sazza and Fraz|3. Cezar") & OvaWindow.modified
     & (s = "OVA Character Generator - Acacia.yaml (3 of 3) *"), "renamed: the Choice follows, the file modified");
 
@@ -618,7 +577,7 @@ BEGIN
     & (OvaWindow.abilities.browser.Count() = 0) & (RowCount() = 0)
     & Listed("1. Acacia|2. Sazza and Fraz|3. Cezar|4. (no name)"),
     "Character > Add Character: a new one, last, shown");
-  OvaWindow.nameIn.SetValue("Imp & Co @2/3"); OvaWindow.nameIn.DoCallback;
+  FlTest.Fill(OvaWindow.nameIn, "Imp & Co @2/3");
   Check.Check(Listed("1. Acacia|2. Sazza and Fraz|3. Cezar|4. Imp && Co @@2/3"), "an &, @ or / in a name shown as itself: ItemLabel gives & and @ doubled");
 
   OvaWindow.characterChoice.Pick(0);
@@ -627,7 +586,7 @@ BEGIN
   Check.Check((LEN(OvaWindow.characters^) = 5) & (OvaWindow.current = 4) & ShownNow("Acacia")
     & (c # OvaWindow.characters[0]) & Ropes.Equal(OvaSave.ToText(c), OvaSave.ToText(OvaWindow.characters[0])),
     "Duplicate Character: a copy of Acacia, last, shown, the same when saved");
-  Type(OvaWindow.numbers[2], "55");
+  FlTest.Fill(OvaWindow.numbers[2].entry, "55");
   Check.Check(c.health.overridden & ~OvaWindow.characters[0].health.overridden,
     "the copy's HEALTH overridden, the first's not: they share nothing");
   OvaWindow.bar.Pick(OvaWindow.moveUpItem); Title(s);
@@ -665,7 +624,7 @@ BEGIN
   Check.Check(ok & (tells = 0) & (s = "OVA Character Generator - several.yaml (1 of 3)")
     & Listed("1. Acacia|2. Cezar|3. Imp && Co @@2/3") & Ropes.Equal(OvaSave.AllToText(OvaWindow.characters), text),
     "loaded again: all three, in order, the same, with nothing to say");
-  OvaWindow.nameIn.SetValue("Acacia II"); OvaWindow.nameIn.DoCallback;
+  FlTest.Fill(OvaWindow.nameIn, "Acacia II");
   answer := OvaWindow.Cancel; asked := 0;
   OvaWindow.bar.Pick(OvaWindow.newItem);
   Check.Check((asked = 1) & Ropes.EqualString(question, "Save the changes to several.yaml first?"),
