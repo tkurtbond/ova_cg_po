@@ -65,7 +65,7 @@ PROCEDURE ShowIt;
 BEGIN
   OvaWindow.window.Show;
   OvaWindow.window.WaitForExpose;
-  IF Fl.Check() THEN END
+  Fl.HandlePending
 END ShowIt;
 
 (* Lets FLTK run what it put off: timers. *)
@@ -168,13 +168,13 @@ PROCEDURE Pick(p: OvaWidgets.Panel; name: ARRAY OF CHAR);
 BEGIN
   it := OvaRules.Find(name); ASSERT(it # NIL);
   i := 0; WHILE OvaRules.Get(p.kind, i) # it DO INC(i) END;
-  IF p.choice.SetValue(i) THEN END;
+  p.choice.Choose(i);
   p.choice.DoCallback
 END Pick;
 
 (* Selects p's line, as a click does. *)
 PROCEDURE SelectLine(p: OvaWidgets.Panel; line: INTEGER);
-BEGIN IF p.browser.Select(line, TRUE) THEN END; p.browser.DoCallback
+BEGIN p.browser.SetSelected(line, TRUE); p.browser.DoCallback
 END SelectLine;
 
 (* The last line of browser b holding text; 0 if none. *)
@@ -241,7 +241,7 @@ BEGIN
   Check.Check(~OvaWindow.weaknesses.withBoss & (OvaWindow.weaknesses.choice.Length() = OvaRules.Count(OvaRules.Weakness) + 1),
     "the Weaknesses offer nothing new");
   tv := OvaCalc.Value(c.tv); total := OvaCalc.Value(c.abilityLevels);
-  IF p.choice.SetValue(n + 2) THEN END; p.choice.DoCallback;
+  p.choice.Choose(n + 2); p.choice.DoCallback;
   it := p.Item();
   Check.Check((it # NIL) & (it.name = "Scale Advantage") & (p.help.page = 123) & ~p.spinner.Active()
     & (p.spinner.Value() = 1), "a Boss Ability chosen: its page, the level 1 and off");
@@ -296,7 +296,7 @@ END Listed;
 
 (* Whether item i of the menu bar is active. *)
 PROCEDURE Active(i: INTEGER): BOOLEAN;
-BEGIN RETURN OvaWindow.bar.ItemFlags(i) * FlMenus.MenuInactive = {}
+BEGIN RETURN OvaWindow.bar.ItemActive(i)
 END Active;
 
 (* Whether the window shows the character shown: its name, and every
@@ -575,11 +575,11 @@ BEGIN
   Check.Check((asked = 2) & OvaWindow.window.Shown(), "Quit with changes: asked; Cancel stays");
   answer := OvaWindow.Discard;
   OvaWindow.bar.Pick(OvaWindow.quitItem);
-  IF Fl.Check() THEN END;
+  Fl.HandlePending;
   Check.Check((asked = 3) & ~OvaWindow.window.Shown(), "Don't save: the window goes, which ends Fl.Run");
   ShowIt;
   OvaWindow.window.DoCallback;  (* what the window's close button does *)
-  IF Fl.Check() THEN END;
+  Fl.HandlePending;
   Check.Check((asked = 4) & ~OvaWindow.window.Shown(), "the close button asks too");
 
   (* ---- A Sample NPC loaded ---- *)
@@ -618,8 +618,8 @@ BEGIN
     & (OvaWindow.abilities.browser.Count() = 0) & (RowCount() = 0)
     & Listed("1. Acacia|2. Sazza and Fraz|3. Cezar|4. (no name)"),
     "Character > Add Character: a new one, last, shown");
-  OvaWindow.nameIn.SetValue("Imp & Co"); OvaWindow.nameIn.DoCallback;
-  Check.Check(Listed("1. Acacia|2. Sazza and Fraz|3. Cezar|4. Imp && Co"), "an & in a name doubled, so FLTK shows it");
+  OvaWindow.nameIn.SetValue("Imp & Co @2/3"); OvaWindow.nameIn.DoCallback;
+  Check.Check(Listed("1. Acacia|2. Sazza and Fraz|3. Cezar|4. Imp && Co @@2/3"), "an &, @ or / in a name shown as itself: ItemLabel gives & and @ doubled");
 
   OvaWindow.characterChoice.Pick(0);
   OvaWindow.bar.Pick(OvaWindow.duplicateItem);
@@ -632,11 +632,11 @@ BEGIN
     "the copy's HEALTH overridden, the first's not: they share nothing");
   OvaWindow.bar.Pick(OvaWindow.moveUpItem); Title(s);
   Check.Check((OvaWindow.current = 3) & (OvaWindow.characters[3] = c) & (s = "OVA Character Generator - Acacia.yaml (4 of 5) *")
-    & Listed("1. Acacia|2. Sazza and Fraz|3. Cezar|4. Acacia|5. Imp && Co") & ShownNow("Acacia"),
+    & Listed("1. Acacia|2. Sazza and Fraz|3. Cezar|4. Acacia|5. Imp && Co @@2/3") & ShownNow("Acacia"),
     "Move Up: the copy fourth, still shown");
   OvaWindow.bar.Pick(OvaWindow.moveDownItem);
   Check.Check((OvaWindow.current = 4) & (OvaWindow.characters[4] = c)
-    & Listed("1. Acacia|2. Sazza and Fraz|3. Cezar|4. Imp && Co|5. Acacia"), "Move Down: last again");
+    & Listed("1. Acacia|2. Sazza and Fraz|3. Cezar|4. Imp && Co @@2/3|5. Acacia"), "Move Down: last again");
 
   confirmed := 0; yes := FALSE;
   OvaWindow.bar.Pick(OvaWindow.removeCharacterItem);
@@ -644,11 +644,11 @@ BEGIN
     & (LEN(OvaWindow.characters^) = 5), "Remove Character...: asked first; Cancel removes nothing");
   yes := TRUE;
   OvaWindow.bar.Pick(OvaWindow.removeCharacterItem);
-  Check.Check((LEN(OvaWindow.characters^) = 4) & (OvaWindow.current = 3) & ShownNow("Imp & Co")
-    & Listed("1. Acacia|2. Sazza and Fraz|3. Cezar|4. Imp && Co"), "removed, the last: the one before it shown");
+  Check.Check((LEN(OvaWindow.characters^) = 4) & (OvaWindow.current = 3) & ShownNow("Imp & Co @2/3")
+    & Listed("1. Acacia|2. Sazza and Fraz|3. Cezar|4. Imp && Co @@2/3"), "removed, the last: the one before it shown");
   OvaWindow.characterChoice.Pick(1);
   OvaWindow.bar.Pick(OvaWindow.removeCharacterItem);
-  Check.Check((OvaWindow.current = 1) & ShownNow("Cezar") & Listed("1. Acacia|2. Cezar|3. Imp && Co"),
+  Check.Check((OvaWindow.current = 1) & ShownNow("Cezar") & Listed("1. Acacia|2. Cezar|3. Imp && Co @@2/3"),
     "removed from the middle: the one after it shown");
 
   (* Saved: every character, in order; each portrait rebased. *)
@@ -663,7 +663,7 @@ BEGIN
   tells := 0;
   ok := Load("../../obj/several.yaml"); Title(s);
   Check.Check(ok & (tells = 0) & (s = "OVA Character Generator - several.yaml (1 of 3)")
-    & Listed("1. Acacia|2. Cezar|3. Imp && Co") & Ropes.Equal(OvaSave.AllToText(OvaWindow.characters), text),
+    & Listed("1. Acacia|2. Cezar|3. Imp && Co @@2/3") & Ropes.Equal(OvaSave.AllToText(OvaWindow.characters), text),
     "loaded again: all three, in order, the same, with nothing to say");
   OvaWindow.nameIn.SetValue("Acacia II"); OvaWindow.nameIn.DoCallback;
   answer := OvaWindow.Cancel; asked := 0;
@@ -674,7 +674,7 @@ BEGIN
   OvaWindow.bar.Pick(OvaWindow.removeCharacterItem); OvaWindow.bar.Pick(OvaWindow.removeCharacterItem);
   Title(s);
   Check.Check((LEN(OvaWindow.characters^) = 1) & ~Active(OvaWindow.removeCharacterItem)
-    & (s = "OVA Character Generator - several.yaml *") & Listed("1. Imp && Co"),
+    & (s = "OVA Character Generator - several.yaml *") & Listed("1. Imp && Co @@2/3"),
     "down to one: Remove inactive, and the title without a count");
   confirmed := 0;
   OvaWindow.bar.Pick(OvaWindow.removeCharacterItem);

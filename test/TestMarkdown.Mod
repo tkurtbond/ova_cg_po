@@ -25,7 +25,7 @@ VAR
   win: Fl.Window;
   in: FlInputs.MultilineInput;
   buf: FlText.TextBuffer;
-  s: OvaText.String;
+  s: Fl.String;
   path: ARRAY 64 OF CHAR;
   ok: BOOLEAN;
 
@@ -58,12 +58,12 @@ END Has;
    inline paragraph if Inline is checked, as OvaMarkdown makes it, in
    its display. *)
 PROCEDURE Shown(): BOOLEAN;
-  VAR b: FlText.TextBuffer; t: OvaText.String; want: Rope;
+  VAR b: FlText.TextBuffer; t: Fl.String; want: Rope;
 BEGIN
   IF OvaMarkdownTab.inline.Value() THEN want := OvaMarkdown.Inline(OvaWindow.character)
   ELSE want := OvaMarkdown.Sheet(OvaWindow.character)
   END;
-  b := OvaMarkdownTab.display.Buffer(); NEW(t, b.Length() + 1); b.GetText(t^);
+  b := OvaMarkdownTab.display.Buffer(); t := b.Text();
   RETURN (want # NIL) & Ropes.Equal(OvaMarkdownTab.sheet, want) & Ropes.EqualString(want, t^)
 END Shown;
 
@@ -74,7 +74,7 @@ PROCEDURE Pick(p: OvaWidgets.Panel; name: ARRAY OF CHAR);
 BEGIN
   it := OvaRules.Find(name); ASSERT(it # NIL);
   i := 0; WHILE OvaRules.Get(p.kind, i) # it DO INC(i) END;
-  IF p.choice.SetValue(i) THEN END;
+  p.choice.Choose(i);
   p.choice.DoCallback
 END Pick;
 
@@ -121,7 +121,7 @@ BEGIN
   NEW(in); FlInputs.OpenMultilineInput(in, 0, 0, 100, 100, "");
   win.End;
   Fl.Paste(in, Fl.Clipboard);
-  NEW(s, in.Length() + 1); in.Value(s^);
+  s := in.Text();
   Check.Check(Ropes.EqualString(OvaMarkdownTab.sheet, s^), "Copy: the whole sheet on the clipboard");
   win.Delete; win := NIL; in := NIL;
 

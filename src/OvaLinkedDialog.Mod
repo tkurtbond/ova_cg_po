@@ -84,8 +84,8 @@ BEGIN RETURN Ropes.FromString(s)
 END R;
 
 PROCEDURE InputText(i: FlInputs.Input): Rope;
-  VAR s: OvaText.String;
-BEGIN NEW(s, i.Length() + 1); i.Value(s^); RETURN OvaText.Trim(Ropes.FromString(s^))
+  VAR s: Fl.String;
+BEGIN s := i.Text(); RETURN OvaText.Trim(Ropes.FromString(s^))
 END InputText;
 
 PROCEDURE SetInput(i: FlInputs.Input; r: Rope);
@@ -259,7 +259,7 @@ BEGIN
   END;
   x := SpellAt(line);
   IF x # NIL THEN
-    IF spells.Select(line, TRUE) THEN END;
+    spells.SetSelected(line, TRUE);
     NEW(t); t.spell := x; spellEnd.target := t; spellEnd.Activate
   ELSE
     spellEnd.target := NIL; spellEnd.Deactivate
@@ -284,7 +284,7 @@ PROCEDURE ChooseSpellItem(it: OvaRules.Item);
 BEGIN
   n := -1;
   IF it # NIL THEN n := OvaRules.OfferIndex(it, castKind, FALSE) END;
-  IF spellAbility.SetValue(n) THEN END;
+  spellAbility.Choose(n);
   IF it # NIL THEN spellHelp.page := it.page ELSE spellHelp.page := 0 END
 END ChooseSpellItem;
 
@@ -370,7 +370,7 @@ BEGIN
     s := OvaText.Chars(r); attacks.Add(s^);
     a := a.next
   END;
-  IF (line > 0) & (line <= attacks.Count()) THEN IF attacks.Select(line, TRUE) THEN END END
+  IF (line > 0) & (line <= attacks.Count()) THEN attacks.SetSelected(line, TRUE) END
 END ShowAttacks;
 
 PROCEDURE AttackDone(changed: BOOLEAN);
@@ -471,7 +471,7 @@ BEGIN
   END;
   FOR i := 0 TO OvaRules.Count(castKind) - 1 DO
     OvaRules.Label(OvaRules.Get(castKind, i), label);
-    IF spellAbility.Add(label, 0, {}, NIL, {}) >= 0 THEN END
+    spellAbility.AddText(label, NIL, {})
   END;
   spellAbility.action := SpellAbilityAction;
   NEW(spellHelp); OvaWidgets.OpenHelpButton(spellHelp, 695, y, 0);

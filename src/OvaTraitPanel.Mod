@@ -17,7 +17,7 @@ MODULE OvaTraitPanel; (* A list of Abilities or Weaknesses and its editor: a cha
    Abilities, which have no level: the file's level: is always 1, and
    the Spinner is off while one is chosen. *)
 
-IMPORT OvaCalc, OvaCharacter, OvaRules, OvaText, OvaWidgets, Ropes;
+IMPORT Fl, OvaCalc, OvaCharacter, OvaRules, OvaText, OvaWidgets, Ropes;
 
 CONST
   (* Under Scaled Cost, the browser's columns: the points', and at
@@ -160,9 +160,9 @@ END Load;
 
 (* The detail typed; NIL for none. *)
 PROCEDURE (p: TraitPanel) Detail(): Rope;
-  VAR s: OvaText.String;
+  VAR s: Fl.String;
 BEGIN
-  NEW(s, p.text.Length() + 1); p.text.Value(s^);
+  s := p.text.Text();
   RETURN OvaText.Trim(Ropes.FromString(s^))
 END Detail;
 

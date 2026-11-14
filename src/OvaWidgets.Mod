@@ -219,7 +219,7 @@ PROCEDURE (p: Panel) Choose*(it: OvaRules.Item);
 BEGIN
   n := -1;
   IF it # NIL THEN n := OvaRules.OfferIndex(it, p.kind, p.withBoss) END;
-  IF p.choice.SetValue(n) THEN END;
+  p.choice.Choose(n);
   p.Chosen
 END Choose;
 
@@ -232,7 +232,7 @@ BEGIN
   FOR i := 0 TO OvaRules.OfferCount(p.kind, p.withBoss) - 1 DO
     OvaRules.Label(OvaRules.Offered(p.kind, i, p.withBoss), label);
     IF p.withBoss & (i = last) THEN flags := FlMenus.MenuDivider ELSE flags := {} END;
-    IF p.choice.Add(label, 0, {}, NIL, flags) >= 0 THEN END
+    p.choice.AddText(label, NIL, flags)
   END
 END FillChoice;
 
@@ -257,7 +257,7 @@ BEGIN
   p.browser.Clear;
   p.Fill;
   IF (line > 0) & (line <= p.browser.Count()) THEN
-    IF p.browser.Select(line, TRUE) THEN END;
+    p.browser.SetSelected(line, TRUE);
     p.Load(line)
   END
 END Refresh;

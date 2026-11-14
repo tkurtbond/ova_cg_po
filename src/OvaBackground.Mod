@@ -67,9 +67,9 @@ END R;
 
 (* What input i holds, trimmed; NIL if blank. *)
 PROCEDURE InputText(i: FlInputs.Input): Rope;
-  VAR s: OvaText.String;
+  VAR s: Fl.String;
 BEGIN
-  NEW(s, i.Length() + 1); i.Value(s^);
+  s := i.Text();
   RETURN OvaText.Trim(Ropes.FromString(s^))
 END InputText;
 
@@ -100,10 +100,10 @@ END ProseOf;
 (* Section which's text, trimmed as the loader trims it, so what is saved
    loads the same; blank is absent. *)
 PROCEDURE (b: ProseBuffer) Modified*(pos, inserted, deleted, restyled: INTEGER);
-  VAR s: OvaText.String; r: Rope; c: OvaCharacter.Character;
+  VAR s: Fl.String; r: Rope; c: OvaCharacter.Character;
 BEGIN
   IF filling OR (character = NIL) OR (inserted = 0) & (deleted = 0) THEN RETURN END;
-  NEW(s, b.Length() + 1); b.GetText(s^);
+  s := b.Text();
   r := OvaText.Trim(Ropes.FromString(s^));
   c := character;
   CASE b.which OF
@@ -173,14 +173,14 @@ BEGIN
 END RemovePortraitAction;
 
 PROCEDURE DialogImage(VAR p: Rope): BOOLEAN;
-  VAR c: FlDialogs.NativeFileChooser; name: ARRAY 4096 OF CHAR; filter: ARRAY 64 OF CHAR; ok: BOOLEAN;
+  VAR c: FlDialogs.NativeFileChooser; name: Fl.String; ok: BOOLEAN;
 BEGIN
   NEW(c); FlDialogs.OpenNativeFileChooser(c, FlDialogs.BrowseFile);
   c.SetTitle("Choose the character's portrait");
-  filter := "Images *.{png,jpg,jpeg,gif,bmp,svg}"; filter[6] := 9X;  (* FLTK's "name<tab>pattern" *)
-  c.SetFilter(filter);
+  c.AddFilter("Images", "*.{png,jpg,jpeg,gif,bmp,svg}");
   ok := c.Show() = FlDialogs.Chosen;
-  IF ok THEN c.FileName(0, name); p := Ropes.FromString(name); ok := p # NIL END;
+  IF ok THEN name := c.Name(0); ok := name # NIL END;
+  IF ok THEN p := Ropes.FromString(name^); ok := p # NIL END;
   c.Close;
   RETURN ok
 END DialogImage;
@@ -228,7 +228,7 @@ BEGIN
   n := character.notes;
   WHILE n # NIL DO s := OvaText.Chars(n.header); notes.Add(s^); n := n.next END;
   IF (line > 0) & (line <= notes.Count()) THEN
-    IF notes.Select(line, TRUE) THEN END;
+    notes.SetSelected(line, TRUE);
     n := NoteAt(line); SetInput(noteHeader, n.header); SetInput(noteText, n.text)
   ELSE
     noteHeader.SetValue(""); noteText.SetValue("")

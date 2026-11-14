@@ -278,15 +278,15 @@ BEGIN
 END Finish;
 
 PROCEDURE OkAction(w: Fl.Widget);
-  VAR name: Rope; s: OvaText.String;
+  VAR name: Rope; s: Fl.String;
 BEGIN
   IF attack # NIL THEN
-    NEW(s, nameIn.Length() + 1); nameIn.Value(s^); name := OvaText.Trim(Ropes.FromString(s^));
+    s := nameIn.Text(); name := OvaText.Trim(Ropes.FromString(s^));
     IF name = NIL THEN tell(Ropes.FromString("The attack needs a name.")); RETURN END;
     attack.name := name;
-    NEW(s, affinityIn.Length() + 1); affinityIn.Value(s^);
+    s := affinityIn.Text();
     OvaCharacter.SetText(attack.hasAffinity, attack.affinity, OvaText.Trim(Ropes.FromString(s^)));
-    NEW(s, descriptionIn.Length() + 1); descriptionIn.Value(s^);
+    s := descriptionIn.Text();
     OvaCharacter.SetText(attack.hasDescription, attack.description, Ropes.FromString(s^));
     attack.telekinetic := telekinetic.Value(); attack.transformed := transformed.Value()
   END;

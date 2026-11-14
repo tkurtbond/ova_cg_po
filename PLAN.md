@@ -1509,6 +1509,27 @@ tested with no display.
    - Screenshots under Xvfb (Ai with a portrait), resized with
      `xdotool windowsize` to 960 x 1200, 640 x 800 and 1100 x 1000: the
      Character, Attacks, Fluff and Markdown tabs.
+16. **pofltk 0.2.0's API** (2026-11-14). [done]
+   - The program needs pofltk 0.2.0 (`Fl.PofltkApiVersion` 200), whose
+     new calls replace workarounds for what 0.1.0 lacked.
+   - A choice's items are added with `AddText`, which shows a label as
+     it is: a character's name is no longer added as "-" and relabelled,
+     and its `&` is no longer doubled by hand. A name with `@` was shown
+     as a symbol before; now it is shown as written. `TestWindow`'s
+     name is "Imp & Co @2/3", and failed (7 checks) with the old
+     labelling put back.
+   - `Text()` of inputs, buffers and preferences, `FlDialogs.InputText`
+     and `NativeFileChooser.Name` take text of any length, so the
+     4096-byte buffers, and their limit on paths, are gone.
+     `AddFilter` replaces filters joined by hand with a tab.
+   - `Choose`, `SetSelected`, `SetItemActive`, `ItemChecked`,
+     `SetItemChecked` and `Fl.HandlePending` replace the
+     `IF ... THEN END` around functions called for their effect, and
+     the `ItemFlags` arithmetic.
+   - Left as they were: the menu bar's items, which need paths and
+     shortcuts (`Add`); the divider checks in `TestWindow`, which have
+     no call of their own (`ItemFlags`); `TestLimits.Kept`'s fixed
+     buffer, enough for its short values.
 
 ## Testing
 

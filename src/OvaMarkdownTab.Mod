@@ -43,16 +43,15 @@ BEGIN s := OvaText.Chars(text); FlDialogs.Message(s^)
 END DialogTell;
 
 PROCEDURE DialogPath(suggested: Rope; VAR p: Rope): BOOLEAN;
-  VAR c: FlDialogs.NativeFileChooser; path: ARRAY 4096 OF CHAR; filter: ARRAY 32 OF CHAR; s: OvaText.String;
-    ok: BOOLEAN;
+  VAR c: FlDialogs.NativeFileChooser; name: Fl.String; s: OvaText.String; ok: BOOLEAN;
 BEGIN
   NEW(c); FlDialogs.OpenNativeFileChooser(c, FlDialogs.BrowseSaveFile);
   c.SetTitle("Save the Markdown sheet as"); c.SetOptions(FlDialogs.SaveAsConfirm);
-  filter := "Markdown *.md"; filter[8] := 9X;  (* FLTK's "name<tab>pattern" *)
-  c.SetFilter(filter);
+  c.AddFilter("Markdown", "*.md");
   IF suggested # NIL THEN s := OvaText.Chars(suggested); c.SetPresetFile(s^) END;
   ok := c.Show() = FlDialogs.Chosen;
-  IF ok THEN c.FileName(0, path); p := Ropes.FromString(path); ok := p # NIL END;
+  IF ok THEN name := c.Name(0); ok := name # NIL END;
+  IF ok THEN p := Ropes.FromString(name^); ok := p # NIL END;
   c.Close;
   RETURN ok
 END DialogPath;

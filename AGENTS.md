@@ -181,6 +181,12 @@ callbacks are module-level procedures; no exceptions; no call chaining;
   variables too.
 - **Labels FLTK keeps are copied by pofltk**, so a local string may die
   with its procedure.
+- **This needs pofltk 0.2.0** (`Fl.PofltkApiVersion` 200; PLAN.md,
+  Phase 16). Add a choice's items with `AddText`, which shows the text
+  as it is (`&`, `@` and `/` too); `Add` is for the menu bar's paths
+  and shortcuts. `ItemLabel` gives `&` and `@` doubled. Read text with
+  `Text()`, which has no length limit, and call `Choose`,
+  `SetSelected` and `Fl.HandlePending`, not functions as statements.
 - **Never delete a widget, or clear its group, inside its own
   callback**: a combat-box row's Remove rebuilds the rows from an
   `Fl.Timer` (`Fl.AddTimeout(rebuild, 0.0D0)`), which a test runs with

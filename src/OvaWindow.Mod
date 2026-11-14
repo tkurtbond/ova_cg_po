@@ -157,10 +157,8 @@ END R;
 
 (* What input i holds; NIL if empty. *)
 PROCEDURE InputText(i: FlInputs.Input): Rope;
-  VAR s: OvaText.String;
-BEGIN
-  NEW(s, i.Length() + 1); i.Value(s^);
-  RETURN Ropes.FromString(s^)
+  VAR s: Fl.String;
+BEGIN s := i.Text(); RETURN Ropes.FromString(s^)
 END InputText;
 
 PROCEDURE SetInput(i: FlInputs.Input; r: Rope);
@@ -204,7 +202,7 @@ BEGIN
 END DialogConfirm;
 
 PROCEDURE DialogPath(save: BOOLEAN; VAR p: Rope): BOOLEAN;
-  VAR c: FlDialogs.NativeFileChooser; name: ARRAY 4096 OF CHAR; filter: ARRAY 32 OF CHAR; ok: BOOLEAN;
+  VAR c: FlDialogs.NativeFileChooser; name: Fl.String; ok: BOOLEAN;
 BEGIN
   NEW(c);
   IF save THEN
@@ -214,35 +212,34 @@ BEGIN
     FlDialogs.OpenNativeFileChooser(c, FlDialogs.BrowseFile);
     c.SetTitle("Open a character")
   END;
-  filter := "YAML *.{yaml,yml}"; filter[4] := 9X;  (* FLTK's "name<tab>pattern" *)
-  c.SetFilter(filter);
+  c.AddFilter("YAML", "*.{yaml,yml}");
   ok := c.Show() = FlDialogs.Chosen;
-  IF ok THEN c.FileName(0, name); p := Ropes.FromString(name); ok := p # NIL END;
+  IF ok THEN name := c.Name(0); ok := name # NIL END;
+  IF ok THEN p := Ropes.FromString(name^); ok := p # NIL END;
   c.Close;
   RETURN ok
 END DialogPath;
 
 PROCEDURE DialogPdf(VAR p: Rope): BOOLEAN;
-  VAR c: FlDialogs.NativeFileChooser; name: ARRAY 4096 OF CHAR; filter: ARRAY 16 OF CHAR; ok: BOOLEAN;
+  VAR c: FlDialogs.NativeFileChooser; name: Fl.String; ok: BOOLEAN;
 BEGIN
   NEW(c); FlDialogs.OpenNativeFileChooser(c, FlDialogs.BrowseFile);
   c.SetTitle("The rulebook's PDF");
-  filter := "PDF *.pdf"; filter[3] := 9X;  (* FLTK's "name<tab>pattern" *)
-  c.SetFilter(filter);
+  c.AddFilter("PDF", "*.pdf");
   ok := c.Show() = FlDialogs.Chosen;
-  IF ok THEN c.FileName(0, name); p := Ropes.FromString(name); ok := p # NIL END;
+  IF ok THEN name := c.Name(0); ok := name # NIL END;
+  IF ok THEN p := Ropes.FromString(name^); ok := p # NIL END;
   c.Close;
   RETURN ok
 END DialogPdf;
 
 PROCEDURE DialogText(prompt: Rope; VAR text: Rope): BOOLEAN;
-  VAR s: OvaText.String; value: ARRAY 4096 OF CHAR; ok: BOOLEAN;
+  VAR p, v: OvaText.String; r: Fl.String;
 BEGIN
-  s := OvaText.Chars(text); COPY(s^, value);
-  s := OvaText.Chars(prompt);
-  ok := FlDialogs.Input(s^, value);
-  IF ok THEN text := Ropes.FromString(value) END;
-  RETURN ok
+  p := OvaText.Chars(prompt); v := OvaText.Chars(text);
+  r := FlDialogs.InputText(p^, v^);  (* NIL: Cancel *)
+  IF r # NIL THEN text := Ropes.FromString(r^) END;
+  RETURN r # NIL
 END DialogText;
 
 (* tell as it is now: the dialog's, which a test may have replaced. *)
@@ -264,9 +261,9 @@ END Keep;
 
 (* What the preferences hold under name; NIL for nothing. *)
 PROCEDURE Kept(name: ARRAY OF CHAR): Rope;
-  VAR s: OvaText.String;
+  VAR s: Fl.String;
 BEGIN
-  NEW(s, preferences.TextLength(name) + 1); preferences.GetText(name, "", s^);
+  s := preferences.Text(name, "");
   RETURN OvaText.Trim(Ropes.FromString(s^))
 END Kept;
 
@@ -760,8 +757,8 @@ END NpcTypeAction;
 PROCEDURE ShowNpcType;
 BEGIN
   IF character.hasNpcType THEN
-    IF npcTypeIn.SetValue(character.npcType + 1) THEN END
-  ELSIF npcTypeIn.SetValue(0) THEN
+    npcTypeIn.Choose(character.npcType + 1)
+  ELSE npcTypeIn.Choose(0)
   END
 END ShowNpcType;
 
@@ -791,47 +788,28 @@ END LimitsAction;
    transformed. *)
 PROCEDURE TransformedAction(w: Fl.Widget);
 BEGIN
-  character.transformed := bar.ItemFlags(transformedItem) * FlMenus.MenuValue # {};
+  character.transformed := bar.ItemChecked(transformedItem);
   Changed
 END TransformedAction;
 
 (* The menu's toggle set from the character. *)
 PROCEDURE ShowTransformed;
-  VAR f: SET;
-BEGIN
-  f := bar.ItemFlags(transformedItem);
-  IF character.transformed THEN f := f + FlMenus.MenuValue ELSE f := f - FlMenus.MenuValue END;
-  bar.SetItemFlags(transformedItem, f)
+BEGIN bar.SetItemChecked(transformedItem, character.transformed)
 END ShowTransformed;
 
 (* ---- The file's characters ---- *)
 
-(* Character i's label in the Choice: its number and name, any "&"
-   doubled so that FLTK shows it. *)
+(* Character i's label in the Choice: its number and name, shown as
+   they are (AddText), so an "&", "@" or "/" in the name is itself. *)
 PROCEDURE CharacterLabel(i: INTEGER): Rope;
-  VAR r, name: Rope; k: LONGINT; ch: CHAR;
+  VAR r: Rope;
 BEGIN
   r := OvaText.Int(i + 1); OvaText.Add(r, ". ");
-  name := characters[i].name;
-  IF name = NIL THEN OvaText.Add(r, "(no name)")
-  ELSE
-    FOR k := 0 TO Ropes.Length(name) - 1 DO
-      ch := Ropes.Fetch(name, k);
-      IF ch = "&" THEN r := Ropes.AppendChar(r, "&") END;
-      r := Ropes.AppendChar(r, ch)
-    END
+  IF characters[i].name = NIL THEN OvaText.Add(r, "(no name)")
+  ELSE r := Ropes.Cat(r, characters[i].name)
   END;
   RETURN r
 END CharacterLabel;
-
-(* Item i of the menu bar active if on. *)
-PROCEDURE Activate(i: INTEGER; on: BOOLEAN);
-  VAR f: SET;
-BEGIN
-  f := bar.ItemFlags(i);
-  IF on THEN f := f - FlMenus.MenuInactive ELSE f := f + FlMenus.MenuInactive END;
-  bar.SetItemFlags(i, f)
-END Activate;
 
 (* The Choice lists the characters again, current chosen, and the
    Character menu's items are active where they can do something. *)
@@ -841,13 +819,12 @@ BEGIN
   n := Count();
   characterChoice.Clear;
   FOR i := 0 TO n - 1 DO
-    IF characterChoice.Add("-", 0, {}, NIL, {}) >= 0 THEN END;
-    s := OvaText.Chars(CharacterLabel(i)); characterChoice.SetItemLabel(i, s^)
+    s := OvaText.Chars(CharacterLabel(i)); characterChoice.AddText(s^, NIL, {})
   END;
-  IF characterChoice.SetValue(current) THEN END;
-  Activate(removeCharacterItem, n > 1);
-  Activate(moveUpItem, current > 0); Activate(previousItem, current > 0);
-  Activate(moveDownItem, current < n - 1); Activate(nextItem, current < n - 1)
+  characterChoice.Choose(current);
+  bar.SetItemActive(removeCharacterItem, n > 1);
+  bar.SetItemActive(moveUpItem, current > 0); bar.SetItemActive(previousItem, current > 0);
+  bar.SetItemActive(moveDownItem, current < n - 1); bar.SetItemActive(nextItem, current < n - 1)
 END ShowCharacters;
 
 (* Shows character i. *)
@@ -1097,11 +1074,11 @@ BEGIN
   TextInput(playerIn, LeftX + 460, Top, 160, "Player Name");
   TextInput(taglineIn, LeftX + 110, Top + 30, 290, "Tagline");
   NEW(npcTypeIn); FlMenus.OpenChoice(npcTypeIn, LeftX + 470, Top + 30, 150, Row, "NPC Type");
-  IF npcTypeIn.Add("none", 0, {}, NIL, {}) >= 0 THEN END;
+  npcTypeIn.AddText("none", NIL, {});
   FOR i := OvaEntities.Heroic TO OvaEntities.Boss DO
     name := OvaText.Chars(OvaEntities.NpcTypeName(i));
     OvaRules.PageLabel(name^, OvaRules.NpcTypesPage, label);
-    IF npcTypeIn.Add(label, 0, {}, NIL, {}) >= 0 THEN END
+    npcTypeIn.AddText(label, NIL, {})
   END;
   npcTypeIn.action := NpcTypeAction;
   OpenTraitPanel(abilities, LeftX, OvaRules.Ability, "Abilities");

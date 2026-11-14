@@ -63,8 +63,8 @@ END Has;
 (* Whether buffer b's text, trimmed as the tab trims it, is r (blank
    for NIL). *)
 PROCEDURE BufferIs(b: FlText.TextBuffer; r: Rope): BOOLEAN;
-  VAR s: OvaText.String;
-BEGIN NEW(s, b.Length() + 1); b.GetText(s^); RETURN Ropes.Equal(OvaText.Trim(Ropes.FromString(s^)), r)
+  VAR s: Fl.String;
+BEGIN s := b.Text(); RETURN Ropes.Equal(OvaText.Trim(Ropes.FromString(s^)), r)
 END BufferIs;
 
 (* Whether input i's text, trimmed as the tab trims it, is r (blank
@@ -170,7 +170,7 @@ BEGIN
 
   Check.Check(OvaWindow.tabs.Value() = OvaWindow.sheetTab, "the Character tab first");
   OvaWindow.tabs.SetValue(OvaWindow.backgroundTab);
-  OvaWindow.window.Show; OvaWindow.window.WaitForExpose; IF Fl.Check() THEN END;
+  OvaWindow.window.Show; OvaWindow.window.WaitForExpose; Fl.HandlePending;
   Check.Check(OvaBackground.prose[OvaBackground.Background].Visible(), "the Background tab, shown");
   Check.Check(AllShown() & NotesShown() & PortraitSays("No portrait.") & (OvaBackground.image = NIL)
     & ~OvaBackground.removePortrait.Active(), "a new character: every field empty, no portrait");
@@ -189,7 +189,7 @@ BEGIN
   Check.Check(ok & (NoteCount() > 0) & NotesShown(), "Raine.yaml: the notes' headers listed");
   OvaBackground.notes.GetText(1, s);
   Check.Check(s = "Nightmares", "the first, Nightmares");
-  IF OvaBackground.notes.Select(1, TRUE) THEN END; OvaBackground.notes.DoCallback;
+  OvaBackground.notes.SetSelected(1, TRUE); OvaBackground.notes.DoCallback;
   c := OvaWindow.character;
   Check.Check(InputIs(OvaBackground.noteHeader, c.notes.header) & InputIs(OvaBackground.noteText, c.notes.text),
     "a note selected: its header and text to edit");
@@ -238,7 +238,7 @@ BEGIN
   text := Saved();
   Check.Check(Has(text, "header: Rivals") & Has(text, "The track team's captain.") & Has(text, "header: Secrets"),
     "and saved");
-  IF OvaBackground.notes.Select(1, TRUE) THEN END; OvaBackground.notes.DoCallback;
+  OvaBackground.notes.SetSelected(1, TRUE); OvaBackground.notes.DoCallback;
   OvaBackground.noteHeader.SetValue("Rival");
   OvaBackground.changeNote.DoCallback;
   Check.Check(Ropes.EqualString(c.notes.header, "Rival") & NotesShown() & (OvaBackground.notes.Value() = 1),

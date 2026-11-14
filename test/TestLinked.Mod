@@ -66,7 +66,7 @@ END LineWith;
 
 (* Selects b's line holding text, as a click does. *)
 PROCEDURE Click(b: FlBrowsers.Browser; text: ARRAY OF CHAR);
-BEGIN IF b.Select(LineWith(b, text), TRUE) THEN END; b.DoCallback
+BEGIN b.SetSelected(LineWith(b, text), TRUE); b.DoCallback
 END Click;
 
 (* Chooses name in p's Choice, as the user does. *)
@@ -75,7 +75,7 @@ PROCEDURE Pick(p: OvaWidgets.Panel; name: ARRAY OF CHAR);
 BEGIN
   it := OvaRules.Find(name); ASSERT(it # NIL);
   i := 0; WHILE OvaRules.Get(p.kind, i) # it DO INC(i) END;
-  IF p.choice.SetValue(i) THEN END;
+  p.choice.Choose(i);
   p.choice.DoCallback
 END Pick;
 
@@ -87,7 +87,7 @@ PROCEDURE PickAbility(ch: FlMenus.Choice; name: ARRAY OF CHAR);
 BEGIN
   it := OvaRules.Find(name); ASSERT(it # NIL);
   i := 0; WHILE OvaRules.Get(it.kind, i) # it DO INC(i) END;
-  IF ch.SetValue(i) THEN END;
+  ch.Choose(i);
   ch.DoCallback
 END PickAbility;
 
@@ -191,7 +191,7 @@ BEGIN
   tells := 0;
   OvaWindow.Build;
   OvaWindow.tell := Tell; OvaWindow.ask := Ask; OvaWidgets.openPage := NoPage;
-  OvaWindow.window.Show; OvaWindow.window.WaitForExpose; IF Fl.Check() THEN END;
+  OvaWindow.window.Show; OvaWindow.window.WaitForExpose; Fl.HandlePending;
 
   (* ---- The button ---- *)
   ok := Load("Fukiko.yaml"); c := OvaWindow.character;
@@ -236,7 +236,7 @@ BEGIN
   Check.Check(OvaLinkedDialog.dialog = NIL, "Close");
 
   (* ---- Character > Transformed form ---- *)
-  Check.Check(OvaWindow.bar.ItemFlags(OvaWindow.transformedItem) * FlMenus.MenuValue # {},
+  Check.Check(OvaWindow.bar.ItemChecked(OvaWindow.transformedItem),
     "Character > Transformed form: on, as Fukiko's file says");
   OvaWindow.bar.Pick(OvaWindow.transformedItem);
   Check.Check(~c.transformed & (c.health.value = before) & Shows(OvaWindow.numbers[2], c.health)
@@ -282,7 +282,7 @@ BEGIN
   OvaLinkedDialog.attacks.GetText(1, s);
   Check.Check(Ropes.Find(R(s), "Claw", 0) = 0, "listed, with its numbers");
   Check.Check(Has(Saved(), "name: Claw"), "and saved");
-  IF OvaLinkedDialog.attacks.Select(1, TRUE) THEN END;
+  OvaLinkedDialog.attacks.SetSelected(1, TRUE);
   OvaLinkedDialog.removeAttack.DoCallback;
   Check.Check((AttackCount(p) = 0) & ~Has(Saved(), "name: Claw"), "Remove");
   OvaLinkedDialog.close.DoCallback;
@@ -323,7 +323,7 @@ BEGIN
   OvaLinkedDialog.spellName.SetValue(" ");
   OvaLinkedDialog.addSpell.DoCallback;
   Check.Check((tells = 1) & (SpellCount(t) = n + 1), "a spell with no name: said so, not added");
-  IF OvaLinkedDialog.spells.Select(n + 1, TRUE) THEN END; OvaLinkedDialog.spells.DoCallback;
+  OvaLinkedDialog.spells.SetSelected(n + 1, TRUE); OvaLinkedDialog.spells.DoCallback;
   OvaLinkedDialog.spellName.Value(s);
   Check.Check(s = "Glow", "a spell selected: its name, Ability and level to edit");
   OvaLinkedDialog.removeSpell.DoCallback;
@@ -360,7 +360,7 @@ BEGIN
   Check.Check((tells = 1) & (SpellCount(t) = 1), "a curse with no name: said so, not added");
   OvaLinkedDialog.close.DoCallback;
   OpenLinked("Magic, Witchcraft");
-  IF OvaLinkedDialog.spells.Select(1, TRUE) THEN END; OvaLinkedDialog.spells.DoCallback;
+  OvaLinkedDialog.spells.SetSelected(1, TRUE); OvaLinkedDialog.spells.DoCallback;
   OvaLinkedDialog.spellName.Value(s);
   Check.Check((s = "Hex") & (OvaLinkedDialog.spellAbility.Value() = 0 + IndexOf("Frail"))
     & (OvaLinkedDialog.spellLevel.Value() = -2), "opened again and selected: its name, Weakness and level");

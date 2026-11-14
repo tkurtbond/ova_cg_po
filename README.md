@@ -220,6 +220,8 @@ You need:
 - The poc libraries `argparser`, `ropes`, `polibfyaml` and `pofltk`,
   each installed by its own repo into `POCLIBDIR` (default
   `~/.local/lib/poc`).
+  pofltk must be 0.2.0 or later (`Fl.PofltkApiVersion` 200), for
+  `AddText`, `Text()` and the other calls its API review added.
   Install them again after upgrading poc, which refuses a library
   another version built.
 - For `make test`: ova_fmt_po, built, at `OVA_FMT_PO` (default

@@ -91,7 +91,7 @@ PROCEDURE Pick(p: OvaWidgets.Panel; name: ARRAY OF CHAR);
 BEGIN
   it := OvaRules.Find(name); ASSERT(it # NIL);
   i := 0; WHILE OvaRules.Get(p.kind, i) # it DO INC(i) END;
-  IF p.choice.SetValue(i) THEN END;
+  p.choice.Choose(i);
   p.choice.DoCallback
 END Pick;
 
@@ -170,7 +170,7 @@ BEGIN
   tells := 0; pdfAsks := 0; pdfAnswer := NIL; textAnswer := NIL;
   OvaWindow.Build;
   OvaWindow.tell := Tell; OvaWindow.ask := Ask; OvaWindow.choosePdf := ChoosePdf; OvaWindow.askText := AskText;
-  OvaWindow.window.Show; OvaWindow.window.WaitForExpose; IF Fl.Check() THEN END;
+  OvaWindow.window.Show; OvaWindow.window.WaitForExpose; Fl.HandlePending;
   OvaWindow.bar.ItemLabel(OvaWindow.limitsItem, s);
   Check.Check(s = "&Limits...", "Character > Limits...");
 
