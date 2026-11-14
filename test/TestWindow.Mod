@@ -247,7 +247,7 @@ BEGIN
   r := NIL;
   FOR i := 0 TO SHORT(LEN(OvaWindow.characters^)) - 1 DO
     IF i > 0 THEN OvaText.Add(r, "|") END;
-    OvaWindow.characterChoice.ItemLabel(i, l); OvaText.Add(r, l)
+    OvaWindow.characterChoice.ItemText(i, l); OvaText.Add(r, l)
   END;
   RETURN Ropes.EqualString(r, labels) & (OvaWindow.characterChoice.Value() = OvaWindow.current)
     & (OvaWindow.character = OvaWindow.characters[OvaWindow.current])
@@ -578,7 +578,7 @@ BEGIN
     & Listed("1. Acacia|2. Sazza and Fraz|3. Cezar|4. (no name)"),
     "Character > Add Character: a new one, last, shown");
   FlTest.Fill(OvaWindow.nameIn, "Imp & Co @2/3");
-  Check.Check(Listed("1. Acacia|2. Sazza and Fraz|3. Cezar|4. Imp && Co @@2/3"), "an &, @ or / in a name shown as itself: ItemLabel gives & and @ doubled");
+  Check.Check(Listed("1. Acacia|2. Sazza and Fraz|3. Cezar|4. Imp & Co @2/3"), "an &, @ or / in a name shown as itself, and read back so");
 
   OvaWindow.characterChoice.Pick(0);
   OvaWindow.bar.Pick(OvaWindow.duplicateItem);
@@ -591,11 +591,11 @@ BEGIN
     "the copy's HEALTH overridden, the first's not: they share nothing");
   OvaWindow.bar.Pick(OvaWindow.moveUpItem); Title(s);
   Check.Check((OvaWindow.current = 3) & (OvaWindow.characters[3] = c) & (s = "OVA Character Generator - Acacia.yaml (4 of 5) *")
-    & Listed("1. Acacia|2. Sazza and Fraz|3. Cezar|4. Acacia|5. Imp && Co @@2/3") & ShownNow("Acacia"),
+    & Listed("1. Acacia|2. Sazza and Fraz|3. Cezar|4. Acacia|5. Imp & Co @2/3") & ShownNow("Acacia"),
     "Move Up: the copy fourth, still shown");
   OvaWindow.bar.Pick(OvaWindow.moveDownItem);
   Check.Check((OvaWindow.current = 4) & (OvaWindow.characters[4] = c)
-    & Listed("1. Acacia|2. Sazza and Fraz|3. Cezar|4. Imp && Co @@2/3|5. Acacia"), "Move Down: last again");
+    & Listed("1. Acacia|2. Sazza and Fraz|3. Cezar|4. Imp & Co @2/3|5. Acacia"), "Move Down: last again");
 
   confirmed := 0; yes := FALSE;
   OvaWindow.bar.Pick(OvaWindow.removeCharacterItem);
@@ -604,10 +604,10 @@ BEGIN
   yes := TRUE;
   OvaWindow.bar.Pick(OvaWindow.removeCharacterItem);
   Check.Check((LEN(OvaWindow.characters^) = 4) & (OvaWindow.current = 3) & ShownNow("Imp & Co @2/3")
-    & Listed("1. Acacia|2. Sazza and Fraz|3. Cezar|4. Imp && Co @@2/3"), "removed, the last: the one before it shown");
+    & Listed("1. Acacia|2. Sazza and Fraz|3. Cezar|4. Imp & Co @2/3"), "removed, the last: the one before it shown");
   OvaWindow.characterChoice.Pick(1);
   OvaWindow.bar.Pick(OvaWindow.removeCharacterItem);
-  Check.Check((OvaWindow.current = 1) & ShownNow("Cezar") & Listed("1. Acacia|2. Cezar|3. Imp && Co @@2/3"),
+  Check.Check((OvaWindow.current = 1) & ShownNow("Cezar") & Listed("1. Acacia|2. Cezar|3. Imp & Co @2/3"),
     "removed from the middle: the one after it shown");
 
   (* Saved: every character, in order; each portrait rebased. *)
@@ -622,7 +622,7 @@ BEGIN
   tells := 0;
   ok := Load("../../obj/several.yaml"); Title(s);
   Check.Check(ok & (tells = 0) & (s = "OVA Character Generator - several.yaml (1 of 3)")
-    & Listed("1. Acacia|2. Cezar|3. Imp && Co @@2/3") & Ropes.Equal(OvaSave.AllToText(OvaWindow.characters), text),
+    & Listed("1. Acacia|2. Cezar|3. Imp & Co @2/3") & Ropes.Equal(OvaSave.AllToText(OvaWindow.characters), text),
     "loaded again: all three, in order, the same, with nothing to say");
   FlTest.Fill(OvaWindow.nameIn, "Acacia II");
   answer := OvaWindow.Cancel; asked := 0;
@@ -633,7 +633,7 @@ BEGIN
   OvaWindow.bar.Pick(OvaWindow.removeCharacterItem); OvaWindow.bar.Pick(OvaWindow.removeCharacterItem);
   Title(s);
   Check.Check((LEN(OvaWindow.characters^) = 1) & ~Active(OvaWindow.removeCharacterItem)
-    & (s = "OVA Character Generator - several.yaml *") & Listed("1. Imp && Co @@2/3"),
+    & (s = "OVA Character Generator - several.yaml *") & Listed("1. Imp & Co @2/3"),
     "down to one: Remove inactive, and the title without a count");
   confirmed := 0;
   OvaWindow.bar.Pick(OvaWindow.removeCharacterItem);

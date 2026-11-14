@@ -89,12 +89,21 @@ END IsSet;
 
 (* With no display, the reason and, in tmux, where it came from (PLAN.md,
    "Findings": a tmux session last attached from a terminal without a
-   display drops DISPLAY and WAYLAND_DISPLAY from new panes). *)
+   display drops DISPLAY and WAYLAND_DISPLAY from new panes, and may keep
+   a DISPLAY that is gone). Both unset is refused before FLTK is asked:
+   FLTK would still try the socket wayland-0. *)
 PROCEDURE RequireDisplay;
+  VAR none, unset: BOOLEAN;
 BEGIN
-  IF ~IsSet("DISPLAY") & ~IsSet("WAYLAND_DISPLAY") THEN
+  unset := ~IsSet("DISPLAY") & ~IsSet("WAYLAND_DISPLAY");
+  none := unset OR ~Fl.CanOpenDisplay();
+  IF none THEN
     Out.Flush;
-    Err.String(Program); Err.String(": no display: neither DISPLAY nor WAYLAND_DISPLAY is set"); Err.Ln;
+    Err.String(Program);
+    IF unset THEN Err.String(": no display: neither DISPLAY nor WAYLAND_DISPLAY is set")
+    ELSE Err.String(": no display: the one DISPLAY or WAYLAND_DISPLAY names can't be opened")
+    END;
+    Err.Ln;
     IF IsSet("TMUX") THEN
       Err.String(Program);
       Err.String(": in tmux, the session may have been attached from a terminal without one;");

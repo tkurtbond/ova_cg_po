@@ -57,5 +57,11 @@ check "no display in tmux: two lines" test "$(wc -l < "$out/stderr")" -eq 2
 env -u TMUX DISPLAY= WAYLAND_DISPLAY= "$prog" >"$out/stdout" 2>"$out/stderr"; st=$?
 check "empty DISPLAY and WAYLAND_DISPLAY count as none" test $st -eq 1
 
+# Named but gone, as a tmux pane may keep it: both name nothing, so
+# neither back end can reach a real display.
+env -u TMUX DISPLAY=:9999 WAYLAND_DISPLAY=no-such-wayland-display "$prog" >"$out/stdout" 2>"$out/stderr"; st=$?
+check "a display named but gone exits 1" test $st -eq 1
+check "and says so" grep -qx "ova_cg_po: no display: the one DISPLAY or WAYLAND_DISPLAY names can't be opened" "$out/stderr"
+
 if [ $status -eq 0 ]; then echo "All checks passed."; else echo "Some checks failed."; fi
 exit $status

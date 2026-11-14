@@ -566,10 +566,19 @@ was found to happen ("Findings"):
 ova_cg_po: in tmux, the session may have been attached from a terminal without one; reattach from the desktop, or set them from `tmux show-environment -g`
 ```
 
-and exits with status 1. A display that is set but can't be opened is
-FLTK's to report ("Can't open display", status 1; pofltk's AGENTS.md).
-`test/cli.sh` checks both messages and the status, with the variables
-unset.
+and exits with status 1. A display that is set but can't be opened was
+FLTK's to report ("Can't open display", status 1; pofltk's AGENTS.md)
+until pofltk 0.4.0's `Fl.CanOpenDisplay` (2026-11-14): now it prints
+
+```
+ova_cg_po: no display: the one DISPLAY or WAYLAND_DISPLAY names can't be opened
+```
+
+with the tmux line too, and exits 1. The variables are still checked
+first: with both unset, FLTK would try the socket `wayland-0`, and
+connect where there is one (checked with a socket of that name in a
+scratch `XDG_RUNTIME_DIR`). `test/cli.sh` checks the messages and the
+status, with the variables unset and with both naming nothing.
 
 ## The rulebook viewer
 

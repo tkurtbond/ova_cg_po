@@ -178,8 +178,7 @@ BEGIN
   NEW(c); FlDialogs.OpenNativeFileChooser(c, FlDialogs.BrowseFile);
   c.SetTitle("Choose the character's portrait");
   c.AddFilter("Images", "*.{png,jpg,jpeg,gif,bmp,svg}");
-  ok := c.Show() = FlDialogs.Chosen;
-  IF ok THEN name := c.Name(0); ok := name # NIL END;
+  name := c.Choose(); ok := name # NIL;
   IF ok THEN p := Ropes.FromString(name^); ok := p # NIL END;
   c.Close;
   RETURN ok

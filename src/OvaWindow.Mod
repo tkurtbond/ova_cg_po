@@ -213,8 +213,7 @@ BEGIN
     c.SetTitle("Open a character")
   END;
   c.AddFilter("YAML", "*.{yaml,yml}");
-  ok := c.Show() = FlDialogs.Chosen;
-  IF ok THEN name := c.Name(0); ok := name # NIL END;
+  name := c.Choose(); ok := name # NIL;
   IF ok THEN p := Ropes.FromString(name^); ok := p # NIL END;
   c.Close;
   RETURN ok
@@ -226,8 +225,7 @@ BEGIN
   NEW(c); FlDialogs.OpenNativeFileChooser(c, FlDialogs.BrowseFile);
   c.SetTitle("The rulebook's PDF");
   c.AddFilter("PDF", "*.pdf");
-  ok := c.Show() = FlDialogs.Chosen;
-  IF ok THEN name := c.Name(0); ok := name # NIL END;
+  name := c.Choose(); ok := name # NIL;
   IF ok THEN p := Ropes.FromString(name^); ok := p # NIL END;
   c.Close;
   RETURN ok
@@ -819,7 +817,7 @@ BEGIN
   n := Count();
   characterChoice.Clear;
   FOR i := 0 TO n - 1 DO
-    s := OvaText.Chars(CharacterLabel(i)); characterChoice.AddText(s^, NIL, {})
+    s := OvaText.Chars(CharacterLabel(i)); characterChoice.AppendText(s^)
   END;
   characterChoice.Choose(current);
   bar.SetItemActive(removeCharacterItem, n > 1);
@@ -1074,11 +1072,11 @@ BEGIN
   TextInput(playerIn, LeftX + 460, Top, 160, "Player Name");
   TextInput(taglineIn, LeftX + 110, Top + 30, 290, "Tagline");
   NEW(npcTypeIn); FlMenus.OpenChoice(npcTypeIn, LeftX + 470, Top + 30, 150, Row, "NPC Type");
-  npcTypeIn.AddText("none", NIL, {});
+  npcTypeIn.AppendText("none");
   FOR i := OvaEntities.Heroic TO OvaEntities.Boss DO
     name := OvaText.Chars(OvaEntities.NpcTypeName(i));
     OvaRules.PageLabel(name^, OvaRules.NpcTypesPage, label);
-    npcTypeIn.AddText(label, NIL, {})
+    npcTypeIn.AppendText(label)
   END;
   npcTypeIn.action := NpcTypeAction;
   OpenTraitPanel(abilities, LeftX, OvaRules.Ability, "Abilities");

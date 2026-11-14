@@ -471,7 +471,7 @@ BEGIN
   END;
   FOR i := 0 TO OvaRules.Count(castKind) - 1 DO
     OvaRules.Label(OvaRules.Get(castKind, i), label);
-    spellAbility.AddText(label, NIL, {})
+    spellAbility.AppendText(label)
   END;
   spellAbility.action := SpellAbilityAction;
   NEW(spellHelp); OvaWidgets.OpenHelpButton(spellHelp, 695, y, 0);

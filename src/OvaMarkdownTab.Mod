@@ -49,8 +49,7 @@ BEGIN
   c.SetTitle("Save the Markdown sheet as"); c.SetOptions(FlDialogs.SaveAsConfirm);
   c.AddFilter("Markdown", "*.md");
   IF suggested # NIL THEN s := OvaText.Chars(suggested); c.SetPresetFile(s^) END;
-  ok := c.Show() = FlDialogs.Chosen;
-  IF ok THEN name := c.Name(0); ok := name # NIL END;
+  name := c.Choose(); ok := name # NIL;
   IF ok THEN p := Ropes.FromString(name^); ok := p # NIL END;
   c.Close;
   RETURN ok
