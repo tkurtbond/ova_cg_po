@@ -4,9 +4,8 @@ MODULE TestResize; (* OvaWindow: resized, everything in it stretched to the wind
    never shown, is resized as a window manager would (Size, which FLTK
    passes to its Resize), larger and back. FLTK stretches the widgets;
    the window fits what it doesn't, after: the menu bar and the tabs'
-   bar keep their height, the combat box's rows stretch with the box,
-   the traits' names' column with its browser, the portrait with its
-   box, keeping its proportions. A row made again after a resize (an
+   bar keep their height, and the combat box's rows stretch with the
+   box; pofltk fits the portrait to its box, keeping its proportions. A row made again after a resize (an
    attack removed) is stretched too. *)
 
 IMPORT Check, Fl, FlImages, FlTest, OvaBackground, OvaWidgets, OvaWindow, Platform, Ropes;
@@ -29,7 +28,7 @@ VAR
   img: FlImages.Image;
   r: OvaWindow.AttackRow;
   path: ARRAY 64 OF CHAR;
-  firstNameW, i: INTEGER;
+  firstW, i: INTEGER;
   ok: BOOLEAN;
 
 PROCEDURE R(s: ARRAY OF CHAR): Rope;
@@ -73,13 +72,28 @@ BEGIN
   RETURN ok
 END RowsFit;
 
-(* Whether the portrait shown fills its box's height, within its width:
-   the image is taller than wide, as the box. *)
+(* Whether p is the image's: no pixel of the gradient is gray, where the
+   box's inside, drawn on white, is. *)
+PROCEDURE Drawn(p: INTEGER): BOOLEAN;
+  VAR r, g, b: INTEGER;
+BEGIN
+  r := p DIV 1000000H MOD 100H; g := p DIV 10000H MOD 100H; b := p DIV 100H MOD 100H;
+  RETURN (p # -1) & ((r # g) OR (g # b))
+END Drawn;
+
+(* Whether the portrait shown fills its box's height inside the frame,
+   within its width: the image is taller than wide, as the box. Drawn
+   scaled, it keeps its own size. *)
 PROCEDURE PortraitFits(): BOOLEAN;
-  VAR img: FlImages.Image; box: Fl.Widget;
+  VAR img: FlImages.Image; box: Fl.Widget; w, h: INTEGER; ok: BOOLEAN;
 BEGIN
   img := OvaBackground.image; box := OvaBackground.portrait;
-  RETURN (img # NIL) & (img.H() = box.H() - 6) & (img.W() <= box.W() - 6)
+  w := box.W(); h := box.H();
+  ok := (img # NIL) & (img.W() = ImageW) & (img.H() = ImageH) & FlImages.ImageFit(box) & FlTest.Capture(box)
+    & Drawn(FlTest.Pixel(w DIV 2, 2)) & Drawn(FlTest.Pixel(w DIV 2, h - 3))
+    & ~Drawn(FlTest.Pixel(2, h DIV 2)) & ~Drawn(FlTest.Pixel(w - 3, h DIV 2));
+  FlTest.Release;
+  RETURN ok
 END PortraitFits;
 
 (* Resizes the window to w by h, and lets it fit what FLTK doesn't
@@ -106,8 +120,7 @@ BEGIN
   r := OvaWindow.rows;
   Check.Check((OvaWindow.window.W() = Width) & (OvaWindow.window.H() = Height) & (r.W() = RowW) & (r.H() = Row)
     & (r.roll.W() = OvaWidgets.Width) & (r.roll.X() = LeftX + 2 + NameW + 8) & RowsFit(), "at first: the rows as built");
-  firstNameW := OvaWindow.abilities.nameW;
-  Check.Check(firstNameW = OvaWindow.abilities.browser.W() - 70, "the names' column, as built");
+  firstW := OvaWindow.abilities.browser.W();
   Check.Check(PortraitFits(), "the portrait fits its box");
 
   (* ---- Larger ---- *)
@@ -119,12 +132,10 @@ BEGIN
   Check.Check((OvaWindow.sheetTab.Y() = BarHeight + TabHeight) & (OvaWindow.sheetTab.W() = BigW)
     & (OvaWindow.sheetTab.H() = BigH - BarHeight - TabHeight) & (OvaWindow.markdownTab.W() = BigW)
     & (OvaWindow.markdownTab.H() = BigH - BarHeight - TabHeight), "the tabs' bar as high, the pages filling the rest");
-  Check.Check((OvaWindow.attackBox.W() = Round(ColumnW * 1.5)) & (OvaWindow.abilities.browser.W() > firstNameW + 70)
+  Check.Check((OvaWindow.attackBox.W() = Round(ColumnW * 1.5)) & (OvaWindow.abilities.browser.W() > firstW)
     & (OvaWindow.combatNotes.W() = Round(ColumnW * 1.5)), "the widgets stretched");
   Check.Check(RowsFit() & (OvaWindow.rows.W() > RowW), "the combat box's rows stretched with it");
-  Check.Check(OvaWindow.abilities.nameW = OvaWindow.abilities.browser.W() - 70, "the Abilities' names' column too");
-  Check.Check(OvaWindow.weaknesses.nameW = OvaWindow.weaknesses.browser.W() - 70, "and the Weaknesses'");
-  Check.Check(PortraitFits() & (OvaBackground.image.H() > PortraitH), "the portrait fits its larger box");
+  Check.Check(PortraitFits() & (OvaBackground.portrait.H() > PortraitH), "the portrait fits its larger box");
 
   (* A row made again, after a resize. *)
   OvaWindow.rows.remove.DoCallback; FlTest.Settle;
@@ -137,7 +148,7 @@ BEGIN
   Check.Check((OvaWindow.sheetTab.H() = Height - BarHeight - TabHeight) & (r.W() = RowW) & (r.H() = Row)
     & (r.roll.W() = OvaWidgets.Width) & (r.roll.X() = LeftX + 2 + NameW + 8),
     "back to the first size: the rows as built");
-  Check.Check((OvaWindow.abilities.nameW = firstNameW) & PortraitFits(), "the column and the portrait too");
+  Check.Check((OvaWindow.abilities.browser.W() = firstW) & PortraitFits(), "the browser and the portrait too");
 
   OvaWindow.Close;
   COPY(ImagePath, path); IF Platform.Unlink(path) = 0 THEN END;

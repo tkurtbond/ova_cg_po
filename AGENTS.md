@@ -183,8 +183,9 @@ callbacks are module-level procedures; no exceptions; no call chaining;
   variables too.
 - **Labels FLTK keeps are copied by pofltk**, so a local string may die
   with its procedure.
-- **This needs pofltk 0.4.0** (`Fl.PofltkApiVersion` 400; PLAN.md,
-  Phase 16), for `AppendText`, `ItemText`, `NativeFileChooser.Choose`
+- **This needs pofltk 0.7.0** (`Fl.PofltkApiVersion` 700; PLAN.md,
+  Phases 16 and 17), for a column width of -1, `Fl.Later` and
+  `FlImages.SetImageFit`, and, from 0.4.0, for `AppendText`, `ItemText`, `NativeFileChooser.Choose`
   and `Fl.CanOpenDisplay`. Add a choice's items with `AppendText`, which
   shows the text as it is (`&`, `@` and `/` too); `Add` is for the menu
   bar's paths and shortcuts. `ItemText` gives an item's text back as it
@@ -192,9 +193,8 @@ callbacks are module-level procedures; no exceptions; no call chaining;
   `Text()`, which has no length limit, and call `Choose`,
   `SetSelected` and `Fl.HandlePending`, not functions as statements.
 - **Never delete a widget, or clear its group, inside its own
-  callback**: a combat-box row's Remove rebuilds the rows from an
-  `Fl.Timer` (`Fl.AddTimeout(rebuild, 0.0D0)`), which a test runs with
-  `Fl.Wait`.
+  callback**: a combat-box row's Remove rebuilds the rows with
+  `Fl.Later(Rebuild)`, which a test runs with `Fl.Wait`.
 - **A menu shortcut must be a key no input takes**: a key goes to the
   focused widget first, and `Fl_Input` types Ctrl+H, I, J, L and M
   into itself and takes Ctrl+A, C, V, X and Z (so does

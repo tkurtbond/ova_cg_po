@@ -313,7 +313,7 @@ BEGIN
   NEW(p.browser); FlBrowsers.OpenHoldBrowser(p.browser, x, y + 20, w, h - 20, title);
   p.browser.SetAlign(Fl.AlignTopLeft);
   p.browser.SetFormatChar(0X);  (* names are text, never format codes *)
-  widths[0] := w - 70; widths[1] := 0;
+  widths[0] := -1; widths[1] := 70;  (* the name takes what the second column leaves *)
   p.browser.SetColumnWidths(widths, 2);
   p.browser.action := BrowserAction;
   yy := y + h + Gap;

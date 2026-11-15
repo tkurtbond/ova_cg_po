@@ -129,7 +129,6 @@ BEGIN
     s := OvaText.Chars(abs);
     NEW(img);
     IF FlImages.Load(img, s^) THEN
-      img.Scale(portrait.W() - 6, portrait.H() - 6, TRUE, FALSE);
       portrait.SetLabel("")
     ELSE
       img := NIL; portrait.SetLabel("The image can't be read.")
@@ -143,13 +142,6 @@ BEGIN
   IF character.hasPortrait THEN removePortrait.Activate ELSE removePortrait.Deactivate END;
   portrait.Redraw
 END ShowPortrait;
-
-(* Fits the portrait shown to its box, as the box is now: after the
-   window is resized. *)
-PROCEDURE Fit*;
-BEGIN
-  IF image # NIL THEN image.Scale(portrait.W() - 6, portrait.H() - 6, TRUE, FALSE); portrait.Redraw END
-END Fit;
 
 PROCEDURE ChoosePortraitAction(w: Fl.Widget);
   VAR p: Rope; c: OvaCharacter.Character;
@@ -359,6 +351,7 @@ BEGIN
   Heading(LeftX, yy, PortraitW, "Character Portrait");
   NEW(portrait); Fl.OpenBox(portrait, LeftX, yy + 20, PortraitW, PortraitH, "");
   portrait.SetBoxType(Fl.DownFrame); portrait.SetAlign(Fl.AlignInside + Fl.AlignWrap);
+  FlImages.SetImageFit(portrait, TRUE, FALSE);  (* shrunk to the box as it is, never grown *)
   NEW(portraitPath); FlInputs.OpenOutput(portraitPath, LeftX + PortraitW + 10, yy + 40, ColumnW - PortraitW - 10, Row,
     "Image file, relative to the character's");
   portraitPath.SetAlign(Fl.AlignTopLeft);

@@ -115,7 +115,6 @@ VAR
   attackBox-: FlLayout.Scroll;
   rows-: AttackRow;                    (* the combat box's, in order *)
   addAttack-: FlButtons.Button;
-  rebuild: Fl.Timer;                   (* rebuilds the rows, after a row's Remove *)
   fit: Fl.Timer;                       (* fits what doesn't stretch, after the window is resized *)
 
   (* What would wait for the user; a test sets its own. tell shows a
@@ -627,7 +626,12 @@ BEGIN
   IF r # NIL THEN OvaAttackDialog.EditAttack(character, r.attack, FALSE, AttackDone) END
 END EditAction;
 
-(* The row is rebuilt later, by rebuild: FLTK can't delete the button
+(* A Later can't be cancelled, so the window may be closed by now. *)
+PROCEDURE Rebuild;
+BEGIN IF attackBox # NIL THEN ShowRows END
+END Rebuild;
+
+(* The rows are rebuilt later, by Rebuild: FLTK can't delete the button
    whose callback is running. *)
 PROCEDURE RemoveAction(w: Fl.Widget);
   VAR r: AttackRow;
@@ -636,13 +640,9 @@ BEGIN
   IF r # NIL THEN
     OvaCharacter.RemoveAttack(character, r.attack);
     Changed;
-    Fl.AddTimeout(rebuild, 0.0D0)
+    Fl.Later(Rebuild)
   END
 END RemoveAction;
-
-PROCEDURE RebuildAction(t: Fl.Timer);
-BEGIN ShowRows
-END RebuildAction;
 
 PROCEDURE AddAttackAction(w: Fl.Widget);
   VAR a: OvaCharacter.Attack;
@@ -701,10 +701,9 @@ BEGIN
 END ShowRows;
 
 (* What FLTK doesn't stretch, fitted to the window's size: the combat
-   box's rows, the traits' columns, and the portrait. *)
+   box's rows. pofltk fits the traits' columns and the portrait. *)
 PROCEDURE FitAction(t: Fl.Timer);
-BEGIN
-  ShowRows; abilities.Fit; weaknesses.Fit; OvaBackground.Fit
+BEGIN ShowRows
 END FitAction;
 
 (* FLTK stretches the window's widgets; the rest is fitted later, by fit,
@@ -1172,7 +1171,6 @@ BEGIN
   window.SizeRange(Width, Height, 0, 0);
   window.End;
   window.action := Quit;
-  NEW(rebuild); rebuild.action := RebuildAction;
   NEW(fit); fit.action := FitAction;
   Take(OvaCharacter.One(OvaCharacter.New()), NIL)
 END Build;
@@ -1183,7 +1181,6 @@ BEGIN
   IF OvaAttackDialog.dialog # NIL THEN OvaAttackDialog.Cancel END;
   IF OvaLinkedDialog.dialog # NIL THEN OvaLinkedDialog.Close END;
   IF OvaSettings.dialog # NIL THEN OvaSettings.Cancel END;
-  IF rebuild.Pending() THEN Fl.RemoveTimeout(rebuild) END;
   IF fit.Pending() THEN Fl.RemoveTimeout(fit) END;
   OvaWidgets.ClosePanel(abilities); OvaWidgets.ClosePanel(weaknesses);
   window.Delete;

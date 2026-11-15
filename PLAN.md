@@ -392,9 +392,10 @@ keep their size. What FLTK doesn't stretch is fitted after a resize,
 from an `Fl.Timer` (`fit`) the window's `Resize` starts: the combat
 box's rows (a `Scroll` moves its children but doesn't stretch them),
 made again at the first size and resized, so FLTK stretches what is in
-them; the traits' columns (`OvaTraitPanel.Fit`), whose widths the
-browser keeps in pixels; and the portrait (`OvaBackground.Fit`), whose
-drawing size is set when it's shown.
+them. pofltk fits the rest itself (Phase 17): the traits' name columns
+are -1, the width the other columns leave, refitted as the browser is
+resized, and the portrait's box scales its image to the box at each
+draw (`FlImages.SetImageFit`).
 
 1. **First and second tabs, "Character" and "Attacks" (the sheet's
    right half)**; Attacks has the combat box and the numbers below it,
@@ -1539,6 +1540,22 @@ tested with no display.
      shortcuts (`Add`); the divider checks in `TestWindow`, which have
      no call of their own (`ItemFlags`); `TestLimits.Kept`'s fixed
      buffer, enough for its short values.
+17. **pofltk 0.7.0's helpers** (2026-11-15). [done]
+   - The program needs pofltk 0.7.0 (`Fl.PofltkApiVersion` 700), whose
+     helpers came from this program's workarounds.
+   - The traits' name columns are -1 (0.5.0), so `OvaTraitPanel.Fit`,
+     its `nameW`, and the window's call of it after a resize are gone;
+     `SetColumns` only chooses between two columns and three.
+   - The portrait's box fits its image (`SetImageFit(portrait, TRUE,
+     FALSE)`, 0.7.0): `OvaBackground.Fit` and the `Scale` on loading
+     are gone, and the image keeps its own size. `TestResize` checks
+     the drawing instead (`FlTest.Capture`): the image's pixels at the
+     top and bottom of the box's inside, white at its sides.
+   - A row's Remove rebuilds the rows with `Fl.Later` (0.6.0), not a
+     timer of the window's own; `Rebuild` checks the window is still
+     open, since a `Later` can't be cancelled.
+   - Left as it was: the combat box's rows, which stretch in height
+     too, where `Scroll.SetFitWidth` (0.7.0) stretches only across.
 
 ## Testing
 

@@ -35,7 +35,6 @@ TYPE
     top-: OvaCharacter.Character;  (* recomputed after a change *)
     shown: Traits;           (* shown[i]: line i + 1's *)
     n: INTEGER;
-    nameW-: INTEGER;         (* the names' column's width, as Fit set it *)
     selected*: PROCEDURE (p: TraitPanel; t: OvaCharacter.Trait);
     changed*: PROCEDURE (p: TraitPanel)
   END;
@@ -68,21 +67,20 @@ PROCEDURE (p: TraitPanel) ShowsPoints*(): BOOLEAN;
 BEGIN RETURN (p.sheet # NIL) & (p.owner = NIL) & p.sheet.options.scaledCost
 END ShowsPoints;
 
-(* Sets the columns' widths from the browser's width, as it is now: the
-   name's column takes what the points and the page leave. *)
-PROCEDURE (p: TraitPanel) Fit*;
+(* Sets the columns, with the points or without: the name's column takes
+   what the others leave, as the browser is resized (-1). *)
+PROCEDURE (p: TraitPanel) SetColumns(points: BOOLEAN);
   VAR widths: ARRAY 3 OF INTEGER;
 BEGIN
-  IF p.ShowsPoints() THEN
-    widths[0] := p.browser.W() - PointsW - PageW; widths[1] := PointsW; widths[2] := 0;
+  IF points THEN
+    widths[0] := -1; widths[1] := PointsW; widths[2] := PageW;
     p.browser.SetColumnWidths(widths, 3)
   ELSE
-    widths[0] := p.browser.W() - 70; widths[1] := 0;  (* as OvaWidgets.OpenPanel *)
+    widths[0] := -1; widths[1] := 70;  (* as OvaWidgets.OpenPanel *)
     p.browser.SetColumnWidths(widths, 2)
   END;
-  p.nameW := widths[0];
   p.browser.Redraw
-END Fit;
+END SetColumns;
 
 (* After the Choice changes: a Boss Ability's Spinner is 1, and off. *)
 PROCEDURE (p: TraitPanel) Chosen*;
@@ -110,7 +108,7 @@ BEGIN
   IF p.sheet = NIL THEN RETURN END;
   p.OfferBoss(p.OffersBoss());
   points := p.ShowsPoints();
-  p.Fit;
+  p.SetColumns(points);
   t := p.List();
   WHILE t # NIL DO IF t.kind = p.kind THEN INC(p.n) END; t := t.next END;
   NEW(p.shown, p.n + 1);
@@ -217,7 +215,6 @@ BEGIN
   p.sheet := NIL; p.owner := NIL; p.top := NIL; p.n := 0; NEW(p.shown, 1);
   p.selected := NIL; p.changed := NIL;
   OvaWidgets.OpenPanel(p, x, y, w, h, kind, title, "level", "detail");
-  p.nameW := p.browser.W() - 70;  (* as OpenPanel sets it *)
   IF kind = OvaRules.Ability THEN p.spinner.SetBounds(1, 5); p.spinner.SetValue(1)
   ELSE p.spinner.SetBounds(-3, -1); p.spinner.SetValue(-1)
   END
