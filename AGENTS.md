@@ -26,7 +26,7 @@ file says otherwise.
 | The Ada ova_fmt (gets the new keys first) | `~/Repos/RPG/Tools/ova_fmt/` |
 | pofltk (FLTK 1.4 binding) | `~/Repos/Oberon/pofltk/` (`README.md`, `AGENTS.md`, `examples/`, `doc/fltk-issues.md`); poc library `pofltk` in `$POCLIBDIR` |
 | polibfyaml, Ropes, ArgParser | `~/Repos/Oberon/polibfyaml`, `~/Repos/Oberon/Ropes`, `~/Repos/Oberon/ArgParser`; poc libraries in `$POCLIBDIR` (default `~/.local/lib/poc`) |
-| poc | `/usr/bin/poc` (0.5.0); source and docs in `~/Repos/Oberon/Peaseblossom-main` (`doc/users-guide.md`, `doc/reference-guide.md`; the runtime, with `Platform.System`, in `rtl/llvm/`) |
+| poc | `/usr/bin/poc` (0.5.0); source and docs in `~/Repos/Oberon/Peaseblossom` (`doc/users-guide.md`, `doc/reference-guide.md`; the runtime, with `Platform.System`, in `rtl/llvm/`) |
 
 Read the pofltk, polibfyaml, Ropes and ArgParser `AGENTS.md` files
 before working around any of those libraries.
