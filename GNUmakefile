@@ -91,15 +91,19 @@ $(OBJ)/Test%: test/Test%.Mod $(TESTSUPPORT) $(PROGSRC) $(SHAREDLIBMANIFESTS) | $
 # ova_fmt_po, the oracle for files: what the generator saves must
 # format as the file it loaded (test/files.sh, after TestFiles).
 OVA_FMT_PO ?= $(HOME)/Repos/RPG/Tools/ova_fmt_po/ova_fmt_po
+# Its sources, which the modules copied from it must match
+# (test/copies.sh).
+OVA_FMT_PO_SRC ?= $(dir $(OVA_FMT_PO))src
 
-# What needs no display: the unit tests, test/files.sh, then
-# test/cli.sh; fail at the end if any failed.
+# What needs no display: the unit tests, test/files.sh, test/cli.sh,
+# then test/copies.sh; fail at the end if any failed.
 test: $(PROGRAM) $(TESTBINS) | $(OBJ)/files
 	@status=0; for t in $(TESTS); do \
 	  echo "== $$t"; (cd test && timeout $(TIMEOUT) ../$(OBJ)/$$t) || status=1; \
 	done; \
 	echo "== files.sh"; test/files.sh $(OVA_FMT_PO) || status=1; \
 	echo "== cli.sh"; test/cli.sh ./$(PROGRAM) || status=1; \
+	echo "== copies.sh"; test/copies.sh $(OVA_FMT_PO_SRC) || status=1; \
 	exit $$status
 
 # Every page in OvaRules against the rulebook: the entries' headings,

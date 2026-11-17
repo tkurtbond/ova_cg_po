@@ -56,7 +56,8 @@ labels are the printed numbers (`/PageLabels`: roman for indexes 0 and
 ```sh
 make                 # obj/ (poc output) and ./ova_cg_po
 make test            # what needs no display: unit tests (TESTS), test/files.sh
-                     #   (needs ova_fmt_po built: OVA_FMT_PO), test/cli.sh
+                     #   (needs ova_fmt_po built: OVA_FMT_PO), test/cli.sh,
+                     #   test/copies.sh (the copies below: OVA_FMT_PO_SRC)
 make check-pages     # OvaRules' pages against the rulebook PDF's headings (needs mutool)
 make test-viewers    # OvaViewer with real okular, evince, mupdf (test/viewer.sh;
                      #   its own headless sway and private bus; ~30 s)
@@ -109,7 +110,8 @@ make print-VAR       # show a makefile variable
   ova_fmt_po reads, and its Markdown sheet and inline paragraph are
   exactly what `ova_fmt_po -M` and `ova_fmt_po -i` write.
   Change them there (and in the Ada ova_fmt first, for a new key), then
-  copy them again; never edit the copies.
+  copy them again; never edit the copies. `make test` fails if one
+  differs from ova_fmt_po's (`test/copies.sh`).
 
 ## Windows and the display
 
