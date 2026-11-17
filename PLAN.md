@@ -1557,11 +1557,55 @@ tested with no display.
    - Left as it was: the combat box's rows, which stretch in height
      too, where `Scroll.SetFitWidth` (0.7.0) stretches only across.
 
+Phases after 17 are in "Ongoing development".
+
+## Ongoing development
+
+Each enhancement after the build order is a phase of its own, numbered
+on from the build order's last, with a heading `Phase N: Title`; a
+phase's parts, where it needs them, are `Phase N.M: Title` under it.
+Mark a finished phase `[done]` in its heading.
+
+### Phase 18: One copy of the modules shared with ova_fmt_po
+
+`OvaEntities`, `OvaText`, `OvaOut`, `OvaConfig`, `OvaCommon` and
+`OvaInline` are ova_fmt_po's, copied into `src/` (AGENTS.md). Copying
+by hand let three of them fall behind ova_fmt_po's (`OvaEntities`,
+`OvaConfig`, `OvaCommon`, found 2026-11-17).
+
+Decided (by the user, 2026-11-17): the two repos stay separate. Merging
+ova_fmt_po into this one would make the other generators (ova_cg_go,
+ova_cg_ada, ova_cg_web) and Lost-Worlds, which run the ova_fmt_po
+binary as their files' oracle, depend on this repo, and would make a
+formatter's users build FLTK; and it isn't needed to have one copy.
+
+#### Phase 18.1: Copy them again, and check for drift [done]
+
+- The three stale copies copied again from ova_fmt_po (2026-11-17);
+  `make test` and `make test-headless` passed.
+- `test/copies.sh`, run by `make test`, compares the six with
+  ova_fmt_po's sources (`OVA_FMT_PO_SRC`, by default `src` beside
+  `OVA_FMT_PO`), byte for byte. Shown to fail with a line added to
+  `OvaOut` (1 check) and with a missing directory (6).
+
+#### Phase 18.2: A poc library of them, installed by ova_fmt_po
+
+- ova_fmt_po builds the six as a poc library (`poc -library`) and
+  installs it in `$(POCLIBDIR)` (`-install-library`), as polibfyaml's
+  `GNUmakefile` does; ova_cg_po links it with the other libraries and
+  drops its copies and `test/copies.sh`.
+- Not started. First find out what a library of a program's own
+  modules needs: whether `OvaOut`'s and `OvaConfig`'s module state
+  works from a library the same way, and how a new poc (which refuses
+  a library another poc built) affects a second program's library.
+- A change to ova_fmt_po, made there with the user's go-ahead.
+
 ## Testing
 
 - `make test` (no display): `TestRules`, `TestCalc`, `TestFiles`,
   `TestModel`, `TestPaths`, `TestSpawn`, `TestViewer` (on fake viewers and a fake gdbus),
-  `test/files.sh`, and a command-line check (`test/cli.sh`).
+  `test/files.sh`, a command-line check (`test/cli.sh`), and the
+  copies of ova_fmt_po's modules against its sources (`test/copies.sh`).
 - `make test-viewers`: `OvaViewer` with the real okular, evince and
   mupdf, on `test/viewer.sh`'s own headless sway and private bus.
 - `make test-headless` / `test-sway`: the window tests (`TestWindow`,

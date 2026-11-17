@@ -4,8 +4,8 @@ Working notes for an agent in this repo, which holds `ova_cg_po`, a
 character generator for OVA (Open Versatile Anime engine). It is an
 Oberon-2 program compiled with poc, the Peaseblossom Oberon Compiler,
 with an FLTK window (pofltk) and YAML files (polibfyaml) in ova_fmt's
-format. PLAN.md is the design and the build order; this file is
-operational notes, not a design doc.
+format. PLAN.md is the design, the build order and the phases of
+ongoing development; this file is operational notes, not a design doc.
 
 Its build, test and coding conventions are ova_fmt_po's
 (`~/Repos/RPG/Tools/ova_fmt_po`), the poc port of ova_fmt, whose
@@ -290,3 +290,8 @@ callbacks are module-level procedures; no exceptions; no call chaining;
 - Record decisions and findings in PLAN.md as they happen. Mark a
   finished step `[done]` and strike through an open question once it's
   decided.
+- **A new enhancement goes in PLAN.md's "Ongoing development"**, not the
+  build order (which ends at Phase 17): a `###` heading
+  `Phase N: Title`, numbered on from the last phase, and, where it
+  needs parts, `####` headings `Phase N.M: Title` under it. Mark a
+  finished phase or part `[done]` in its heading.
