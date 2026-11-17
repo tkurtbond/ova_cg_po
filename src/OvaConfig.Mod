@@ -10,9 +10,10 @@ IMPORT Ropes;
 
 CONST
   (* Output formats (the Ada Output_Format).  Terse (reST prose) is the
-     default; -g, -M, -H, -G, -m and -i choose the others, and the last one
-     given wins. *)
+     default; -g, -M, -H, -G, -m, -i, -X and -S choose the others, and the
+     last one given wins. *)
   Terse* = 0; Gemtext* = 1; Markdown* = 2; HtmlInRst* = 3; GroffInRst* = 4; Hmm* = 5; Inline* = 6;
+  Form* = 7; Sheet* = 8;
 
 VAR
   format*: INTEGER;
@@ -26,6 +27,26 @@ VAR
      its own. *)
   outputFile*: Ropes.Rope;      (* -o/--output *)
   hasOutputFile*: BOOLEAN;      (* off: standard output *)
+
+  (* With -S/--sheet, the portrait for every main entity, in place of
+     its own `portrait:` (PLAN.md, "The portrait"). *)
+  portrait*: Ropes.Rope;        (* -P/--portrait *)
+  hasPortrait*: BOOLEAN;        (* off: each entity's own *)
+
+  (* With -S/--sheet, draw the sheet's frames and labels in the troff,
+     so that no blank sheet goes under it (OvaSheetDraw). *)
+  redraw*: BOOLEAN;             (* -R/--redraw *)
+
+  (* With -S/--sheet and -R/--redraw, page 1 as Acacia's block in the
+     rulebook: one column of Abilities and Weaknesses beside an Attacks
+     & Combat Stats box.  Only with both, since the blank sheet has two
+     columns; OvaFmt refuses it otherwise. *)
+  oneColumn*: BOOLEAN;          (* -C/--one-column *)
+
+  (* The directory of the file being read, with its final "/"; NIL (empty)
+     for one in the current directory or standard input: a relative
+     `portrait:` path is relative to the YAML file.  OvaFmt sets it. *)
+  sourceDir*: Ropes.Rope;
 
   underliner*: CHAR;            (* -u/--underliner *)
   subunderliner*: CHAR;         (* -U/--subunderliner; 0X = not given *)
@@ -41,6 +62,7 @@ BEGIN
   hmmDepth := 0; hmmCompactLists := FALSE; hmmPlain := FALSE;
   gemtextEmphasis := FALSE;
   outputFile := NIL; hasOutputFile := FALSE;
+  portrait := NIL; hasPortrait := FALSE; redraw := FALSE; oneColumn := FALSE; sourceDir := NIL;
   underliner := "="; subunderliner := 0X;
   unicodeMinus := TRUE;
   showOptions := FALSE

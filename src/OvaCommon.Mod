@@ -140,6 +140,32 @@ BEGIN
   RETURN Ropes.Map(r, ToSpace)
 END AllOneLine;
 
+(* YAML prose as the sheet formats (-X, -S) hold it: each line trimmed
+   (of blanks, tabs, LFs and CRs, as OvaText.Trim does), a paragraph's
+   lines joined with blanks, paragraphs (separated by blank lines) with
+   a single LF.  They wrap the lines themselves. *)
+PROCEDURE Reflow*(r: Rope): Rope;
+  VAR result, line: Rope; inPara, break: BOOLEAN; from, to, n: LONGINT;
+BEGIN
+  result := NIL; inPara := FALSE; break := FALSE;
+  n := Ropes.Length(r); from := 0;
+  WHILE from <= n DO
+    to := Ropes.IndexChar(r, 0AX, from);
+    IF to < 0 THEN to := n END;
+    line := OvaText.Trim(Ropes.Substring(r, from, to - from));
+    IF Ropes.Length(line) = 0 THEN break := inPara
+    ELSE
+      IF inPara THEN
+        IF break THEN result := Ropes.AppendChar(result, 0AX) ELSE result := Ropes.AppendChar(result, " ") END
+      END;
+      result := Ropes.Cat(result, line);
+      inPara := TRUE; break := FALSE
+    END;
+    from := to + 1
+  END;
+  RETURN result
+END Reflow;
+
 (* ---- The keys added for the character generator ---- *)
 
 (* What follows a number its mapping's overrides: list names: NIL if
@@ -321,6 +347,19 @@ BEGIN
   OvaText.Add(r, " Endurance)");
   RETURN r
 END FormatSpellLine;
+
+(* The character sheet's shorter "Name (Ability +L, E END)", from the
+   rulebook's Acacia (p. 134), for every spell in the sheet's narrow
+   Abilities column.  raw: as OverrideMark's. *)
+PROCEDURE FormatShortSpellLine*(s: OvaEntities.Spell; raw: BOOLEAN): Rope;
+  VAR r: Rope;
+BEGIN
+  r := s.name; OvaText.Add(r, " ("); r := Ropes.Cat(r, s.ability);
+  r := Ropes.AppendChar(r, " "); r := Ropes.Cat(r, SignedImg(s.level));
+  OvaText.Add(r, ", "); r := Ropes.Cat(r, Marked(s.endurance, OvaEntities.OvEndurance, s.overrides, raw));
+  OvaText.Add(r, " END)");
+  RETURN r
+END FormatShortSpellLine;
 
 (* Abilities or SubItems, joined with ", ". *)
 PROCEDURE JoinSubItems*(l: OvaEntities.List): Rope;
@@ -677,8 +716,9 @@ BEGIN
   END
 END PrintOptionsIfShown;
 
-(* The label of fluff field i, as the text formats write it. *)
-PROCEDURE FluffLabel(i: INTEGER): Rope;
+(* The label of fluff field i, as the text formats write it; OvaSheet's
+   too. *)
+PROCEDURE FluffLabel*(i: INTEGER): Rope;
   VAR s: ARRAY 16 OF CHAR;
 BEGIN
   CASE i OF
