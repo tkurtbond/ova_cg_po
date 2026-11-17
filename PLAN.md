@@ -1599,13 +1599,35 @@ formatter's users build FLTK; and it isn't needed to have one copy.
   works from a library the same way, and how a new poc (which refuses
   a library another poc built) affects a second program's library.
 - A change to ova_fmt_po, made there with the user's go-ahead.
+- Weigh against Phase 19: a library installed by ova_fmt_po makes
+  ova_fmt_po a build dependency, so someone trying pofltk would build a
+  formatter first. The copies keep this repo buildable alone.
+
+### Phase 19: Ready for pofltk readers
+
+ova_cg_po is announced as a complete pofltk program (the user,
+2026-11-17), so someone interested in pofltk, not OVA, should be able to
+build it, try it and find their way around it.
+
+#### Phase 19.1: make test without ova_fmt_po [done]
+
+- `test/files.sh` and `test/copies.sh` take `skip-missing`, which
+  `make test` passes when `OVA_FMT_PO` is the makefile's default
+  (`$(origin OVA_FMT_PO)` is `file`): a missing ova_fmt_po is then a
+  `skip` line, not a FAIL. One set in the environment or on the command
+  line must be there (2026-11-17).
+- Checked both ways: `make test` here, all passed; with `HOME` a
+  scratch directory (so the default isn't there), the unit tests passed
+  and the two said `skip`; each script with a missing path, with and
+  without `skip-missing`.
 
 ## Testing
 
 - `make test` (no display): `TestRules`, `TestCalc`, `TestFiles`,
   `TestModel`, `TestPaths`, `TestSpawn`, `TestViewer` (on fake viewers and a fake gdbus),
   `test/files.sh`, a command-line check (`test/cli.sh`), and the
-  copies of ova_fmt_po's modules against its sources (`test/copies.sh`).
+  copies of ova_fmt_po's modules against its sources (`test/copies.sh`);
+  those two skip without ova_fmt_po (Phase 19.1).
 - `make test-viewers`: `OvaViewer` with the real okular, evince and
   mupdf, on `test/viewer.sh`'s own headless sway and private bus.
 - `make test-headless` / `test-sway`: the window tests (`TestWindow`,

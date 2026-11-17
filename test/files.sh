@@ -19,11 +19,20 @@
 # ova_fmt_po -M makes of its saved copy, and its inline paragraphs
 # (obj/files/NAME.inline.md) what ova_fmt_po -i makes of it.
 #
-# usage: test/files.sh OVA_FMT_PO
+# With skip-missing (make test passes it when OVA_FMT_PO is the
+# makefile's default), a missing ova_fmt_po skips the round trip instead
+# of failing it, so the generator builds and tests without ova_fmt_po;
+# an OVA_FMT_PO given by hand must be there.
+#
+# usage: test/files.sh OVA_FMT_PO [skip-missing]
 set -u
-fmt=${1:?usage: files.sh OVA_FMT_PO}
+fmt=${1:?usage: files.sh OVA_FMT_PO [skip-missing]}
 cd "$(dirname "$0")/.." || exit 1
 if [ ! -x "$fmt" ]; then
+  if [ "${2:-}" = skip-missing ]; then
+    echo "skip - the round trip through ova_fmt_po: $fmt isn't there (build ova_fmt_po, or set OVA_FMT_PO)"
+    exit 0
+  fi
   echo "FAIL - $fmt isn't there: build ova_fmt_po (make in its repo), or set OVA_FMT_PO"
   exit 1
 fi

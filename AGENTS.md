@@ -57,7 +57,8 @@ labels are the printed numbers (`/PageLabels`: roman for indexes 0 and
 make                 # obj/ (poc output) and ./ova_cg_po
 make test            # what needs no display: unit tests (TESTS), test/files.sh
                      #   (needs ova_fmt_po built: OVA_FMT_PO), test/cli.sh,
-                     #   test/copies.sh (the copies below: OVA_FMT_PO_SRC)
+                     #   test/copies.sh (the copies below: OVA_FMT_PO_SRC);
+                     #   those two say skip if the default ova_fmt_po isn't there
 make check-pages     # OvaRules' pages against the rulebook PDF's headings (needs mutool)
 make test-viewers    # OvaViewer with real okular, evince, mupdf (test/viewer.sh;
                      #   its own headless sway and private bus; ~30 s)
@@ -112,6 +113,12 @@ make print-VAR       # show a makefile variable
   Change them there (and in the Ada ova_fmt first, for a new key), then
   copy them again; never edit the copies. `make test` fails if one
   differs from ova_fmt_po's (`test/copies.sh`).
+- **Building needs nothing from ova_fmt_po**, so someone trying pofltk
+  can build and test this repo without it (README, "Building";
+  `doc/pofltk-tour.md`). Where `OVA_FMT_PO`'s default isn't there,
+  `test/files.sh` and `test/copies.sh` print `skip` and pass; an
+  `OVA_FMT_PO` set by hand must be there. Here it always is, so a
+  `skip` in this checkout means something moved: look.
 
 ## Windows and the display
 

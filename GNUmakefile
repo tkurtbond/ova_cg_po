@@ -94,16 +94,21 @@ OVA_FMT_PO ?= $(HOME)/Repos/RPG/Tools/ova_fmt_po/ova_fmt_po
 # Its sources, which the modules copied from it must match
 # (test/copies.sh).
 OVA_FMT_PO_SRC ?= $(dir $(OVA_FMT_PO))src
+# Building needs no ova_fmt_po, so where the default isn't there those
+# two checks are skipped, and say so; an OVA_FMT_PO given in the
+# environment or on the command line must be there.
+OVA_FMT_PO_MISSING := $(if $(filter file,$(origin OVA_FMT_PO)),skip-missing)
 
 # What needs no display: the unit tests, test/files.sh, test/cli.sh,
-# then test/copies.sh; fail at the end if any failed.
+# then test/copies.sh; fail at the end if any failed.  files.sh and
+# copies.sh skip without ova_fmt_po (OVA_FMT_PO_MISSING, above).
 test: $(PROGRAM) $(TESTBINS) | $(OBJ)/files
 	@status=0; for t in $(TESTS); do \
 	  echo "== $$t"; (cd test && timeout $(TIMEOUT) ../$(OBJ)/$$t) || status=1; \
 	done; \
-	echo "== files.sh"; test/files.sh $(OVA_FMT_PO) || status=1; \
+	echo "== files.sh"; test/files.sh $(OVA_FMT_PO) $(OVA_FMT_PO_MISSING) || status=1; \
 	echo "== cli.sh"; test/cli.sh ./$(PROGRAM) || status=1; \
-	echo "== copies.sh"; test/copies.sh $(OVA_FMT_PO_SRC) || status=1; \
+	echo "== copies.sh"; test/copies.sh $(OVA_FMT_PO_SRC) $(OVA_FMT_PO_MISSING) || status=1; \
 	exit $$status
 
 # Every page in OvaRules against the rulebook: the entries' headings,
