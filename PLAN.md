@@ -1603,7 +1603,7 @@ formatter's users build FLTK; and it isn't needed to have one copy.
   ova_fmt_po a build dependency, so someone trying pofltk would build a
   formatter first. The copies keep this repo buildable alone.
 
-### Phase 19: Ready for pofltk readers
+### Phase 19: Ready for pofltk readers [done]
 
 ova_cg_po is announced as a complete pofltk program (the user,
 2026-11-17), so someone interested in pofltk, not OVA, should be able to
@@ -1631,6 +1631,15 @@ build it, try it and find their way around it.
   (2026-11-17). It now says pofltk 0.7.0, as AGENTS.md does (it said
   0.2.0).
 - Built and tested on Fedora 44 only; the README says so.
+
+#### Phase 19.3: A tour of the code for pofltk readers [done]
+
+- `doc/pofltk-tour.md`: where each pofltk technique is, by module and
+  procedure, and why; the user approved the text (2026-11-17).
+- `doc/window.png`, at its top: the Character tab with
+  `test/data/Miho.yaml`, captured on Xvfb (`xvfb-run`, then
+  `import -window` of the program's window, found with `xdotool search
+  --pid`; 640 x 800). Capture it again so when the window changes.
 
 ## Testing
 
