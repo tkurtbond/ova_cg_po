@@ -186,7 +186,8 @@ int32_t ova_spawn_on_path(const char *name) {
   path = getenv("PATH");
   if (path == NULL) path = "/usr/local/bin:/usr/bin:/bin";
   for (dir = path; ; dir = end + 1) {
-    end = strchrnul(dir, ':');
+    end = strchr(dir, ':');
+    if (end == NULL) end = dir + strlen(dir);
     /* An empty entry is the current directory. */
     if (end == dir) snprintf(full, sizeof full, "./%s", name);
     else snprintf(full, sizeof full, "%.*s/%s", (int)(end - dir), dir, name);
