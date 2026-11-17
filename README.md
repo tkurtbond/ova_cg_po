@@ -11,7 +11,9 @@ that page in your PDF viewer. Characters are saved as YAML that
 
 It is written in Oberon-2 for poc, the
 [Peaseblossom](https://github.com/tkurtbond/peaseblossom) Oberon
-compiler, with pofltk (FLTK 1.4) for the window and polibfyaml for YAML.
+compiler, with [pofltk](https://github.com/tkurtbond/pofltk) (FLTK 1.4)
+for the window and [polibfyaml](https://github.com/tkurtbond/polibfyaml)
+for YAML.
 
 **Status: complete** (the nine phases of PLAN.md). It covers what the
 character sheet holds: the names, the Abilities and Weaknesses, the
@@ -212,31 +214,126 @@ viewer, and they are kept for the next time.
 
 ## Building
 
-You need:
+ova_cg_po is also a complete example of a
+[pofltk](https://github.com/tkurtbond/pofltk) program: a menu bar,
+tabs, browsers, choices, text editors, an image, dialogs, preferences
+and the native file chooser, with tests that drive the window on a
+virtual display. [doc/pofltk-tour.md](doc/pofltk-tour.md) says where
+each of those is in the source.
 
-- poc, with its runtime library, on `PATH` (override with `POC=`), and
-  clang, which poc runs.
-- FLTK 1.4 and libfyaml.
-- The poc libraries `argparser`, `ropes`, `polibfyaml` and `pofltk`,
-  each installed by its own repo into `POCLIBDIR` (default
-  `~/.local/lib/poc`).
-  pofltk must be 0.2.0 or later (`Fl.PofltkApiVersion` 200), for
-  `AddText`, `Text()` and the other calls its API review added.
-  Install them again after upgrading poc, which refuses a library
-  another version built.
-- For `make test`: ova_fmt_po, built, at `OVA_FMT_PO` (default
-  `~/Repos/RPG/Tools/ova_fmt_po/ova_fmt_po`): what the generator saves
-  must format as the file it loaded.
-- polibfyaml with `CreateStyledScalar` (2026-10-09 or later).
+It has been built and tested on Fedora 44 (x86_64). poc, pofltk and
+polibfyaml are tested on more systems (Debian 13, FreeBSD, OpenBSD and
+NetBSD), so it should build there too, but nothing has tried it.
+
+### 1. The system's packages
+
+clang, GNU make, FLTK 1.4 and libfyaml, with their headers:
+
+| System | Install |
+|---|---|
+| Fedora 44 | `dnf install clang make fltk-devel libfyaml-devel` |
+| Debian 13 | `apt install clang make libfltk1.4-dev libfyaml-dev` |
+
+FLTK must be 1.4 (`fltk-config --version`): an older system, or one
+whose packages carry FLTK 1.3, needs FLTK 1.4 built from
+[source](https://www.fltk.org). pofltk's README says how it finds an
+FLTK installed elsewhere.
+
+### 2. poc
+
+poc, the Peaseblossom Oberon compiler, is not in any system's own
+package collection yet, but each
+[release](https://github.com/tkurtbond/peaseblossom/releases) carries
+packages for Fedora 44, Debian 13, FreeBSD 15.1, OpenBSD 7.9 and NetBSD
+11.0:
+
+```sh
+dnf install ./peaseblossom-<version>-1.fc44.x86_64.rpm          # Fedora 44
+apt install ./peaseblossom-<version>-1-debian13-amd64.deb       # Debian 13
+```
+
+Anywhere else, build it from the release tarball, which needs only clang
+and GNU make (`gmake` on the BSDs) and takes a few minutes:
+
+```sh
+tar xzf peaseblossom-<version>.tar.gz
+cd peaseblossom-<version>
+make installable
+make install PREFIX=$HOME/local     # or, as root, make install for /usr/local
+export PATH=$HOME/local/bin:$PATH
+```
+
+Peaseblossom's `INSTALL.md` has the details: checking the tarball's sum,
+the other packages, and other places to install.
+
+### 3. The poc libraries
+
+Four libraries, each built and installed from its own repository into
+`POCLIBDIR` (default `~/.local/lib/poc`), no root needed:
+
+```sh
+git clone https://github.com/tkurtbond/oberon-argparser.git
+(cd oberon-argparser && make -f pocGNUmakefile install)
+git clone https://github.com/tkurtbond/oberon-ropes.git
+(cd oberon-ropes && make -f pocGNUmakefile install)
+git clone https://github.com/tkurtbond/polibfyaml.git
+(cd polibfyaml && make install)
+git clone https://github.com/tkurtbond/pofltk.git
+(cd pofltk && make install)
+```
+
+pofltk must be 0.7.0 or later (`Fl.PofltkApiVersion` 700). A library
+records the poc that built it, and another poc refuses it, so **install
+all four again after upgrading poc**.
+
+### 4. ova_cg_po
+
+```sh
+git clone https://github.com/tkurtbond/ova_cg_po.git
+cd ova_cg_po
+make                 # ./ova_cg_po
+make test            # the tests that need no display
+```
+
+`make POC=/path/to/poc` names another poc, and `make POCLIBDIR=...`
+another library directory.
+
+### Trying it
+
+The test fixtures are the rulebook's sample characters, so there is
+something to open straight away:
+
+```sh
+./ova_cg_po test/data/Miho.yaml
+```
+
+Everything but opening the rulebook works without it: **?** and
+**Rulebook > Open** ask for its PDF, and if you cancel they say how to
+give it later.
+
+### ova_fmt_po, and the other tests
+
+Six modules in `src/` are copied from
+[ova_fmt_po](https://github.com/tkurtbond/ova_fmt_po), the formatter
+for the same YAML, so that the generator reads and writes exactly what
+it does. Building needs nothing from ova_fmt_po. `make test` uses it
+when it is there, at `OVA_FMT_PO` (default
+`~/Repos/RPG/Tools/ova_fmt_po/ova_fmt_po`): every file the generator
+saves must format as the file it loaded, and the copies must be
+ova_fmt_po's sources (`OVA_FMT_PO_SRC`, default `src` beside it).
+Where it isn't, those two checks say `skip`; an `OVA_FMT_PO` given in
+the environment or on the command line must be there.
+
+The other targets need more:
+
 - For the window tests: Xvfb (`xvfb-run`) and `xdotool`, or sway.
 - For `make test-viewers`: sway (with Xwayland), okular, evince, mupdf,
   `gdbus`, `dbus-run-session`, grim, jq and python3.
+- For `make check-pages`: the rulebook's PDF (`RULEBOOK`) and mutool.
 - For `make valgrind`: valgrind, and a checkout of pofltk at `POFLTK`
   (default `~/Repos/Oberon/pofltk`), for its `test/vg-check.sh`.
 
 ```sh
-make                 # ./ova_cg_po
-make test            # the tests that need no display
 make test-headless   # the window tests, on Xvfb
 make test-sway       # the window tests, on a headless sway (Wayland)
 make test-viewers    # the real PDF viewers, on a headless sway of its own

@@ -1621,6 +1621,17 @@ build it, try it and find their way around it.
   and the two said `skip`; each script with a missing path, with and
   without `skip-missing`.
 
+#### Phase 19.2: Building from scratch, in the README [done]
+
+- The README's "Building" says the whole route: the system's packages
+  (Fedora 44 and Debian 13, whose `libfltk1.4-dev` is FLTK 1.4.3), poc
+  from a release's package or tarball, the four libraries from their
+  repos, then this repo; how to try it on a sample character without
+  the rulebook; and that ova_fmt_po is for the tests alone
+  (2026-11-17). It now says pofltk 0.7.0, as AGENTS.md does (it said
+  0.2.0).
+- Built and tested on Fedora 44 only; the README says so.
+
 ## Testing
 
 - `make test` (no display): `TestRules`, `TestCalc`, `TestFiles`,
