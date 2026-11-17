@@ -7,7 +7,7 @@ Flaws, and it works out Endurance costs, ROLL, DX, Defense, Health,
 Endurance and Threat Value as you go. It holds no rules text: each name
 shows its rulebook page, and the program can open the rulebook's PDF at
 that page in your PDF viewer. Characters are saved as YAML that
-[ova_fmt_po](../ova_fmt_po) and the Ada [ova_fmt](../ova_fmt) format.
+[ova_fmt_po](https://github.com/tkurtbond/ova_fmt_po) and the Ada [ova_fmt](https://github.com/tkurtbond/ova_fmt) format.
 
 It is written in Oberon-2 for poc, the
 [Peaseblossom](https://github.com/tkurtbond/peaseblossom) Oberon
